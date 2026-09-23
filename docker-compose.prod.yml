@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/at-v-sistemas/voxy:latest
+    image: ghcr.io/jhonyspark/voxy-backend:latest
     container_name: voxy_api
     restart: unless-stopped
     # Removemos o "ports" público para forçar o acesso apenas via Nginx
