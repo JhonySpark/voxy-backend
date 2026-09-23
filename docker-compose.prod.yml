@@ -37,7 +37,7 @@ services:
       # O WebRTC UDP precisa ser exposto publicamente para o streaming de vídeo funcionar
       - "7882:7882/udp"
     environment:
-      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
 
   nginx:
     image: nginx:alpine
