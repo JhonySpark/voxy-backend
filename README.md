@@ -119,6 +119,33 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
+## Produção e CI/CD
+
+O projeto possui integração contínua (CI/CD) configurada via GitHub Actions. Qualquer commit enviado para a branch `main` irá automaticamente:
+1. Fazer o build da imagem Docker do backend e enviar para o GHCR.
+2. Acessar o servidor VPS (Hetzner) via SSH.
+3. Subir o backend, o Redis e o LiveKit através do `docker-compose.prod.yml`.
+4. Rodar automaticamente as migrations do Prisma (`npx prisma migrate deploy`).
+
+### Configuração de Secrets no GitHub
+
+Para que o deploy funcione, você precisa configurar os seguintes **Secrets e Variáveis** no painel do seu repositório no GitHub (`Settings > Secrets and variables > Actions`):
+
+| Secret | Descrição |
+| ------ | --------- |
+| `DATABASE_URL` | URL de conexão com seu banco de dados em produção (ex: Neon DB) |
+| `HETZNER_HOST` | IP do seu servidor VPS na Hetzner |
+| `HETZNER_USER` | Usuário do servidor (ex: `root`) |
+| `SSH_PRIVATE_KEY` | Sua chave privada SSH com permissão de acesso ao servidor |
+| `LIVEKIT_API_KEY` | Chave de API para o servidor do LiveKit (você pode inventar qualquer texto seguro) |
+| `LIVEKIT_API_SECRET` | Senha da chave de API do LiveKit (você pode inventar qualquer texto seguro) |
+
+### Setup Inicial do Servidor (VPS)
+
+Se você estiver configurando o servidor do zero, certifique-se de:
+1. Ter o Docker e o Docker Compose instalados (`curl -fsSL https://get.docker.com | sh`).
+2. Ter a chave pública referente ao `SSH_PRIVATE_KEY` adicionada no arquivo `~/.ssh/authorized_keys` do servidor.
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
