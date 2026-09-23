@@ -58,7 +58,7 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,docker/nginx/nginx.conf"
+          source: "docker-compose.prod.yml,docker/nginx/nginx.conf,docker/livekit/livekit.yaml"
           target: "~/voxy-production"
 
       - name: Execute Deploy via SSH
