@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  friends           Friendship[] @relation("UserFriends")
+  friendsOf         Friendship[] @relation("FriendOfUser")
+  sentMessages      Message[]    @relation("SentMessages")
+  receivedMessages  Message[]    @relation("ReceivedMessages")
+  ownedServers      Server[]       @relation("ServerOwner")
+  serverMemberships ServerMember[]
+  channelMessages   ChannelMessage[]
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  status    String   @default("PENDING") // PENDING, ACCEPTED
+  createdAt DateTime @default(now())
+  
+  user      User     @relation("UserFriends", fields: [userId], references: [id])
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Server {
+  id         String   @id @default(uuid())
+  name       String
+  ownerId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owner     User           @relation("ServerOwner", fields: [ownerId], references: [id])
+  members   ServerMember[]
+  channels  Channel[]
+}
+
+model ServerMember {
+  id        String   @id @default(uuid())
+  serverId  String
+  userId    String
+  role      String   @default("MEMBER") // OWNER, MEMBER
+  createdAt DateTime @default(now())
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+}
+
+model Channel {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("TEXT") // TEXT, VOICE
+  serverId  String
+  createdAt DateTime @default(now())
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages  ChannelMessage[]
+}
+
+model ChannelMessage {
+  id         String   @id @default(uuid())
+  content    String
+  senderId   String
+  channelId  String
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+}
