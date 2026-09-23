@@ -10,7 +10,7 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       # A URL agora será a pública HTTPS, e não o container interno
-      - LIVEKIT_URL=https://livekit.atev.com.br
+      - LIVEKIT_URL=https://livekit.d4rkside.com.br
       - NODE_ENV=production
     depends_on:
       redis:
