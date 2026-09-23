@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: at-v-sistemas/voxy-backend
+  IMAGE_NAME: at-v-sistemas/voxy
 
 jobs:
   build-and-push-image:
