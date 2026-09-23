@@ -52,13 +52,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Transfer Compose to Server
+      - name: Transfer Compose and Config to Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml"
+          source: "docker-compose.prod.yml,docker/nginx/nginx.conf"
           target: "~/voxy-production"
 
       - name: Execute Deploy via SSH
@@ -69,6 +69,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             mkdir -p ~/voxy-production
+            cd ~/voxy-production
+            
+            # Cria a pasta de certificados do Nginx e injeta as chaves da Cloudflare
+            mkdir -p docker/nginx/certs
+            echo "${{ secrets.CF_ORIGIN_CERT }}" > docker/nginx/certs/cert.pem
+            echo "${{ secrets.CF_ORIGIN_KEY }}" > docker/nginx/certs/key.pem
             cd ~/voxy-production
             
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin

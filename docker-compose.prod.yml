@@ -1,16 +1,16 @@
 services:
   api:
-    image: ghcr.io/at-v-sistemas/voxy-backend:latest
+    image: ghcr.io/at-v-sistemas/voxy:latest
     container_name: voxy_api
     restart: unless-stopped
-    ports:
-      - "8080:3000"
+    # Removemos o "ports" público para forçar o acesso apenas via Nginx
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://voxy_redis:6379
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - LIVEKIT_URL=ws://voxy_livekit:7880
+      # A URL agora será a pública HTTPS, e não o container interno
+      - LIVEKIT_URL=https://livekit.atev.com.br
       - NODE_ENV=production
     depends_on:
       redis:
@@ -34,11 +34,24 @@ services:
     container_name: voxy_livekit
     restart: unless-stopped
     ports:
-      - "7880:7880"
-      - "7881:7881"
+      # O WebRTC UDP precisa ser exposto publicamente para o streaming de vídeo funcionar
       - "7882:7882/udp"
     environment:
       - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+
+  nginx:
+    image: nginx:alpine
+    container_name: voxy_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - livekit
 
 volumes:
   redis_data:
