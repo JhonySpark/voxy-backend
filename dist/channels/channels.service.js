@@ -103,7 +103,9 @@ let ChannelsService = class ChannelsService {
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
-        const at = new AccessToken('devkey', 'secret', {
+        const apiKey = process.env.LIVEKIT_API_KEY || 'devkey';
+        const apiSecret = process.env.LIVEKIT_API_SECRET || 'secret';
+        const at = new AccessToken(apiKey, apiSecret, {
             identity: user.sub,
             name: user.username,
         });

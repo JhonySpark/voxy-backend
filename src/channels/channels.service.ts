@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AccessToken } from 'livekit-server-sdk';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -6,15 +10,20 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class ChannelsService {
   constructor(private prisma: PrismaService) {}
 
-  async createChannel(serverId: string, userId: string, name: string, type: 'TEXT' | 'VOICE' = 'TEXT') {
+  async createChannel(
+    serverId: string,
+    userId: string,
+    name: string,
+    type: 'TEXT' | 'VOICE' = 'TEXT',
+  ) {
     // Optimized: Only check if the specific user is an OWNER of this server
     const member = await this.prisma.serverMember.findUnique({
       where: {
         serverId_userId: {
           serverId,
-          userId
-        }
-      }
+          userId,
+        },
+      },
     });
 
     if (!member || member.role !== 'OWNER') {
@@ -25,16 +34,16 @@ export class ChannelsService {
       data: {
         name,
         type,
-        serverId
-      }
+        serverId,
+      },
     });
   }
 
   async getChannelMessages(channelId: string, userId: string) {
     const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId }
+      where: { id: channelId },
     });
-    
+
     if (!channel) throw new NotFoundException('Channel not found');
 
     // Check membership efficiently
@@ -42,9 +51,9 @@ export class ChannelsService {
       where: {
         serverId_userId: {
           serverId: channel.serverId,
-          userId
-        }
-      }
+          userId,
+        },
+      },
     });
 
     if (!isMember) {
@@ -54,15 +63,19 @@ export class ChannelsService {
     return this.prisma.channelMessage.findMany({
       where: { channelId },
       orderBy: { createdAt: 'asc' },
-      include: { sender: true }
+      include: { sender: true },
     });
   }
 
-  async saveChannelMessage(channelId: string, senderId: string, content: string) {
+  async saveChannelMessage(
+    channelId: string,
+    senderId: string,
+    content: string,
+  ) {
     const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId }
+      where: { id: channelId },
     });
-    
+
     if (!channel) throw new NotFoundException('Channel not found');
 
     // Security check: Make sure sender is actually in the server!
@@ -70,9 +83,9 @@ export class ChannelsService {
       where: {
         serverId_userId: {
           serverId: channel.serverId,
-          userId: senderId
-        }
-      }
+          userId: senderId,
+        },
+      },
     });
 
     if (!isMember) {
@@ -83,28 +96,28 @@ export class ChannelsService {
       data: {
         content,
         senderId,
-        channelId
+        channelId,
       },
       include: {
-        sender: true
-      }
+        sender: true,
+      },
     });
   }
 
   async getVoiceToken(channelId: string, user: any) {
     const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId }
+      where: { id: channelId },
     });
-    
+
     if (!channel) throw new NotFoundException('Channel not found');
 
     const isMember = await this.prisma.serverMember.findUnique({
       where: {
         serverId_userId: {
           serverId: channel.serverId,
-          userId: user.sub
-        }
-      }
+          userId: user.sub,
+        },
+      },
     });
 
     if (!isMember) {
@@ -117,9 +130,9 @@ export class ChannelsService {
       identity: user.sub,
       name: user.username,
     });
-    
+
     at.addGrant({ roomJoin: true, room: channelId });
-    
+
     return { token: await at.toJwt() };
   }
 }
