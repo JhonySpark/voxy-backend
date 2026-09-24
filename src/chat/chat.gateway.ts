@@ -49,6 +49,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     if (client.data.user) {
       this.connectedUsers.delete(client.data.user.sub);
+      
+      // Cleanup voice states on sudden disconnect
+      for (const [channelId, participants] of this.voiceStates.entries()) {
+        if (participants.has(client.id)) {
+          const user = participants.get(client.id);
+          const serverId = user?.serverId;
+          participants.delete(client.id);
+          
+          if (serverId) {
+            this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
+              channelId,
+              participants: Array.from(participants.values())
+            });
+          }
+        }
+      }
     }
   }
 
@@ -96,7 +112,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private voiceStates = new Map<string, Map<string, { userId: string, username: string, socketId: string }>>(); // channelId -> map of socketId -> user
+  private voiceStates = new Map<string, Map<string, { userId: string, username: string, socketId: string, serverId: string, isMuted: boolean }>>(); // channelId -> map of socketId -> user
 
   @SubscribeMessage('joinServer')
   handleJoinServer(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
@@ -114,6 +130,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(data.targetId).emit('friendActionUpdate');
   }
 
+  @SubscribeMessage('channelCreated')
+  handleChannelCreated(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
+    this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+  }
+
   // WebRTC Signaling
   @SubscribeMessage('joinVoice')
   handleJoinVoice(@MessageBody() data: { serverId: string, channelId: string }, @ConnectedSocket() client: Socket) {
@@ -122,7 +143,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!this.voiceStates.has(data.channelId)) {
       this.voiceStates.set(data.channelId, new Map());
     }
-    this.voiceStates.get(data.channelId)!.set(client.id, { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+    const participants = this.voiceStates.get(data.channelId)!;
+    
+    // Prevent duplicate instances of the same user
+    for (const [socketId, user] of participants.entries()) {
+      if (user.userId === client.data.user.sub && socketId !== client.id) {
+        participants.delete(socketId);
+      }
+    }
+
+    participants.set(client.id, { 
+      userId: client.data.user.sub, 
+      username: client.data.user.username, 
+      socketId: client.id,
+      serverId: data.serverId,
+      isMuted: false
+    });
 
     // Notify users in the voice room (for WebRTC)
     client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
@@ -130,7 +166,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Notify EVERYONE in the server about the voice state update
     this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
       channelId: data.channelId,
-      participants: Array.from(this.voiceStates.get(data.channelId)!.values())
+      participants: Array.from(participants.values())
     });
   }
 
@@ -148,6 +184,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       channelId: data.channelId,
       participants: Array.from(this.voiceStates.get(data.channelId)?.values() || [])
     });
+  }
+
+  @SubscribeMessage('updateVoiceMute')
+  handleUpdateVoiceMute(@MessageBody() data: { serverId: string, channelId: string, isMuted: boolean }, @ConnectedSocket() client: Socket) {
+    const channelState = this.voiceStates.get(data.channelId);
+    if (channelState && channelState.has(client.id)) {
+      const user = channelState.get(client.id)!;
+      user.isMuted = data.isMuted;
+      
+      this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
+        channelId: data.channelId,
+        participants: Array.from(channelState.values())
+      });
+    }
   }
 
   @SubscribeMessage('webrtcSignal')
