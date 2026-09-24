@@ -33,15 +33,16 @@ services:
     image: livekit/livekit-server:latest
     container_name: voxy_livekit
     restart: unless-stopped
-    command: --config /etc/livekit.yaml --node-ip 167.233.22.25 --keys ${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}
     ports:
       # O WebRTC UDP precisa ser exposto publicamente para o streaming de vídeo funcionar
       - "7882:7882/udp"
       - "7881:7881/tcp"
     environment:
       - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
-    volumes:
-      - ./docker/livekit/livekit.yaml:/etc/livekit.yaml:ro
+      - "LIVEKIT_RTC_UDP_PORT=7882"
+      - "LIVEKIT_RTC_TCP_PORT=7881"
+      - "LIVEKIT_RTC_USE_EXTERNAL_IP=true"
+      - "LIVEKIT_NODE_IP=167.233.22.25"
 
   nginx:
     image: nginx:alpine
