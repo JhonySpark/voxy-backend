@@ -38,11 +38,11 @@ services:
       - "7882:7882/udp"
       - "7881:7881/tcp"
     environment:
-      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
-      - "LIVEKIT_RTC_UDP_PORT=7882"
-      - "LIVEKIT_RTC_TCP_PORT=7881"
-      - "LIVEKIT_RTC_USE_EXTERNAL_IP=true"
-      - "LIVEKIT_NODE_IP=167.233.22.25"
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      LIVEKIT_RTC_UDP_PORT: "7882"
+      LIVEKIT_RTC_TCP_PORT: "7881"
+      LIVEKIT_RTC_USE_EXTERNAL_IP: "true"
+      LIVEKIT_NODE_IP: "167.233.22.25"
 
   nginx:
     image: nginx:alpine
