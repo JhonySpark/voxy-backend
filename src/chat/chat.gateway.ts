@@ -57,10 +57,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           const serverId = user?.serverId;
           participants.delete(client.id);
           
+          if (participants.size === 0) {
+            this.voiceStates.delete(channelId);
+            this.channelStartTimes.delete(channelId);
+          }
+          
           if (serverId) {
             this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
               channelId,
-              participants: Array.from(participants.values())
+              participants: Array.from(participants.values()),
+              startedAt: this.channelStartTimes.get(channelId)
             });
           }
         }
@@ -113,6 +119,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private voiceStates = new Map<string, Map<string, { userId: string, username: string, socketId: string, serverId: string, isMuted: boolean }>>(); // channelId -> map of socketId -> user
+  private channelStartTimes = new Map<string, number>(); // channelId -> timestamp
 
   @SubscribeMessage('joinServer')
   handleJoinServer(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
@@ -142,6 +149,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     if (!this.voiceStates.has(data.channelId)) {
       this.voiceStates.set(data.channelId, new Map());
+      this.channelStartTimes.set(data.channelId, Date.now());
     }
     const participants = this.voiceStates.get(data.channelId)!;
     
@@ -166,7 +174,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Notify EVERYONE in the server about the voice state update
     this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
       channelId: data.channelId,
-      participants: Array.from(participants.values())
+      participants: Array.from(participants.values()),
+      startedAt: this.channelStartTimes.get(data.channelId)
     });
   }
 
@@ -176,13 +185,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     if (this.voiceStates.has(data.channelId)) {
       this.voiceStates.get(data.channelId)!.delete(client.id);
+      if (this.voiceStates.get(data.channelId)!.size === 0) {
+        this.voiceStates.delete(data.channelId);
+        this.channelStartTimes.delete(data.channelId);
+      }
     }
 
     client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
     
     this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
       channelId: data.channelId,
-      participants: Array.from(this.voiceStates.get(data.channelId)?.values() || [])
+      participants: Array.from(this.voiceStates.get(data.channelId)?.values() || []),
+      startedAt: this.channelStartTimes.get(data.channelId)
     });
   }
 
@@ -195,7 +209,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       
       this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
         channelId: data.channelId,
-        participants: Array.from(channelState.values())
+        participants: Array.from(channelState.values()),
+        startedAt: this.channelStartTimes.get(data.channelId)
       });
     }
   }
