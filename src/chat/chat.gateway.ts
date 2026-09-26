@@ -124,7 +124,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('joinServer')
   handleJoinServer(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
     client.join(`server-${data.serverId}`);
-    // Send current voice states for this server's channels if needed, but it's simpler to let client request or just wait for updates.
+    
+    for (const [channelId, participantsMap] of this.voiceStates.entries()) {
+      const participants = Array.from(participantsMap.values());
+      if (participants.length > 0 && participants[0].serverId === data.serverId) {
+        client.emit('serverVoiceUpdate', {
+          channelId,
+          participants,
+          startedAt: this.channelStartTimes.get(channelId)
+        });
+      }
+    }
   }
 
   @SubscribeMessage('leaveServer')
