@@ -85,7 +85,8 @@ jobs:
             LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}
             EOF
             
-            docker compose -f docker-compose.prod.yml pull api
+            docker compose -f docker-compose.prod.yml config --quiet
+            docker compose -f docker-compose.prod.yml pull api livekit
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker compose -f docker-compose.prod.yml restart nginx
             
