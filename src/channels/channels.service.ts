@@ -2,13 +2,24 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
-import { AccessToken } from 'livekit-server-sdk';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { CHANNEL_REPOSITORY } from '../core/ports/repositories/channel.repository.port.js';
+import type { IChannelRepository } from '../core/ports/repositories/channel.repository.port.js';
+import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
+import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
+import { VOICE_ENGINE_PORT } from '../core/ports/voice-engine.port.js';
+import type { IVoiceEnginePort } from '../core/ports/voice-engine.port.js';
+import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
+import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
 
 @Injectable()
 export class ChannelsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(CHANNEL_REPOSITORY) private readonly channelRepo: IChannelRepository,
+    @Inject(SERVER_REPOSITORY) private readonly serverRepo: IServerRepository,
+    @Inject(VOICE_ENGINE_PORT) private readonly voiceEngine: IVoiceEnginePort,
+  ) {}
 
   async createChannel(
     serverId: string,
@@ -16,55 +27,42 @@ export class ChannelsService {
     name: string,
     type: 'TEXT' | 'VOICE' = 'TEXT',
   ) {
-    // Optimized: Only check if the specific user is an OWNER of this server
-    const member = await this.prisma.serverMember.findUnique({
-      where: {
-        serverId_userId: {
-          serverId,
-          userId,
-        },
-      },
-    });
-
-    if (!member || member.role !== 'OWNER') {
+    const role = await this.serverRepo.getMemberRole(serverId, userId);
+    if (!role || role !== 'OWNER') {
       throw new ForbiddenException('Only the owner can create channels');
     }
 
-    return this.prisma.channel.create({
-      data: {
-        name,
-        type,
-        serverId,
-      },
+    const channelOrError = Channel.create({
+      name,
+      type: ChannelType.create(type).getValue(),
+      serverId,
     });
+
+    if (channelOrError.isFailure) {
+      throw new ForbiddenException(channelOrError.error);
+    }
+
+    const channel = channelOrError.getValue();
+    const created = await this.channelRepo.create(channel);
+
+    return {
+      id: created.id,
+      name: created.name,
+      type: created.type.value,
+      serverId: created.serverId,
+    };
   }
 
   async getChannelMessages(channelId: string, userId: string) {
-    const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId },
-    });
-
+    const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
 
-    // Check membership efficiently
-    const isMember = await this.prisma.serverMember.findUnique({
-      where: {
-        serverId_userId: {
-          serverId: channel.serverId,
-          userId,
-        },
-      },
-    });
-
+    const isMember = await this.serverRepo.isMember(channel.serverId, userId);
     if (!isMember) {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    return this.prisma.channelMessage.findMany({
-      where: { channelId },
-      orderBy: { createdAt: 'asc' },
-      include: { sender: true },
-    });
+    return this.channelRepo.getMessages(channelId);
   }
 
   async saveChannelMessage(
@@ -72,67 +70,32 @@ export class ChannelsService {
     senderId: string,
     content: string,
   ) {
-    const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId },
-    });
-
+    const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
 
-    // Security check: Make sure sender is actually in the server!
-    const isMember = await this.prisma.serverMember.findUnique({
-      where: {
-        serverId_userId: {
-          serverId: channel.serverId,
-          userId: senderId,
-        },
-      },
-    });
-
+    const isMember = await this.serverRepo.isMember(channel.serverId, senderId);
     if (!isMember) {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    return this.prisma.channelMessage.create({
-      data: {
-        content,
-        senderId,
-        channelId,
-      },
-      include: {
-        sender: true,
-      },
-    });
+    return this.channelRepo.saveMessage(channelId, senderId, content);
   }
 
-  async getVoiceToken(channelId: string, user: any) {
-    const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId },
-    });
-
+  async getVoiceToken(channelId: string, user: { sub: string; username: string }) {
+    const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
 
-    const isMember = await this.prisma.serverMember.findUnique({
-      where: {
-        serverId_userId: {
-          serverId: channel.serverId,
-          userId: user.sub,
-        },
-      },
-    });
-
+    const isMember = await this.serverRepo.isMember(channel.serverId, user.sub);
     if (!isMember) {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    const apiKey = process.env.LIVEKIT_API_KEY || 'devkey';
-    const apiSecret = process.env.LIVEKIT_API_SECRET || 'secret';
-    const at = new AccessToken(apiKey, apiSecret, {
-      identity: user.sub,
-      name: user.username,
+    const token = await this.voiceEngine.generateAccessToken({
+      roomName: channelId,
+      participantId: user.sub,
+      participantName: user.username,
     });
 
-    at.addGrant({ roomJoin: true, room: channelId });
-
-    return { token: await at.toJwt() };
+    return { token };
   }
 }

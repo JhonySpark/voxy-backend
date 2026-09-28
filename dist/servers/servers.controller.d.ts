@@ -3,87 +3,73 @@ export declare class ServersController {
     private readonly serversService;
     constructor(serversService: ServersService);
     createServer(req: any, name: string): Promise<{
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
-        }[];
-    } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
+        }[];
     }>;
-    getUserServers(req: any): Promise<({
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
-        }[];
-    } & {
+    getUserServers(req: any): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
-    })[]>;
-    getServerById(req: any, id: string): Promise<({
-        members: ({
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+    }[]>;
+    getServerById(req: any, id: string): Promise<{
+        id: string;
+        name: string;
+        ownerId: string;
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
             user: {
                 id: string;
                 username: string;
             };
-        } & {
-            id: string;
-            createdAt: Date;
-            userId: string;
-            role: string;
-            serverId: string;
-        })[];
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
         }[];
-    } & {
+    }>;
+    joinServer(req: any, inviteCode: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
-    }) | null>;
-    joinServer(req: any, inviteCode: string): Promise<({
-        members: ({
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
             user: {
                 id: string;
                 username: string;
             };
-        } & {
-            id: string;
-            createdAt: Date;
-            userId: string;
-            role: string;
-            serverId: string;
-        })[];
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
         }[];
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        ownerId: string;
-    }) | null>;
+    }>;
 }

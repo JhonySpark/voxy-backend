@@ -15,23 +15,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleMessage(data: {
         receiverId: string;
         content: string;
-    }, client: Socket): Promise<{
-        sender: {
-            id: string;
-            username: string;
-            email: string;
-            password: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        content: string;
-        receiverId: string;
-        senderId: string;
-    }>;
+    }, client: Socket): Promise<any>;
     handleJoinChannel(data: {
         channelId: string;
     }, client: Socket): void;
@@ -41,25 +25,9 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleChannelMessage(data: {
         channelId: string;
         content: string;
-    }, client: Socket): Promise<({
-        sender: {
-            id: string;
-            username: string;
-            email: string;
-            password: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        content: string;
-        senderId: string;
-        channelId: string;
-    }) | {
-        error: string;
-    }>;
+    }, client: Socket): Promise<any>;
     private voiceStates;
+    private channelStartTimes;
     handleJoinServer(data: {
         serverId: string;
     }, client: Socket): void;
@@ -69,6 +37,9 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleFriendAction(data: {
         targetId: string;
     }, client: Socket): void;
+    handleChannelCreated(data: {
+        serverId: string;
+    }, client: Socket): void;
     handleJoinVoice(data: {
         serverId: string;
         channelId: string;
@@ -76,6 +47,11 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleLeaveVoice(data: {
         serverId: string;
         channelId: string;
+    }, client: Socket): void;
+    handleUpdateVoiceMute(data: {
+        serverId: string;
+        channelId: string;
+        isMuted: boolean;
     }, client: Socket): void;
     handleWebrtcSignal(data: {
         to: string;

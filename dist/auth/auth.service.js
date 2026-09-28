@@ -7,20 +7,25 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable, BadRequestException } from '@nestjs/common';
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
+import { TOKEN_SERVICE_PORT } from '../core/ports/security/token-service.port.js';
 let AuthService = class AuthService {
     usersService;
-    jwtService;
-    constructor(usersService, jwtService) {
+    tokenService;
+    passwordHasher;
+    constructor(usersService, tokenService, passwordHasher) {
         this.usersService = usersService;
-        this.jwtService = jwtService;
+        this.tokenService = tokenService;
+        this.passwordHasher = passwordHasher;
     }
     async validateUser(email, pass) {
         const user = await this.usersService.findByEmail(email);
-        if (user && (await bcrypt.compare(pass, user.password))) {
+        if (user && (await this.passwordHasher.compare(pass, user.password))) {
             const { password, ...result } = user;
             return result;
         }
@@ -29,7 +34,7 @@ let AuthService = class AuthService {
     async login(user) {
         const payload = { username: user.username, sub: user.id };
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: this.tokenService.sign(payload),
         };
     }
     async register(data) {
@@ -37,7 +42,7 @@ let AuthService = class AuthService {
         if (userExists) {
             throw new BadRequestException('User already exists');
         }
-        const hashedPassword = await bcrypt.hash(data.password, 10);
+        const hashedPassword = await this.passwordHasher.hash(data.password || '');
         const user = await this.usersService.create({
             ...data,
             password: hashedPassword,
@@ -48,8 +53,9 @@ let AuthService = class AuthService {
 };
 AuthService = __decorate([
     Injectable(),
-    __metadata("design:paramtypes", [UsersService,
-        JwtService])
+    __param(1, Inject(TOKEN_SERVICE_PORT)),
+    __param(2, Inject(PASSWORD_HASHER_PORT)),
+    __metadata("design:paramtypes", [UsersService, Object, Object])
 ], AuthService);
 export { AuthService };
 //# sourceMappingURL=auth.service.js.map

@@ -7,79 +7,61 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { FRIENDSHIP_REPOSITORY } from '../core/ports/repositories/friendship.repository.port.js';
+import { Friendship } from '../modules/friends/domain/entities/friendship.entity.js';
 let FriendsService = class FriendsService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    friendshipRepo;
+    constructor(friendshipRepo) {
+        this.friendshipRepo = friendshipRepo;
     }
     async sendFriendRequest(userId, friendId) {
         if (userId === friendId) {
             throw new BadRequestException('Cannot add yourself');
         }
-        const existing = await this.prisma.friendship.findUnique({
-            where: {
-                userId_friendId: { userId, friendId }
-            }
-        });
+        const existing = await this.friendshipRepo.findFriendship(userId, friendId);
         if (existing) {
             throw new BadRequestException('Friend request already sent');
         }
-        return this.prisma.friendship.create({
-            data: {
-                userId,
-                friendId,
-                status: 'PENDING'
-            }
-        });
+        const friendship = Friendship.create({
+            userId,
+            friendId,
+            status: 'PENDING',
+        }).getValue();
+        const created = await this.friendshipRepo.create(friendship);
+        return {
+            id: created.id,
+            userId: created.userId,
+            friendId: created.friendId,
+            status: created.status,
+        };
     }
     async acceptFriendRequest(userId, friendId) {
-        return this.prisma.friendship.update({
-            where: {
-                userId_friendId: { userId: friendId, friendId: userId }
-            },
-            data: {
-                status: 'ACCEPTED'
-            }
-        });
+        await this.friendshipRepo.updateStatus(friendId, userId, 'ACCEPTED');
+        return {
+            status: 'ACCEPTED',
+        };
     }
     async rejectFriendRequest(userId, friendId) {
-        return this.prisma.friendship.delete({
-            where: {
-                userId_friendId: { userId: friendId, friendId: userId }
-            }
-        });
+        await this.friendshipRepo.delete(friendId, userId);
+        return {
+            success: true,
+        };
     }
     async getFriends(userId) {
-        const friendships = await this.prisma.friendship.findMany({
-            where: {
-                OR: [
-                    { userId, status: 'ACCEPTED' },
-                    { friendId: userId, status: 'ACCEPTED' }
-                ]
-            },
-            include: {
-                user: true,
-                friend: true
-            }
-        });
-        return friendships.map((f) => f.userId === userId ? f.friend : f.user);
+        return this.friendshipRepo.findFriends(userId);
     }
     async getPendingRequests(userId) {
-        const requests = await this.prisma.friendship.findMany({
-            where: {
-                friendId: userId,
-                status: 'PENDING'
-            },
-            include: { user: true }
-        });
-        return requests.map((r) => r.user);
+        return this.friendshipRepo.findPendingRequests(userId);
     }
 };
 FriendsService = __decorate([
     Injectable(),
-    __metadata("design:paramtypes", [PrismaService])
+    __param(0, Inject(FRIENDSHIP_REPOSITORY)),
+    __metadata("design:paramtypes", [Object])
 ], FriendsService);
 export { FriendsService };
 //# sourceMappingURL=friends.service.js.map

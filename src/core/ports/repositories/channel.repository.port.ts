@@ -1,0 +1,11 @@
+import { Channel } from '../../../modules/servers/domain/entities/channel.entity.js';
+
+export interface IChannelRepository {
+  create(channel: Channel): Promise<Channel>;
+  findById(id: string): Promise<Channel | null>;
+  findServerChannels(serverId: string): Promise<Channel[]>;
+  saveMessage(channelId: string, senderId: string, content: string): Promise<any>;
+  getMessages(channelId: string): Promise<any[]>;
+}
+
+export const CHANNEL_REPOSITORY = Symbol('CHANNEL_REPOSITORY');

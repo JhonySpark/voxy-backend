@@ -10,7 +10,5 @@ export declare class AuthController {
         id: string;
         username: string;
         email: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
 }

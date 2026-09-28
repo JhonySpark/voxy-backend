@@ -1,24 +1,43 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { USER_REPOSITORY, IUserRepository } from '../core/ports/repositories/user.repository.port.js';
+import { User } from '../modules/identity/domain/entities/user.entity.js';
+import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
+import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let prisma: { user: { create: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn> } };
+  let userRepo: {
+    create: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
+    findByEmail: ReturnType<typeof vi.fn>;
+    findByUsername: ReturnType<typeof vi.fn>;
+  };
+
+  const createMockDomainUser = (id: string, username: string, email: string, password = 'hashedPassword') => {
+    return User.create(
+      {
+        username: Username.create(username).getValue(),
+        email: Email.create(email).getValue(),
+        password,
+      },
+      id
+    ).getValue();
+  };
 
   beforeEach(async () => {
-    prisma = {
-      user: {
-        create: vi.fn(),
-        findUnique: vi.fn(),
-      },
+    userRepo = {
+      create: vi.fn(),
+      findById: vi.fn(),
+      findByEmail: vi.fn(),
+      findByUsername: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        { provide: PrismaService, useValue: prisma },
+        { provide: USER_REPOSITORY, useValue: userRepo },
       ],
     }).compile();
 
@@ -30,51 +49,92 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create a user in prisma', async () => {
-      const input = { username: 'test', email: 'test@example.com', password: 'hash' };
-      const expected = { id: 'u1', ...input };
-      prisma.user.create.mockResolvedValue(expected);
+    it('should create a user via user repository port', async () => {
+      const input = { username: 'testuser', email: 'test@example.com', password: 'hash' };
+      const domainUser = createMockDomainUser('u1', input.username, input.email, input.password);
+      userRepo.create.mockResolvedValue(domainUser);
 
       const result = await service.create(input);
 
-      expect(prisma.user.create).toHaveBeenCalledWith({ data: input });
-      expect(result).toEqual(expected);
+      expect(userRepo.create).toHaveBeenCalled();
+      expect(result).toEqual({
+        id: 'u1',
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'hash',
+      });
     });
   });
 
   describe('findByUsername', () => {
     it('should find user by username', async () => {
-      const expected = { id: 'u1', username: 'john' };
-      prisma.user.findUnique.mockResolvedValue(expected);
+      const domainUser = createMockDomainUser('u1', 'john', 'john@example.com');
+      userRepo.findByUsername.mockResolvedValue(domainUser);
 
       const result = await service.findByUsername('john');
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { username: 'john' } });
-      expect(result).toEqual(expected);
+      expect(userRepo.findByUsername).toHaveBeenCalledWith('john');
+      expect(result).toEqual({
+        id: 'u1',
+        username: 'john',
+        email: 'john@example.com',
+        password: 'hashedPassword',
+      });
+    });
+
+    it('should return null if user not found by username', async () => {
+      userRepo.findByUsername.mockResolvedValue(null);
+
+      const result = await service.findByUsername('ghost');
+      expect(result).toBeNull();
     });
   });
 
   describe('findByEmail', () => {
     it('should find user by email', async () => {
-      const expected = { id: 'u1', email: 'john@example.com' };
-      prisma.user.findUnique.mockResolvedValue(expected);
+      const domainUser = createMockDomainUser('u1', 'john', 'john@example.com');
+      userRepo.findByEmail.mockResolvedValue(domainUser);
 
       const result = await service.findByEmail('john@example.com');
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'john@example.com' } });
-      expect(result).toEqual(expected);
+      expect(userRepo.findByEmail).toHaveBeenCalledWith('john@example.com');
+      expect(result).toEqual({
+        id: 'u1',
+        username: 'john',
+        email: 'john@example.com',
+        password: 'hashedPassword',
+      });
+    });
+
+    it('should return null if user not found by email', async () => {
+      userRepo.findByEmail.mockResolvedValue(null);
+
+      const result = await service.findByEmail('notfound@example.com');
+      expect(result).toBeNull();
     });
   });
 
   describe('findById', () => {
     it('should find user by id', async () => {
-      const expected = { id: 'u1', username: 'john' };
-      prisma.user.findUnique.mockResolvedValue(expected);
+      const domainUser = createMockDomainUser('u1', 'john', 'john@example.com');
+      userRepo.findById.mockResolvedValue(domainUser);
 
       const result = await service.findById('u1');
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' } });
-      expect(result).toEqual(expected);
+      expect(userRepo.findById).toHaveBeenCalledWith('u1');
+      expect(result).toEqual({
+        id: 'u1',
+        username: 'john',
+        email: 'john@example.com',
+        password: 'hashedPassword',
+      });
+    });
+
+    it('should return null if user not found by id', async () => {
+      userRepo.findById.mockResolvedValue(null);
+
+      const result = await service.findById('u999');
+      expect(result).toBeNull();
     });
   });
 });

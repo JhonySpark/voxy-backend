@@ -1,37 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { Injectable, Inject } from '@nestjs/common';
+import { CHAT_REPOSITORY } from '../core/ports/repositories/chat.repository.port.js';
+import type { IChatRepository } from '../core/ports/repositories/chat.repository.port.js';
 
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(CHAT_REPOSITORY) private readonly chatRepo: IChatRepository,
+  ) {}
 
   async saveMessage(senderId: string, receiverId: string, content: string) {
-    return this.prisma.message.create({
-      data: {
-        senderId,
-        receiverId,
-        content,
-      },
-      include: {
-        sender: true,
-      }
-    });
+    return this.chatRepo.saveDirectMessage(senderId, receiverId, content);
   }
 
   async getMessagesBetweenUsers(userId1: string, userId2: string) {
-    return this.prisma.message.findMany({
-      where: {
-        OR: [
-          { senderId: userId1, receiverId: userId2 },
-          { senderId: userId2, receiverId: userId1 },
-        ],
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-      include: {
-        sender: true,
-      }
-    });
+    return this.chatRepo.getDirectMessages(userId1, userId2);
   }
 }

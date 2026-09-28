@@ -1,38 +1,33 @@
-import { PrismaService } from '../prisma/prisma.service.js';
-import { Prisma } from '@prisma/client';
+import type { IUserRepository } from '../core/ports/repositories/user.repository.port.js';
 export declare class UsersService {
-    private prisma;
-    constructor(prisma: PrismaService);
-    create(data: Prisma.UserCreateInput): Promise<{
+    private readonly userRepo;
+    constructor(userRepo: IUserRepository);
+    create(data: {
+        username: string;
+        email: string;
+        password?: string;
+    }): Promise<{
         id: string;
         username: string;
         email: string;
         password: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     findByUsername(username: string): Promise<{
         id: string;
         username: string;
         email: string;
         password: string;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     findByEmail(email: string): Promise<{
         id: string;
         username: string;
         email: string;
         password: string;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     findById(id: string): Promise<{
         id: string;
         username: string;
         email: string;
         password: string;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
 }

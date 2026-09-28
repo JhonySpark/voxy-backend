@@ -1,79 +1,58 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { FRIENDSHIP_REPOSITORY } from '../core/ports/repositories/friendship.repository.port.js';
+import type { IFriendshipRepository } from '../core/ports/repositories/friendship.repository.port.js';
+import { Friendship } from '../modules/friends/domain/entities/friendship.entity.js';
 
 @Injectable()
 export class FriendsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(FRIENDSHIP_REPOSITORY) private readonly friendshipRepo: IFriendshipRepository,
+  ) {}
 
   async sendFriendRequest(userId: string, friendId: string) {
     if (userId === friendId) {
       throw new BadRequestException('Cannot add yourself');
     }
-    
-    // Check if request already exists
-    const existing = await this.prisma.friendship.findUnique({
-      where: {
-        userId_friendId: { userId, friendId }
-      }
-    });
 
+    const existing = await this.friendshipRepo.findFriendship(userId, friendId);
     if (existing) {
       throw new BadRequestException('Friend request already sent');
     }
 
-    return this.prisma.friendship.create({
-      data: {
-        userId,
-        friendId,
-        status: 'PENDING'
-      }
-    });
+    const friendship = Friendship.create({
+      userId,
+      friendId,
+      status: 'PENDING',
+    }).getValue();
+
+    const created = await this.friendshipRepo.create(friendship);
+    return {
+      id: created.id,
+      userId: created.userId,
+      friendId: created.friendId,
+      status: created.status,
+    };
   }
 
   async acceptFriendRequest(userId: string, friendId: string) {
-    return this.prisma.friendship.update({
-      where: {
-        userId_friendId: { userId: friendId, friendId: userId }
-      },
-      data: {
-        status: 'ACCEPTED'
-      }
-    });
+    await this.friendshipRepo.updateStatus(friendId, userId, 'ACCEPTED');
+    return {
+      status: 'ACCEPTED',
+    };
   }
 
   async rejectFriendRequest(userId: string, friendId: string) {
-    return this.prisma.friendship.delete({
-      where: {
-        userId_friendId: { userId: friendId, friendId: userId }
-      }
-    });
+    await this.friendshipRepo.delete(friendId, userId);
+    return {
+      success: true,
+    };
   }
 
   async getFriends(userId: string) {
-    const friendships = await this.prisma.friendship.findMany({
-      where: {
-        OR: [
-          { userId, status: 'ACCEPTED' },
-          { friendId: userId, status: 'ACCEPTED' }
-        ]
-      },
-      include: {
-        user: true,
-        friend: true
-      }
-    });
-
-    return friendships.map((f: any) => f.userId === userId ? f.friend : f.user);
+    return this.friendshipRepo.findFriends(userId);
   }
 
   async getPendingRequests(userId: string) {
-    const requests = await this.prisma.friendship.findMany({
-      where: {
-        friendId: userId,
-        status: 'PENDING'
-      },
-      include: { user: true }
-    });
-    return requests.map((r: any) => r.user);
+    return this.friendshipRepo.findPendingRequests(userId);
   }
 }

@@ -7,12 +7,21 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { Module } from '@nestjs/common';
 import { FriendsService } from './friends.service.js';
 import { FriendsController } from './friends.controller.js';
+import { FRIENDSHIP_REPOSITORY } from '../core/ports/repositories/friendship.repository.port.js';
+import { PrismaFriendshipRepository } from '../infrastructure/adapters/repositories/prisma-friendship.repository.js';
 let FriendsModule = class FriendsModule {
 };
 FriendsModule = __decorate([
     Module({
-        providers: [FriendsService],
-        controllers: [FriendsController]
+        providers: [
+            FriendsService,
+            {
+                provide: FRIENDSHIP_REPOSITORY,
+                useClass: PrismaFriendshipRepository,
+            },
+        ],
+        controllers: [FriendsController],
+        exports: [FriendsService],
     })
 ], FriendsModule);
 export { FriendsModule };

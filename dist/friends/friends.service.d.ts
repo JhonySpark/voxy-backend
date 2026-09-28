@@ -1,27 +1,18 @@
-import { PrismaService } from '../prisma/prisma.service.js';
+import type { IFriendshipRepository } from '../core/ports/repositories/friendship.repository.port.js';
 export declare class FriendsService {
-    private prisma;
-    constructor(prisma: PrismaService);
+    private readonly friendshipRepo;
+    constructor(friendshipRepo: IFriendshipRepository);
     sendFriendRequest(userId: string, friendId: string): Promise<{
         id: string;
-        createdAt: Date;
-        status: string;
-        friendId: string;
         userId: string;
+        friendId: string;
+        status: import("../modules/friends/domain/entities/friendship.entity.js").FriendshipStatusType;
     }>;
     acceptFriendRequest(userId: string, friendId: string): Promise<{
-        id: string;
-        createdAt: Date;
         status: string;
-        friendId: string;
-        userId: string;
     }>;
     rejectFriendRequest(userId: string, friendId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        status: string;
-        friendId: string;
-        userId: string;
+        success: boolean;
     }>;
     getFriends(userId: string): Promise<any[]>;
     getPendingRequests(userId: string): Promise<any[]>;

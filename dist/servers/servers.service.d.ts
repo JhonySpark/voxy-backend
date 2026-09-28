@@ -1,89 +1,75 @@
-import { PrismaService } from '../prisma/prisma.service.js';
+import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 export declare class ServersService {
-    private prisma;
-    constructor(prisma: PrismaService);
+    private readonly serverRepo;
+    constructor(serverRepo: IServerRepository);
     createServer(ownerId: string, name: string): Promise<{
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
-        }[];
-    } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
+        }[];
     }>;
-    getUserServers(userId: string): Promise<({
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
-        }[];
-    } & {
+    getUserServers(userId: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
-    })[]>;
-    getServerById(serverId: string, userId: string): Promise<({
-        members: ({
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+    }[]>;
+    getServerById(serverId: string, userId: string): Promise<{
+        id: string;
+        name: string;
+        ownerId: string;
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
             user: {
                 id: string;
                 username: string;
             };
-        } & {
-            id: string;
-            createdAt: Date;
-            userId: string;
-            role: string;
-            serverId: string;
-        })[];
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
         }[];
-    } & {
+    }>;
+    joinServer(serverId: string, userId: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         ownerId: string;
-    }) | null>;
-    joinServer(serverId: string, userId: string): Promise<({
-        members: ({
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
             user: {
                 id: string;
                 username: string;
             };
-        } & {
-            id: string;
-            createdAt: Date;
-            userId: string;
-            role: string;
-            serverId: string;
-        })[];
-        channels: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            serverId: string;
-            type: string;
         }[];
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        ownerId: string;
-    }) | null>;
+    }>;
 }

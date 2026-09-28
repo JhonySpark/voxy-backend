@@ -1,36 +1,39 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FriendsService } from './friends.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { FRIENDSHIP_REPOSITORY, IFriendshipRepository } from '../core/ports/repositories/friendship.repository.port.js';
 import { BadRequestException } from '@nestjs/common';
+import { Friendship } from '../modules/friends/domain/entities/friendship.entity.js';
 
 describe('FriendsService', () => {
   let service: FriendsService;
-  let prisma: {
-    friendship: {
-      findUnique: ReturnType<typeof vi.fn>;
-      create: ReturnType<typeof vi.fn>;
-      update: ReturnType<typeof vi.fn>;
-      delete: ReturnType<typeof vi.fn>;
-      findMany: ReturnType<typeof vi.fn>;
-    };
+  let friendshipRepo: {
+    findFriendship: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    updateStatus: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    findFriends: ReturnType<typeof vi.fn>;
+    findPendingRequests: ReturnType<typeof vi.fn>;
+  };
+
+  const createMockFriendship = (id: string, userId: string, friendId: string, status: 'PENDING' | 'ACCEPTED' = 'PENDING') => {
+    return Friendship.create({ userId, friendId, status }, id).getValue();
   };
 
   beforeEach(async () => {
-    prisma = {
-      friendship: {
-        findUnique: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-        findMany: vi.fn(),
-      },
+    friendshipRepo = {
+      findFriendship: vi.fn(),
+      create: vi.fn(),
+      updateStatus: vi.fn(),
+      delete: vi.fn(),
+      findFriends: vi.fn(),
+      findPendingRequests: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FriendsService,
-        { provide: PrismaService, useValue: prisma },
+        { provide: FRIENDSHIP_REPOSITORY, useValue: friendshipRepo },
       ],
     }).compile();
 
@@ -47,97 +50,75 @@ describe('FriendsService', () => {
     });
 
     it('should throw BadRequestException if request already exists', async () => {
-      prisma.friendship.findUnique.mockResolvedValue({ id: 'f1', status: 'PENDING' });
+      const existing = createMockFriendship('f1', 'u1', 'u2', 'PENDING');
+      friendshipRepo.findFriendship.mockResolvedValue(existing);
 
       await expect(service.sendFriendRequest('u1', 'u2')).rejects.toThrow(BadRequestException);
     });
 
     it('should create friendship with status PENDING', async () => {
-      prisma.friendship.findUnique.mockResolvedValue(null);
-      const mockFriendship = { id: 'f1', userId: 'u1', friendId: 'u2', status: 'PENDING' };
-      prisma.friendship.create.mockResolvedValue(mockFriendship);
+      friendshipRepo.findFriendship.mockResolvedValue(null);
+      const mockFriendship = createMockFriendship('f1', 'u1', 'u2', 'PENDING');
+      friendshipRepo.create.mockResolvedValue(mockFriendship);
 
       const result = await service.sendFriendRequest('u1', 'u2');
 
-      expect(prisma.friendship.create).toHaveBeenCalledWith({
-        data: {
-          userId: 'u1',
-          friendId: 'u2',
-          status: 'PENDING',
-        },
+      expect(friendshipRepo.create).toHaveBeenCalled();
+      expect(result).toEqual({
+        id: 'f1',
+        userId: 'u1',
+        friendId: 'u2',
+        status: 'PENDING',
       });
-      expect(result).toEqual(mockFriendship);
     });
   });
 
   describe('acceptFriendRequest', () => {
     it('should update status to ACCEPTED', async () => {
-      const mockAccepted = { id: 'f1', status: 'ACCEPTED' };
-      prisma.friendship.update.mockResolvedValue(mockAccepted);
+      friendshipRepo.updateStatus.mockResolvedValue(undefined);
 
       const result = await service.acceptFriendRequest('u1', 'u2');
 
-      expect(prisma.friendship.update).toHaveBeenCalledWith({
-        where: {
-          userId_friendId: { userId: 'u2', friendId: 'u1' },
-        },
-        data: {
-          status: 'ACCEPTED',
-        },
-      });
-      expect(result).toEqual(mockAccepted);
+      expect(friendshipRepo.updateStatus).toHaveBeenCalledWith('u2', 'u1', 'ACCEPTED');
+      expect(result).toEqual({ status: 'ACCEPTED' });
     });
   });
 
   describe('rejectFriendRequest', () => {
     it('should delete the friendship', async () => {
-      prisma.friendship.delete.mockResolvedValue({ id: 'f1' });
+      friendshipRepo.delete.mockResolvedValue(undefined);
 
       const result = await service.rejectFriendRequest('u1', 'u2');
 
-      expect(prisma.friendship.delete).toHaveBeenCalledWith({
-        where: {
-          userId_friendId: { userId: 'u2', friendId: 'u1' },
-        },
-      });
-      expect(result).toEqual({ id: 'f1' });
+      expect(friendshipRepo.delete).toHaveBeenCalledWith('u2', 'u1');
+      expect(result).toEqual({ success: true });
     });
   });
 
   describe('getFriends', () => {
-    it('should return friends mapping the other user', async () => {
-      const mockFriendships = [
-        { userId: 'u1', friendId: 'u2', user: { id: 'u1' }, friend: { id: 'u2', username: 'friendA' } },
-        { userId: 'u3', friendId: 'u1', user: { id: 'u3', username: 'friendB' }, friend: { id: 'u1' } },
+    it('should return friends list from repository', async () => {
+      const mockFriends = [
+        { id: 'u2', username: 'friendA' },
+        { id: 'u3', username: 'friendB' },
       ];
-      prisma.friendship.findMany.mockResolvedValue(mockFriendships);
+      friendshipRepo.findFriends.mockResolvedValue(mockFriends);
 
       const result = await service.getFriends('u1');
 
-      expect(result).toEqual([
-        { id: 'u2', username: 'friendA' },
-        { id: 'u3', username: 'friendB' },
-      ]);
+      expect(friendshipRepo.findFriends).toHaveBeenCalledWith('u1');
+      expect(result).toEqual(mockFriends);
     });
   });
 
   describe('getPendingRequests', () => {
-    it('should return pending requests users', async () => {
-      const mockRequests = [
-        { user: { id: 'u2', username: 'requester' } },
-      ];
-      prisma.friendship.findMany.mockResolvedValue(mockRequests);
+    it('should return pending requests users from repository', async () => {
+      const mockRequests = [{ id: 'u2', username: 'requester' }];
+      friendshipRepo.findPendingRequests.mockResolvedValue(mockRequests);
 
       const result = await service.getPendingRequests('u1');
 
-      expect(prisma.friendship.findMany).toHaveBeenCalledWith({
-        where: {
-          friendId: 'u1',
-          status: 'PENDING',
-        },
-        include: { user: true },
-      });
-      expect(result).toEqual([{ id: 'u2', username: 'requester' }]);
+      expect(friendshipRepo.findPendingRequests).toHaveBeenCalledWith('u1');
+      expect(result).toEqual(mockRequests);
     });
   });
 });

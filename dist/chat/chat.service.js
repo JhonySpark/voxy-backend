@@ -7,45 +7,27 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Injectable, Inject } from '@nestjs/common';
+import { CHAT_REPOSITORY } from '../core/ports/repositories/chat.repository.port.js';
 let ChatService = class ChatService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    chatRepo;
+    constructor(chatRepo) {
+        this.chatRepo = chatRepo;
     }
     async saveMessage(senderId, receiverId, content) {
-        return this.prisma.message.create({
-            data: {
-                senderId,
-                receiverId,
-                content,
-            },
-            include: {
-                sender: true,
-            }
-        });
+        return this.chatRepo.saveDirectMessage(senderId, receiverId, content);
     }
     async getMessagesBetweenUsers(userId1, userId2) {
-        return this.prisma.message.findMany({
-            where: {
-                OR: [
-                    { senderId: userId1, receiverId: userId2 },
-                    { senderId: userId2, receiverId: userId1 },
-                ],
-            },
-            orderBy: {
-                createdAt: 'asc',
-            },
-            include: {
-                sender: true,
-            }
-        });
+        return this.chatRepo.getDirectMessages(userId1, userId2);
     }
 };
 ChatService = __decorate([
     Injectable(),
-    __metadata("design:paramtypes", [PrismaService])
+    __param(0, Inject(CHAT_REPOSITORY)),
+    __metadata("design:paramtypes", [Object])
 ], ChatService);
 export { ChatService };
 //# sourceMappingURL=chat.service.js.map

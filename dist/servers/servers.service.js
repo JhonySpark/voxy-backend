@@ -7,97 +7,99 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Injectable, ForbiddenException, NotFoundException, Inject } from '@nestjs/common';
+import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
+import { Server } from '../modules/servers/domain/entities/server.entity.js';
 let ServersService = class ServersService {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    serverRepo;
+    constructor(serverRepo) {
+        this.serverRepo = serverRepo;
     }
     async createServer(ownerId, name) {
-        return this.prisma.server.create({
-            data: {
-                name,
-                ownerId,
-                members: {
-                    create: [{ userId: ownerId, role: 'OWNER' }]
-                },
-                channels: {
-                    create: [{ name: 'geral', type: 'TEXT' }, { name: 'Voz Geral', type: 'VOICE' }]
-                }
-            },
-            include: {
-                channels: true
-            }
-        });
+        const serverOrError = Server.create(name, ownerId);
+        if (serverOrError.isFailure) {
+            throw new ForbiddenException(serverOrError.error);
+        }
+        const server = serverOrError.getValue();
+        const created = await this.serverRepo.create(server);
+        return {
+            id: created.id,
+            name: created.name,
+            ownerId: created.ownerId,
+            channels: created.channels.map(c => ({
+                id: c.id,
+                name: c.name,
+                type: c.type.value,
+                serverId: c.serverId,
+            })),
+            members: created.members.map(m => ({
+                id: m.id,
+                userId: m.userId,
+                role: m.role.value,
+                serverId: m.serverId,
+            })),
+        };
     }
     async getUserServers(userId) {
-        return this.prisma.server.findMany({
-            where: {
-                members: {
-                    some: { userId }
-                }
-            },
-            include: {
-                channels: true
-            }
-        });
+        const servers = await this.serverRepo.findUserServers(userId);
+        return servers.map(s => ({
+            id: s.id,
+            name: s.name,
+            ownerId: s.ownerId,
+            channels: s.channels.map(c => ({
+                id: c.id,
+                name: c.name,
+                type: c.type.value,
+                serverId: c.serverId,
+            })),
+        }));
     }
     async getServerById(serverId, userId) {
-        const isMember = await this.prisma.serverMember.findUnique({
-            where: {
-                serverId_userId: {
-                    serverId,
-                    userId
-                }
-            }
-        });
+        const isMember = await this.serverRepo.isMember(serverId, userId);
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
-        const server = await this.prisma.server.findUnique({
-            where: { id: serverId },
-            include: {
-                channels: true,
-                members: {
-                    include: { user: { select: { id: true, username: true } } }
-                }
-            }
-        });
-        return server;
+        const server = await this.serverRepo.findById(serverId);
+        if (!server) {
+            throw new NotFoundException('Server not found');
+        }
+        return {
+            id: server.id,
+            name: server.name,
+            ownerId: server.ownerId,
+            channels: server.channels.map(c => ({
+                id: c.id,
+                name: c.name,
+                type: c.type.value,
+                serverId: c.serverId,
+            })),
+            members: server.members.map(m => ({
+                id: m.id,
+                userId: m.userId,
+                role: m.role.value,
+                serverId: m.serverId,
+                user: { id: m.userId, username: m.username || '' },
+            })),
+        };
     }
     async joinServer(serverId, userId) {
-        const server = await this.prisma.server.findUnique({
-            where: { id: serverId },
-            select: { id: true }
-        });
+        const server = await this.serverRepo.findById(serverId);
         if (!server)
             throw new NotFoundException('Server not found');
-        const isMember = await this.prisma.serverMember.findUnique({
-            where: {
-                serverId_userId: {
-                    serverId,
-                    userId
-                }
-            }
-        });
-        if (isMember) {
-            return this.getServerById(serverId, userId);
+        const isMember = await this.serverRepo.isMember(serverId, userId);
+        if (!isMember) {
+            await this.serverRepo.addMember(serverId, userId, 'MEMBER');
         }
-        await this.prisma.server.update({
-            where: { id: serverId },
-            data: {
-                members: {
-                    create: { userId, role: 'MEMBER' }
-                }
-            }
-        });
         return this.getServerById(serverId, userId);
     }
 };
 ServersService = __decorate([
     Injectable(),
-    __metadata("design:paramtypes", [PrismaService])
+    __param(0, Inject(SERVER_REPOSITORY)),
+    __metadata("design:paramtypes", [Object])
 ], ServersService);
 export { ServersService };
 //# sourceMappingURL=servers.service.js.map

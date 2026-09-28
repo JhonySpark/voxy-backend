@@ -9,13 +9,23 @@ import { ChatService } from './chat.service.js';
 import { ChatGateway } from './chat.gateway.js';
 import { ChatController } from './chat.controller.js';
 import { ChannelsModule } from '../channels/channels.module.js';
+import { CHAT_REPOSITORY } from '../core/ports/repositories/chat.repository.port.js';
+import { PrismaChatRepository } from '../infrastructure/adapters/repositories/prisma-chat.repository.js';
 let ChatModule = class ChatModule {
 };
 ChatModule = __decorate([
     Module({
         imports: [ChannelsModule],
         controllers: [ChatController],
-        providers: [ChatGateway, ChatService],
+        providers: [
+            ChatGateway,
+            ChatService,
+            {
+                provide: CHAT_REPOSITORY,
+                useClass: PrismaChatRepository,
+            },
+        ],
+        exports: [ChatService],
     })
 ], ChatModule);
 export { ChatModule };

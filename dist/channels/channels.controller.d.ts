@@ -4,27 +4,11 @@ export declare class ChannelsController {
     constructor(channelsService: ChannelsService);
     createChannel(req: any, serverId: string, name: string, type: 'TEXT' | 'VOICE'): Promise<{
         id: string;
-        createdAt: Date;
         name: string;
+        type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
         serverId: string;
-        type: string;
     }>;
-    getMessages(req: any, channelId: string): Promise<({
-        sender: {
-            id: string;
-            username: string;
-            email: string;
-            password: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        content: string;
-        senderId: string;
-        channelId: string;
-    })[]>;
+    getMessages(req: any, channelId: string): Promise<any[]>;
     getVoiceToken(req: any, channelId: string): Promise<{
         token: string;
     }>;

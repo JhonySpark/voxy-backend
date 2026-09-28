@@ -48,6 +48,24 @@ let ChatGateway = class ChatGateway {
     handleDisconnect(client) {
         if (client.data.user) {
             this.connectedUsers.delete(client.data.user.sub);
+            for (const [channelId, participants] of this.voiceStates.entries()) {
+                if (participants.has(client.id)) {
+                    const user = participants.get(client.id);
+                    const serverId = user?.serverId;
+                    participants.delete(client.id);
+                    if (participants.size === 0) {
+                        this.voiceStates.delete(channelId);
+                        this.channelStartTimes.delete(channelId);
+                    }
+                    if (serverId) {
+                        this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
+                            channelId,
+                            participants: Array.from(participants.values()),
+                            startedAt: this.channelStartTimes.get(channelId)
+                        });
+                    }
+                }
+            }
         }
     }
     async handleMessage(data, client) {
@@ -75,8 +93,19 @@ let ChatGateway = class ChatGateway {
         }
     }
     voiceStates = new Map();
+    channelStartTimes = new Map();
     handleJoinServer(data, client) {
         client.join(`server-${data.serverId}`);
+        for (const [channelId, participantsMap] of this.voiceStates.entries()) {
+            const participants = Array.from(participantsMap.values());
+            if (participants.length > 0 && participants[0].serverId === data.serverId) {
+                client.emit('serverVoiceUpdate', {
+                    channelId,
+                    participants,
+                    startedAt: this.channelStartTimes.get(channelId)
+                });
+            }
+        }
     }
     handleLeaveServer(data, client) {
         client.leave(`server-${data.serverId}`);
@@ -84,28 +113,62 @@ let ChatGateway = class ChatGateway {
     handleFriendAction(data, client) {
         this.server.to(data.targetId).emit('friendActionUpdate');
     }
+    handleChannelCreated(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+    }
     handleJoinVoice(data, client) {
         client.join(`voice-${data.channelId}`);
         if (!this.voiceStates.has(data.channelId)) {
             this.voiceStates.set(data.channelId, new Map());
+            this.channelStartTimes.set(data.channelId, Date.now());
         }
-        this.voiceStates.get(data.channelId).set(client.id, { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+        const participants = this.voiceStates.get(data.channelId);
+        for (const [socketId, user] of participants.entries()) {
+            if (user.userId === client.data.user.sub && socketId !== client.id) {
+                participants.delete(socketId);
+            }
+        }
+        participants.set(client.id, {
+            userId: client.data.user.sub,
+            username: client.data.user.username,
+            socketId: client.id,
+            serverId: data.serverId,
+            isMuted: false
+        });
         client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
         this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
             channelId: data.channelId,
-            participants: Array.from(this.voiceStates.get(data.channelId).values())
+            participants: Array.from(participants.values()),
+            startedAt: this.channelStartTimes.get(data.channelId)
         });
     }
     handleLeaveVoice(data, client) {
         client.leave(`voice-${data.channelId}`);
         if (this.voiceStates.has(data.channelId)) {
             this.voiceStates.get(data.channelId).delete(client.id);
+            if (this.voiceStates.get(data.channelId).size === 0) {
+                this.voiceStates.delete(data.channelId);
+                this.channelStartTimes.delete(data.channelId);
+            }
         }
         client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
         this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
             channelId: data.channelId,
-            participants: Array.from(this.voiceStates.get(data.channelId)?.values() || [])
+            participants: Array.from(this.voiceStates.get(data.channelId)?.values() || []),
+            startedAt: this.channelStartTimes.get(data.channelId)
         });
+    }
+    handleUpdateVoiceMute(data, client) {
+        const channelState = this.voiceStates.get(data.channelId);
+        if (channelState && channelState.has(client.id)) {
+            const user = channelState.get(client.id);
+            user.isMuted = data.isMuted;
+            this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
+                channelId: data.channelId,
+                participants: Array.from(channelState.values()),
+                startedAt: this.channelStartTimes.get(data.channelId)
+            });
+        }
     }
     handleWebrtcSignal(data, client) {
         this.server.to(data.to).emit('webrtcSignal', {
@@ -177,6 +240,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleFriendAction", null);
 __decorate([
+    SubscribeMessage('channelCreated'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleChannelCreated", null);
+__decorate([
     SubscribeMessage('joinVoice'),
     __param(0, MessageBody()),
     __param(1, ConnectedSocket()),
@@ -192,6 +263,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleLeaveVoice", null);
+__decorate([
+    SubscribeMessage('updateVoiceMute'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleUpdateVoiceMute", null);
 __decorate([
     SubscribeMessage('webrtcSignal'),
     __param(0, MessageBody()),

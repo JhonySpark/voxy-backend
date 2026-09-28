@@ -1,40 +1,39 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServersService } from './servers.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { SERVER_REPOSITORY, IServerRepository } from '../core/ports/repositories/server.repository.port.js';
+import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 describe('ServersService', () => {
   let service: ServersService;
-  let prisma: {
-    server: {
-      create: ReturnType<typeof vi.fn>;
-      findMany: ReturnType<typeof vi.fn>;
-      findUnique: ReturnType<typeof vi.fn>;
-      update: ReturnType<typeof vi.fn>;
-    };
-    serverMember: {
-      findUnique: ReturnType<typeof vi.fn>;
-    };
+  let serverRepo: {
+    create: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
+    findUserServers: ReturnType<typeof vi.fn>;
+    isMember: ReturnType<typeof vi.fn>;
+    getMemberRole: ReturnType<typeof vi.fn>;
+    addMember: ReturnType<typeof vi.fn>;
+  };
+
+  const createDomainServer = (id: string, name: string, ownerId: string) => {
+    return Server.create(name, ownerId, id).getValue();
   };
 
   beforeEach(async () => {
-    prisma = {
-      server: {
-        create: vi.fn(),
-        findMany: vi.fn(),
-        findUnique: vi.fn(),
-        update: vi.fn(),
-      },
-      serverMember: {
-        findUnique: vi.fn(),
-      },
+    serverRepo = {
+      create: vi.fn(),
+      findById: vi.fn(),
+      findUserServers: vi.fn(),
+      isMember: vi.fn(),
+      getMemberRole: vi.fn(),
+      addMember: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServersService,
-        { provide: PrismaService, useValue: prisma },
+        { provide: SERVER_REPOSITORY, useValue: serverRepo },
       ],
     }).compile();
 
@@ -47,130 +46,98 @@ describe('ServersService', () => {
 
   describe('createServer', () => {
     it('should create a server with owner member and default channels', async () => {
-      const mockCreated = { id: 's1', name: 'My Server', ownerId: 'u1', channels: [] };
-      prisma.server.create.mockResolvedValue(mockCreated);
+      const server = createDomainServer('s1', 'My Server', 'u1');
+      serverRepo.create.mockResolvedValue(server);
 
       const result = await service.createServer('u1', 'My Server');
 
-      expect(prisma.server.create).toHaveBeenCalledWith({
-        data: {
-          name: 'My Server',
-          ownerId: 'u1',
-          members: {
-            create: [{ userId: 'u1', role: 'OWNER' }],
-          },
-          channels: {
-            create: [
-              { name: 'geral', type: 'TEXT' },
-              { name: 'Voz Geral', type: 'VOICE' },
-            ],
-          },
-        },
-        include: {
-          channels: true,
-        },
-      });
-      expect(result).toEqual(mockCreated);
+      expect(serverRepo.create).toHaveBeenCalled();
+      expect(result.id).toBe('s1');
+      expect(result.name).toBe('My Server');
+      expect(result.ownerId).toBe('u1');
+      expect(result.channels).toHaveLength(2);
+      expect(result.members).toHaveLength(1);
+    });
+
+    it('should throw ForbiddenException if server name is invalid', async () => {
+      await expect(service.createServer('u1', '')).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('getUserServers', () => {
     it('should return all servers where user is a member', async () => {
-      const mockServers = [{ id: 's1', name: 'Server 1', channels: [] }];
-      prisma.server.findMany.mockResolvedValue(mockServers);
+      const server = createDomainServer('s1', 'Server 1', 'u1');
+      serverRepo.findUserServers.mockResolvedValue([server]);
 
       const result = await service.getUserServers('u1');
 
-      expect(prisma.server.findMany).toHaveBeenCalledWith({
-        where: {
-          members: {
-            some: { userId: 'u1' },
-          },
-        },
-        include: {
-          channels: true,
-        },
-      });
-      expect(result).toEqual(mockServers);
+      expect(serverRepo.findUserServers).toHaveBeenCalledWith('u1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('s1');
+      expect(result[0].name).toBe('Server 1');
     });
   });
 
   describe('getServerById', () => {
     it('should throw ForbiddenException if user is not a member', async () => {
-      prisma.serverMember.findUnique.mockResolvedValue(null);
+      serverRepo.isMember.mockResolvedValue(false);
 
       await expect(service.getServerById('s1', 'u1')).rejects.toThrow(ForbiddenException);
     });
 
+    it('should throw NotFoundException if server does not exist', async () => {
+      serverRepo.isMember.mockResolvedValue(true);
+      serverRepo.findById.mockResolvedValue(null);
+
+      await expect(service.getServerById('s1', 'u1')).rejects.toThrow(NotFoundException);
+    });
+
     it('should return the server if user is a member', async () => {
-      prisma.serverMember.findUnique.mockResolvedValue({ id: 'sm1', serverId: 's1', userId: 'u1' });
-      const mockServer = { id: 's1', name: 'Server 1', channels: [], members: [] };
-      prisma.server.findUnique.mockResolvedValue(mockServer);
+      serverRepo.isMember.mockResolvedValue(true);
+      const server = createDomainServer('s1', 'Server 1', 'u1');
+      serverRepo.findById.mockResolvedValue(server);
 
       const result = await service.getServerById('s1', 'u1');
 
-      expect(prisma.serverMember.findUnique).toHaveBeenCalledWith({
-        where: {
-          serverId_userId: { serverId: 's1', userId: 'u1' },
-        },
-      });
-      expect(prisma.server.findUnique).toHaveBeenCalledWith({
-        where: { id: 's1' },
-        include: {
-          channels: true,
-          members: {
-            include: { user: { select: { id: true, username: true } } },
-          },
-        },
-      });
-      expect(result).toEqual(mockServer);
+      expect(serverRepo.isMember).toHaveBeenCalledWith('s1', 'u1');
+      expect(serverRepo.findById).toHaveBeenCalledWith('s1');
+      expect(result.id).toBe('s1');
+      expect(result.name).toBe('Server 1');
+      expect(result.members).toBeDefined();
     });
   });
 
   describe('joinServer', () => {
     it('should throw NotFoundException if server does not exist', async () => {
-      prisma.server.findUnique.mockResolvedValue(null);
+      serverRepo.findById.mockResolvedValue(null);
 
       await expect(service.joinServer('invalid_id', 'u1')).rejects.toThrow(NotFoundException);
     });
 
     it('should return server without adding member if already a member', async () => {
-      prisma.server.findUnique.mockImplementation(({ where }) => {
-        if (where.id === 's1') return Promise.resolve({ id: 's1', name: 'Voxy' });
-        return Promise.resolve(null);
-      });
-      prisma.serverMember.findUnique.mockResolvedValue({ id: 'sm1', serverId: 's1', userId: 'u1' });
+      const server = createDomainServer('s1', 'Voxy', 'u_owner');
+      serverRepo.findById.mockResolvedValue(server);
+      serverRepo.isMember.mockResolvedValue(true);
 
       const result = await service.joinServer('s1', 'u1');
 
-      expect(prisma.server.update).not.toHaveBeenCalled();
-      expect(result).toBeDefined();
+      expect(serverRepo.addMember).not.toHaveBeenCalled();
+      expect(result.id).toBe('s1');
     });
 
     it('should add user as member and return server if not yet a member', async () => {
-      prisma.server.findUnique.mockImplementation(({ where }) => {
-        if (where.id === 's1') return Promise.resolve({ id: 's1', name: 'Voxy' });
-        return Promise.resolve(null);
-      });
-      // First check in joinServer: not member
-      // Second check in getServerById: is member
-      prisma.serverMember.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'sm2', serverId: 's1', userId: 'u2' });
-
-      prisma.server.update.mockResolvedValue({ id: 's1' });
+      const server = createDomainServer('s1', 'Voxy', 'u_owner');
+      serverRepo.findById.mockResolvedValue(server);
+      // First isMember check in joinServer returns false, second in getServerById returns true
+      serverRepo.isMember
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      serverRepo.addMember.mockResolvedValue(undefined);
 
       const result = await service.joinServer('s1', 'u2');
 
-      expect(prisma.server.update).toHaveBeenCalledWith({
-        where: { id: 's1' },
-        data: {
-          members: {
-            create: { userId: 'u2', role: 'MEMBER' },
-          },
-        },
-      });
-      expect(result).toBeDefined();
+      expect(serverRepo.addMember).toHaveBeenCalledWith('s1', 'u2', 'MEMBER');
+      expect(result.id).toBe('s1');
     });
   });
 });
