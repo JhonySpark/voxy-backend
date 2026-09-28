@@ -1,18 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { describe, it, expect, vi } from 'vitest';
 import { PrismaService } from './prisma.service.js';
 
+vi.mock('@prisma/client', () => {
+  return {
+    PrismaClient: class {
+      $connect = vi.fn();
+      $disconnect = vi.fn();
+    },
+  };
+});
+
+vi.mock('pg', () => ({
+  Pool: class {},
+}));
+
+vi.mock('@prisma/adapter-pg', () => ({
+  PrismaPg: class {},
+}));
+
 describe('PrismaService', () => {
-  let service: PrismaService;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [PrismaService],
-    }).compile();
-
-    service = module.get<PrismaService>(PrismaService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('should call $connect on onModuleInit', async () => {
+    const service = new PrismaService();
+    await service.onModuleInit();
+    expect(service.$connect).toHaveBeenCalled();
   });
 });
