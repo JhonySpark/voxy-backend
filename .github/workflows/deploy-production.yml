@@ -91,3 +91,53 @@ jobs:
             docker compose -f docker-compose.prod.yml restart nginx
             
             docker image prune -af
+
+  deploy-to-hostgator:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Transfer Compose and Config to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTGATOR_HOST }}
+          username: ${{ secrets.HOSTGATOR_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22022
+          source: "docker-compose.prod.yml,docker/nginx/nginx.conf,docker/livekit/livekit.yaml"
+          target: "~/voxy-production"
+
+      - name: Execute Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTGATOR_HOST }}
+          username: ${{ secrets.HOSTGATOR_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22022
+          script: |
+            mkdir -p ~/voxy-production
+            cd ~/voxy-production
+            
+            # Cria a pasta de certificados do Nginx e injeta as chaves da Cloudflare
+            mkdir -p docker/nginx/certs
+            echo "${{ secrets.CF_ORIGIN_CERT }}" > docker/nginx/certs/cert.pem
+            echo "${{ secrets.CF_ORIGIN_KEY }}" > docker/nginx/certs/key.pem
+            cd ~/voxy-production
+            
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            cat <<EOF > .env
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            LIVEKIT_API_KEY=${{ secrets.LIVEKIT_API_KEY }}
+            LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}
+            EOF
+            
+            docker compose -f docker-compose.prod.yml config --quiet
+            docker compose -f docker-compose.prod.yml pull api livekit
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml restart nginx
+            
+            docker image prune -af
