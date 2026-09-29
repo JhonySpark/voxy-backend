@@ -65,4 +65,14 @@ describe('ChannelsController', () => {
     expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user);
     expect(result).toEqual({ token: 'jwt123' });
   });
+
+  it('should get voice token for channel via GET', async () => {
+    const req = { user: { sub: 'u1', username: 'testuser' } };
+    channelsService.getVoiceToken.mockResolvedValue({ token: 'jwt123' });
+
+    const result = await controller.getVoiceTokenGet(req, 'c1');
+
+    expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user);
+    expect(result).toEqual({ token: 'jwt123' });
+  });
 });

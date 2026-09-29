@@ -26,4 +26,9 @@ export class ChannelsController {
   async getVoiceToken(@Request() req: any, @Param('channelId') channelId: string) {
     return this.channelsService.getVoiceToken(channelId, req.user);
   }
+
+  @Get(':channelId/voice-token')
+  async getVoiceTokenGet(@Request() req: any, @Param('channelId') channelId: string) {
+    return this.channelsService.getVoiceToken(channelId, req.user);
+  }
 }
