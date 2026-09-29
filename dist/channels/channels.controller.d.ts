@@ -9,7 +9,10 @@ export declare class ChannelsController {
         serverId: string;
     }>;
     getMessages(req: any, channelId: string): Promise<any[]>;
-    getVoiceToken(req: any, channelId: string): Promise<{
+    getVoiceToken(req: any, channelId: string, screen?: string): Promise<{
+        token: string;
+    }>;
+    getVoiceTokenGet(req: any, channelId: string, screen?: string): Promise<{
         token: string;
     }>;
 }

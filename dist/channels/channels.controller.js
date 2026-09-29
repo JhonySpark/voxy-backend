@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let ChannelsController = class ChannelsController {
@@ -24,8 +24,11 @@ let ChannelsController = class ChannelsController {
     async getMessages(req, channelId) {
         return this.channelsService.getChannelMessages(channelId, req.user.sub);
     }
-    async getVoiceToken(req, channelId) {
-        return this.channelsService.getVoiceToken(channelId, req.user);
+    async getVoiceToken(req, channelId, screen) {
+        return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
+    }
+    async getVoiceTokenGet(req, channelId, screen) {
+        return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
     }
 };
 __decorate([
@@ -50,10 +53,20 @@ __decorate([
     Post(':channelId/voice-token'),
     __param(0, Request()),
     __param(1, Param('channelId')),
+    __param(2, Query('screen')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "getVoiceToken", null);
+__decorate([
+    Get(':channelId/voice-token'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __param(2, Query('screen')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "getVoiceTokenGet", null);
 ChannelsController = __decorate([
     UseGuards(AuthGuard),
     Controller('channels'),

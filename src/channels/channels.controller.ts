@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 
@@ -23,12 +23,12 @@ export class ChannelsController {
   }
 
   @Post(':channelId/voice-token')
-  async getVoiceToken(@Request() req: any, @Param('channelId') channelId: string) {
-    return this.channelsService.getVoiceToken(channelId, req.user);
+  async getVoiceToken(@Request() req: any, @Param('channelId') channelId: string, @Query('screen') screen?: string) {
+    return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
   }
 
   @Get(':channelId/voice-token')
-  async getVoiceTokenGet(@Request() req: any, @Param('channelId') channelId: string) {
-    return this.channelsService.getVoiceToken(channelId, req.user);
+  async getVoiceTokenGet(@Request() req: any, @Param('channelId') channelId: string, @Query('screen') screen?: string) {
+    return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
   }
 }

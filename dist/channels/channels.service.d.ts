@@ -17,7 +17,7 @@ export declare class ChannelsService {
     getVoiceToken(channelId: string, user: {
         sub: string;
         username: string;
-    }): Promise<{
+    }, isScreen?: boolean): Promise<{
         token: string;
     }>;
 }

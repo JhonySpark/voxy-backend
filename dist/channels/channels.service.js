@@ -67,7 +67,7 @@ let ChannelsService = class ChannelsService {
         }
         return this.channelRepo.saveMessage(channelId, senderId, content);
     }
-    async getVoiceToken(channelId, user) {
+    async getVoiceToken(channelId, user, isScreen = false) {
         const channel = await this.channelRepo.findById(channelId);
         if (!channel)
             throw new NotFoundException('Channel not found');
@@ -77,8 +77,8 @@ let ChannelsService = class ChannelsService {
         }
         const token = await this.voiceEngine.generateAccessToken({
             roomName: channelId,
-            participantId: user.sub,
-            participantName: user.username,
+            participantId: isScreen ? `${user.sub}#screen` : user.sub,
+            participantName: isScreen ? `${user.username} (Tela)` : user.username,
         });
         return { token };
     }
