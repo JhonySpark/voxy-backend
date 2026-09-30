@@ -12,6 +12,13 @@ services:
       # A URL agora será a pública HTTPS, e não o container interno
       - LIVEKIT_URL=https://livekit.d4rkside.com.br
       - NODE_ENV=production
+      # Cloudflare R2 Storage (S3 API)
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME:-voxy-storage}
+      - R2_ENDPOINT=${R2_ENDPOINT}
+      - CHAT_RETENTION_DAYS=${CHAT_RETENTION_DAYS:-60}
     depends_on:
       redis:
         condition: service_healthy
