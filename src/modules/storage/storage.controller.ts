@@ -18,7 +18,6 @@ import { StorageService } from './storage.service.js';
 import { ChatRetentionService } from './retention.service.js';
 
 @Controller('storage')
-@UseGuards(AuthGuard)
 export class StorageController {
   constructor(
     private readonly storageService: StorageService,
@@ -29,6 +28,7 @@ export class StorageController {
    * Upload de Avatar do Usuário (WebP 256x256, armazenado privadamente no R2)
    */
   @Post('avatar')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadAvatar(
     @Request() req: any,
@@ -45,13 +45,14 @@ export class StorageController {
    * Obter URL assinada temporária para download de avatar privado
    */
   @Get('avatar/:userId/url')
+  @UseGuards(AuthGuard)
   async getAvatarUrl(@Param('userId') userId: string) {
     const downloadUrl = await this.storageService.getUserAvatarDownloadUrl(userId);
     return { downloadUrl };
   }
 
   /**
-   * Redirecionamento HTTP 302 para URL assinada do avatar (para tags <img>)
+   * Redirecionamento HTTP 302 para URL assinada do avatar (Público para tags <img>)
    */
   @Get('avatar/:userId')
   async getAvatarRedirect(
@@ -70,6 +71,7 @@ export class StorageController {
    * Upload de Banner do Usuário (WebP 600x240, armazenado privadamente no R2)
    */
   @Post('banner')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadBanner(
     @Request() req: any,
@@ -86,13 +88,14 @@ export class StorageController {
    * Obter URL assinada temporária para download de banner privado
    */
   @Get('banner/:userId/url')
+  @UseGuards(AuthGuard)
   async getBannerUrl(@Param('userId') userId: string) {
     const downloadUrl = await this.storageService.getUserBannerDownloadUrl(userId);
     return { downloadUrl };
   }
 
   /**
-   * Redirecionamento HTTP 302 para URL assinada do banner (para tags <img>)
+   * Redirecionamento HTTP 302 para URL assinada do banner (Público para tags <img>)
    */
   @Get('banner/:userId')
   async getBannerRedirect(
@@ -111,6 +114,7 @@ export class StorageController {
    * Upload de Ícone de Servidor (WebP 256x256, armazenado privadamente no R2)
    */
   @Post('server/:serverId/icon')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadServerIcon(
     @Request() req: any,
@@ -128,13 +132,14 @@ export class StorageController {
    * Obter URL assinada temporária para download de ícone privado de servidor
    */
   @Get('server/:serverId/icon/url')
+  @UseGuards(AuthGuard)
   async getServerIconUrl(@Param('serverId') serverId: string) {
     const downloadUrl = await this.storageService.getServerIconDownloadUrl(serverId);
     return { downloadUrl };
   }
 
   /**
-   * Redirecionamento HTTP 302 para URL assinada do ícone de servidor (para tags <img>)
+   * Redirecionamento HTTP 302 para URL assinada do ícone de servidor (Público para tags <img>)
    */
   @Get('server/:serverId/icon')
   async getServerIconRedirect(
@@ -154,6 +159,7 @@ export class StorageController {
    * Armazenado na zona privada com compressão agressiva
    */
   @Post('attachment')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadAttachment(
     @Request() req: any,
@@ -175,6 +181,7 @@ export class StorageController {
    * Obter Pre-signed PUT URL para upload direto do cliente ao R2 (Direct-to-R2)
    */
   @Post('presigned-upload')
+  @UseGuards(AuthGuard)
   async getDirectUploadUrl(
     @Request() req: any,
     @Body()
@@ -195,6 +202,7 @@ export class StorageController {
    * Obter URL temporária pré-assinada (15-30 min) para download seguro de anexo
    */
   @Get('attachment/:id/url')
+  @UseGuards(AuthGuard)
   async getAttachmentUrl(
     @Request() req: any,
     @Param('id') attachmentId: string,
@@ -207,6 +215,7 @@ export class StorageController {
    * Rota de disparo manual da rotina de retenção de 60 dias (para testes/manutenção)
    */
   @Post('retention/cleanup')
+  @UseGuards(AuthGuard)
   async triggerRetentionCleanup() {
     return this.retentionService.handleRetentionCleanup();
   }

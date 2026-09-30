@@ -68,7 +68,7 @@ export class StorageService {
       isPublic: false,
     });
 
-    const avatarUrl = `/api/storage/avatar/${userId}`;
+    const avatarUrl = `/storage/avatar/${userId}`;
 
     // 4. Atualizar registro do usuário
     await this.prisma.user.update({
@@ -134,7 +134,7 @@ export class StorageService {
       isPublic: false,
     });
 
-    const iconUrl = `/api/storage/server/${serverId}/icon`;
+    const iconUrl = `/storage/server/${serverId}/icon`;
 
     await this.prisma.server.update({
       where: { id: serverId },
@@ -483,7 +483,7 @@ export class StorageService {
       isPublic: false,
     });
 
-    const bannerUrl = `/api/storage/banner/${userId}`;
+    const bannerUrl = `/storage/banner/${userId}`;
 
     await this.prisma.user.update({
       where: { id: userId },
