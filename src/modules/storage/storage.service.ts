@@ -250,7 +250,7 @@ export class StorageService {
     });
 
     // 5. Gerar URL temporária pré-assinada para visualização imediata
-    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(finalKey, 1800);
+    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(finalKey, 14400);
 
     return {
       attachmentId: attachment.id,
@@ -309,9 +309,9 @@ export class StorageService {
       }
     }
 
-    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(attachment.fileKey, 1800);
+    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(attachment.fileKey, 14400);
     const thumbnailUrl = attachment.thumbnailKey
-      ? await this.storagePort.getPresignedDownloadUrl(attachment.thumbnailKey, 1800)
+      ? await this.storagePort.getPresignedDownloadUrl(attachment.thumbnailKey, 14400)
       : undefined;
 
     return { downloadUrl, thumbnailUrl };

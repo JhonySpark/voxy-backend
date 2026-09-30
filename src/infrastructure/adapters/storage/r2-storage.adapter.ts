@@ -50,7 +50,7 @@ export class R2StorageAdapter implements IStoragePort {
   async uploadFile(options: UploadFileOptions): Promise<UploadFileResult> {
     const cacheControl = options.isPublic
       ? 'public, max-age=31536000, immutable'
-      : 'private, no-cache';
+      : 'private, max-age=14400';
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
@@ -84,10 +84,11 @@ export class R2StorageAdapter implements IStoragePort {
     return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
   }
 
-  async getPresignedDownloadUrl(key: string, expiresInSeconds = 1800): Promise<string> {
+  async getPresignedDownloadUrl(key: string, expiresInSeconds = 14400): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
+      ResponseCacheControl: 'private, max-age=14400',
     });
 
     return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
