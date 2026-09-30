@@ -19,6 +19,13 @@ export class PrismaUserRepository implements IUserRepository {
         email,
         username,
         password: raw.password,
+        avatarUrl: raw.avatarUrl,
+        avatarKey: raw.avatarKey,
+        displayName: raw.displayName,
+        bio: raw.bio,
+        bannerUrl: raw.bannerUrl,
+        bannerKey: raw.bannerKey,
+        bannerColor: raw.bannerColor,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
       },
@@ -33,7 +40,35 @@ export class PrismaUserRepository implements IUserRepository {
         username: user.username.value,
         email: user.email.value,
         password: user.password,
+        avatarUrl: user.avatarUrl,
+        avatarKey: user.avatarKey,
+        displayName: user.displayName,
+        bio: user.bio,
+        bannerUrl: user.bannerUrl,
+        bannerKey: user.bannerKey,
+        bannerColor: user.bannerColor,
         createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+
+    return this.toDomain(raw)!;
+  }
+
+  async update(user: User): Promise<User> {
+    const raw = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        username: user.username.value,
+        email: user.email.value,
+        password: user.password,
+        avatarUrl: user.avatarUrl,
+        avatarKey: user.avatarKey,
+        displayName: user.displayName,
+        bio: user.bio,
+        bannerUrl: user.bannerUrl,
+        bannerKey: user.bannerKey,
+        bannerColor: user.bannerColor,
         updatedAt: user.updatedAt,
       },
     });

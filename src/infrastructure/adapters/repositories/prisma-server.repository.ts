@@ -44,7 +44,9 @@ export class PrismaServerRepository implements IServerRepository {
       raw.ownerId,
       raw.id,
       members,
-      channels
+      channels,
+      raw.iconUrl,
+      raw.iconKey
     ).getValue();
   }
 
@@ -54,6 +56,8 @@ export class PrismaServerRepository implements IServerRepository {
         id: server.id,
         name: server.name,
         ownerId: server.ownerId,
+        iconUrl: server.iconUrl,
+        iconKey: server.iconKey,
         members: {
           create: server.members.map(m => ({
             userId: m.userId,
@@ -66,6 +70,26 @@ export class PrismaServerRepository implements IServerRepository {
             type: c.type.value,
           })),
         },
+      },
+      include: {
+        channels: true,
+        members: {
+          include: { user: { select: { id: true, username: true } } },
+        },
+      },
+    });
+
+    return this.toDomain(raw)!;
+  }
+
+  async update(server: Server): Promise<Server> {
+    const raw = await this.prisma.server.update({
+      where: { id: server.id },
+      data: {
+        name: server.name,
+        iconUrl: server.iconUrl,
+        iconKey: server.iconKey,
+        updatedAt: server.updatedAt,
       },
       include: {
         channels: true,

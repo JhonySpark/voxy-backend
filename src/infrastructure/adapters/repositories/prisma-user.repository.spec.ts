@@ -82,4 +82,24 @@ describe('PrismaUserRepository', () => {
     const found = await repo.findById('u1');
     expect(found?.id).toBe('u1');
   });
+
+  it('should update user and map to domain', async () => {
+    prismaMock.user.update = vi.fn().mockResolvedValue({
+      id: 'u1',
+      username: 'alice',
+      email: 'alice@example.com',
+      password: 'password123',
+      displayName: 'Alice Cooper',
+      bio: 'Singer and dev',
+      bannerColor: '#3b82f6',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    domainUser.updateProfile({ displayName: 'Alice Cooper', bio: 'Singer and dev', bannerColor: '#3b82f6' });
+    const result = await repo.update(domainUser);
+    expect(prismaMock.user.update).toHaveBeenCalled();
+    expect(result.displayName).toBe('Alice Cooper');
+    expect(result.bio).toBe('Singer and dev');
+  });
 });

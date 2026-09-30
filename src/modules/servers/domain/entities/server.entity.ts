@@ -8,6 +8,8 @@ import { ChannelType } from '../value-objects/channel-type.vo.js';
 export interface ServerProps {
   name: string;
   ownerId: string;
+  iconUrl?: string | null;
+  iconKey?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
   members: ServerMember[];
@@ -21,6 +23,14 @@ export class Server extends AggregateRoot<ServerProps> {
 
   get ownerId(): string {
     return this.props.ownerId;
+  }
+
+  get iconUrl(): string | null | undefined {
+    return this.props.iconUrl;
+  }
+
+  get iconKey(): string | null | undefined {
+    return this.props.iconKey;
   }
 
   get members(): ServerMember[] {
@@ -98,12 +108,49 @@ export class Server extends AggregateRoot<ServerProps> {
     return Result.ok<Channel>(channel);
   }
 
+  public updateName(newName: string, requesterUserId: string): Result<void> {
+    if (!this.isOwner(requesterUserId)) {
+      return Result.fail<void>('Apenas o dono do servidor pode alterar o nome.');
+    }
+    if (!newName || newName.trim().length === 0) {
+      return Result.fail<void>('Nome do servidor não pode ser vazio.');
+    }
+    this.props.name = newName.trim();
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
+  public updateIcon(iconUrl: string, iconKey: string, requesterUserId: string): Result<void> {
+    if (!this.isOwner(requesterUserId)) {
+      return Result.fail<void>('Apenas o dono do servidor pode alterar o ícone.');
+    }
+    if (!iconUrl || !iconKey) {
+      return Result.fail<void>('Icon URL e Key são obrigatórios.');
+    }
+    this.props.iconUrl = iconUrl;
+    this.props.iconKey = iconKey;
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
+  public removeIcon(requesterUserId: string): Result<void> {
+    if (!this.isOwner(requesterUserId)) {
+      return Result.fail<void>('Apenas o dono do servidor pode remover o ícone.');
+    }
+    this.props.iconUrl = null;
+    this.props.iconKey = null;
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
   public static create(
     name: string,
     ownerId: string,
     id?: string,
     existingMembers?: ServerMember[],
-    existingChannels?: Channel[]
+    existingChannels?: Channel[],
+    iconUrl?: string | null,
+    iconKey?: string | null
   ): Result<Server> {
     if (!name || name.trim().length === 0) {
       return Result.fail<Server>('Nome do servidor não pode ser vazio.');
@@ -148,6 +195,8 @@ export class Server extends AggregateRoot<ServerProps> {
       {
         name: name.trim(),
         ownerId,
+        iconUrl: iconUrl || null,
+        iconKey: iconKey || null,
         members,
         channels,
         createdAt: new Date(),

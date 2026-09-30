@@ -48,4 +48,49 @@ describe('User Entity', () => {
     const invalidChange = user.changePassword('');
     expect(invalidChange.isFailure).toBe(true);
   });
+
+  it('should update profile fields successfully', () => {
+    const user = User.create({
+      username,
+      email,
+      password: 'initialpassword',
+    }).getValue();
+
+    const updateRes = user.updateProfile({
+      displayName: 'Voxy User',
+      bio: 'Coding with DDD and Clean Architecture',
+      bannerColor: '#10b981',
+    });
+
+    expect(updateRes.isSuccess).toBe(true);
+    expect(user.displayName).toBe('Voxy User');
+    expect(user.bio).toBe('Coding with DDD and Clean Architecture');
+    expect(user.bannerColor).toBe('#10b981');
+  });
+
+  it('should update and remove avatar and banner', () => {
+    const user = User.create({
+      username,
+      email,
+      password: 'initialpassword',
+    }).getValue();
+
+    const avatarRes = user.updateAvatar('https://r2.voxy.app/avatar.webp', 'avatars/avatar.webp');
+    expect(avatarRes.isSuccess).toBe(true);
+    expect(user.avatarUrl).toBe('https://r2.voxy.app/avatar.webp');
+    expect(user.avatarKey).toBe('avatars/avatar.webp');
+
+    user.removeAvatar();
+    expect(user.avatarUrl).toBeNull();
+    expect(user.avatarKey).toBeNull();
+
+    const bannerRes = user.updateBanner('https://r2.voxy.app/banner.webp', 'banners/banner.webp');
+    expect(bannerRes.isSuccess).toBe(true);
+    expect(user.bannerUrl).toBe('https://r2.voxy.app/banner.webp');
+    expect(user.bannerKey).toBe('banners/banner.webp');
+
+    user.removeBanner();
+    expect(user.bannerUrl).toBeNull();
+    expect(user.bannerKey).toBeNull();
+  });
 });

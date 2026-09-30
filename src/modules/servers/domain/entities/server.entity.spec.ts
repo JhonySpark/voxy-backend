@@ -69,4 +69,31 @@ describe('Server Entity Aggregate Root', () => {
     expect(chanRes.isFailure).toBe(true);
     expect(chanRes.error).toContain('Apenas o dono');
   });
+
+  it('should allow owner to update server name', () => {
+    const server = Server.create('Dev Community', 'u_owner').getValue();
+    const updateRes = server.updateName('New Name', 'u_owner');
+    expect(updateRes.isSuccess).toBe(true);
+    expect(server.name).toBe('New Name');
+
+    const unauthorizedRes = server.updateName('Hacker Name', 'u_other');
+    expect(unauthorizedRes.isFailure).toBe(true);
+    expect(unauthorizedRes.error).toContain('Apenas o dono');
+  });
+
+  it('should allow owner to update and remove server icon', () => {
+    const server = Server.create('Dev Community', 'u_owner').getValue();
+    const iconRes = server.updateIcon('https://r2.voxy.app/icon.webp', 'servers/icon.webp', 'u_owner');
+    expect(iconRes.isSuccess).toBe(true);
+    expect(server.iconUrl).toBe('https://r2.voxy.app/icon.webp');
+    expect(server.iconKey).toBe('servers/icon.webp');
+
+    const unauthorizedRes = server.updateIcon('evil.png', 'key', 'u_other');
+    expect(unauthorizedRes.isFailure).toBe(true);
+
+    const removeRes = server.removeIcon('u_owner');
+    expect(removeRes.isSuccess).toBe(true);
+    expect(server.iconUrl).toBeNull();
+    expect(server.iconKey).toBeNull();
+  });
 });
