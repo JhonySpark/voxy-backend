@@ -4,6 +4,7 @@ import { ServersService } from './servers.service.js';
 import { SERVER_REPOSITORY, IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 describe('ServersService', () => {
   let service: ServersService;
@@ -34,6 +35,7 @@ describe('ServersService', () => {
       providers: [
         ServersService,
         { provide: SERVER_REPOSITORY, useValue: serverRepo },
+        { provide: PrismaService, useValue: { server: { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() } } },
       ],
     }).compile();
 

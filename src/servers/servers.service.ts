@@ -2,14 +2,21 @@ import { Injectable, ForbiddenException, NotFoundException, Inject } from '@nest
 import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
 import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class ServersService {
   constructor(
     @Inject(SERVER_REPOSITORY) private readonly serverRepo: IServerRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async createServer(ownerId: string, name: string) {
+  async createServer(
+    ownerId: string,
+    name: string,
+    iconUrl?: string,
+    iconKey?: string,
+  ) {
     const serverOrError = Server.create(name, ownerId);
     if (serverOrError.isFailure) {
       throw new ForbiddenException(serverOrError.error);
@@ -18,10 +25,22 @@ export class ServersService {
     const server = serverOrError.getValue();
     const created = await this.serverRepo.create(server);
 
+    if ((iconUrl || iconKey) && this.prisma?.server) {
+      await this.prisma.server.update({
+        where: { id: created.id },
+        data: {
+          iconUrl: iconUrl || null,
+          iconKey: iconKey || null,
+        },
+      });
+    }
+
     return {
       id: created.id,
       name: created.name,
       ownerId: created.ownerId,
+      iconUrl: (created as any).iconUrl || iconUrl,
+      iconKey: (created as any).iconKey || iconKey,
       channels: created.channels.map(c => ({
         id: c.id,
         name: c.name,
@@ -37,12 +56,53 @@ export class ServersService {
     };
   }
 
+  async updateServer(
+    userId: string,
+    serverId: string,
+    data: { name?: string; iconUrl?: string; iconKey?: string },
+  ) {
+    if (!this.prisma?.server) {
+      throw new ForbiddenException('Database service not available');
+    }
+
+    const server = await this.prisma.server.findUnique({
+      where: { id: serverId },
+      include: { members: true },
+    });
+
+    if (!server) {
+      throw new NotFoundException('Servidor não encontrado.');
+    }
+
+    const isOwner = server.ownerId === userId;
+    const isServerAdmin = server.members.some(
+      (m: any) => m.userId === userId && (m.role === 'OWNER' || m.role === 'ADMIN'),
+    );
+
+    if (!isOwner && !isServerAdmin) {
+      throw new ForbiddenException('Apenas o proprietário ou administradores podem editar este servidor.');
+    }
+
+    await this.prisma.server.update({
+      where: { id: serverId },
+      data: {
+        ...(data.name ? { name: data.name.trim() } : {}),
+        ...(data.iconUrl !== undefined ? { iconUrl: data.iconUrl } : {}),
+        ...(data.iconKey !== undefined ? { iconKey: data.iconKey } : {}),
+      },
+    });
+
+    return this.getServerById(serverId, userId);
+  }
+
   async getUserServers(userId: string) {
     const servers = await this.serverRepo.findUserServers(userId);
     return servers.map(s => ({
       id: s.id,
       name: s.name,
       ownerId: s.ownerId,
+      iconUrl: (s as any).iconUrl,
+      iconKey: (s as any).iconKey,
       channels: s.channels.map(c => ({
         id: c.id,
         name: c.name,
@@ -67,6 +127,8 @@ export class ServersService {
       id: server.id,
       name: server.name,
       ownerId: server.ownerId,
+      iconUrl: (server as any).iconUrl,
+      iconKey: (server as any).iconKey,
       channels: server.channels.map(c => ({
         id: c.id,
         name: c.name,

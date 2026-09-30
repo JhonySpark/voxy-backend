@@ -1,14 +1,19 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { USER_REPOSITORY } from '../core/ports/repositories/user.repository.port.js';
 import type { IUserRepository } from '../core/ports/repositories/user.repository.port.js';
 import { User } from '../modules/identity/domain/entities/user.entity.js';
 import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
 import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
+import type { IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
 
 @Injectable()
 export class UsersService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    private readonly prisma: PrismaService,
+    @Inject(PASSWORD_HASHER_PORT) private readonly hasher: IPasswordHasherPort,
   ) {}
 
   async create(data: { username: string; email: string; password?: string }) {
@@ -59,5 +64,88 @@ export class UsersService {
       email: user.email.value,
       password: user.password,
     };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        avatarKey: true,
+        bannerUrl: true,
+        bannerKey: true,
+        bannerColor: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    return user;
+  }
+
+  async updateProfile(
+    userId: string,
+    data: { displayName?: string; bio?: string; bannerColor?: string },
+  ) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.displayName !== undefined ? { displayName: data.displayName.trim() || null } : {}),
+        ...(data.bio !== undefined ? { bio: data.bio.trim() || null } : {}),
+        ...(data.bannerColor !== undefined ? { bannerColor: data.bannerColor.trim() || null } : {}),
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        bannerUrl: true,
+        bannerColor: true,
+      },
+    });
+
+    return updated;
+  }
+
+  async changePassword(userId: string, currentPass: string, newPass: string) {
+    if (!currentPass || !newPass) {
+      throw new BadRequestException('Senha atual e nova senha são obrigatórias.');
+    }
+
+    if (newPass.length < 6) {
+      throw new BadRequestException('A nova senha deve ter no mínimo 6 caracteres.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    const isMatch = await this.hasher.compare(currentPass, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Senha atual incorreta.');
+    }
+
+    const hashed = await this.hasher.hash(newPass);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    return { message: 'Senha atualizada com sucesso.' };
   }
 }

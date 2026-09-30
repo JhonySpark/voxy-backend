@@ -10,6 +10,8 @@ import { UsersController } from './users.controller.js';
 import { USER_REPOSITORY } from '../core/ports/repositories/user.repository.port.js';
 import { PrismaUserRepository } from '../infrastructure/adapters/repositories/prisma-user.repository.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
+import { BcryptPasswordHasherAdapter } from '../infrastructure/adapters/security/bcrypt-hasher.adapter.js';
 let UsersModule = class UsersModule {
 };
 UsersModule = __decorate([
@@ -21,6 +23,10 @@ UsersModule = __decorate([
             {
                 provide: USER_REPOSITORY,
                 useClass: PrismaUserRepository,
+            },
+            {
+                provide: PASSWORD_HASHER_PORT,
+                useClass: BcryptPasswordHasherAdapter,
             },
         ],
         exports: [UsersService, USER_REPOSITORY],

@@ -120,6 +120,26 @@ export class MediaCompressionService {
   }
 
   /**
+   * Comprime imagem de banner do perfil (600x240 WebP, 80% qualidade, strip EXIF)
+   */
+  async processBanner(inputBuffer: Buffer): Promise<ProcessedMedia> {
+    this.validateLimits(inputBuffer.length, 'IMAGE');
+
+    const compressed = await sharp(inputBuffer)
+      .resize(600, 240, { fit: 'cover', position: 'center' })
+      .webp({ quality: 80, effort: 4 })
+      .toBuffer();
+
+    return {
+      buffer: compressed,
+      mimeType: 'image/webp',
+      extension: '.webp',
+      originalSize: inputBuffer.length,
+      compressedSize: compressed.length,
+    };
+  }
+
+  /**
    * Comprime imagem enviada no chat (máx 1920x1080 WebP, 75% qualidade, strip EXIF)
    */
   async processChatImage(inputBuffer: Buffer): Promise<ProcessedMedia> {

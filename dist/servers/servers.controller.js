@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { ServersService } from './servers.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let ServersController = class ServersController {
@@ -18,8 +18,14 @@ let ServersController = class ServersController {
     constructor(serversService) {
         this.serversService = serversService;
     }
-    async createServer(req, name) {
+    async createServer(req, name, iconUrl, iconKey) {
+        if (iconUrl !== undefined || iconKey !== undefined) {
+            return this.serversService.createServer(req.user.sub, name, iconUrl, iconKey);
+        }
         return this.serversService.createServer(req.user.sub, name);
+    }
+    async updateServer(req, serverId, body) {
+        return this.serversService.updateServer(req.user.sub, serverId, body);
     }
     async getUserServers(req) {
         return this.serversService.getUserServers(req.user.sub);
@@ -35,10 +41,21 @@ __decorate([
     Post(),
     __param(0, Request()),
     __param(1, Body('name')),
+    __param(2, Body('iconUrl')),
+    __param(3, Body('iconKey')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], ServersController.prototype, "createServer", null);
+__decorate([
+    Patch(':id'),
+    __param(0, Request()),
+    __param(1, Param('id')),
+    __param(2, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], ServersController.prototype, "updateServer", null);
 __decorate([
     Get(),
     __param(0, Request()),

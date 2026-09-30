@@ -4,11 +4,57 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { Controller } from '@nestjs/common';
-let UsersController = class UsersController {
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Controller, Get, Patch, Body, UseGuards, Request, } from '@nestjs/common';
+import { UsersService } from './users.service.js';
+import { AuthGuard } from '../auth/auth.guard.js';
+let UsersController = class UsersController {
+    usersService;
+    constructor(usersService) {
+        this.usersService = usersService;
+    }
+    async getProfile(req) {
+        return this.usersService.getProfile(req.user.sub);
+    }
+    async updateProfile(req, body) {
+        return this.usersService.updateProfile(req.user.sub, body);
+    }
+    async changePassword(req, body) {
+        return this.usersService.changePassword(req.user.sub, body.currentPassword, body.newPassword);
+    }
+};
+__decorate([
+    Get('me'),
+    __param(0, Request()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getProfile", null);
+__decorate([
+    Patch('profile'),
+    __param(0, Request()),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateProfile", null);
+__decorate([
+    Patch('change-password'),
+    __param(0, Request()),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "changePassword", null);
 UsersController = __decorate([
-    Controller('users')
+    Controller('users'),
+    UseGuards(AuthGuard),
+    __metadata("design:paramtypes", [UsersService])
 ], UsersController);
 export { UsersController };
 //# sourceMappingURL=users.controller.js.map

@@ -5,6 +5,8 @@ import { USER_REPOSITORY, IUserRepository } from '../core/ports/repositories/use
 import { User } from '../modules/identity/domain/entities/user.entity.js';
 import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
 import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -38,6 +40,8 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: USER_REPOSITORY, useValue: userRepo },
+        { provide: PrismaService, useValue: {} },
+        { provide: PASSWORD_HASHER_PORT, useValue: { hash: vi.fn(), compare: vi.fn() } },
       ],
     }).compile();
 

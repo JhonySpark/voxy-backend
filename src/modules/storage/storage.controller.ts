@@ -67,6 +67,47 @@ export class StorageController {
   }
 
   /**
+   * Upload de Banner do Usuário (WebP 600x240, armazenado privadamente no R2)
+   */
+  @Post('banner')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadBanner(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado.');
+    }
+    const userId = req.user.sub;
+    return this.storageService.uploadUserBanner(userId, file);
+  }
+
+  /**
+   * Obter URL assinada temporária para download de banner privado
+   */
+  @Get('banner/:userId/url')
+  async getBannerUrl(@Param('userId') userId: string) {
+    const downloadUrl = await this.storageService.getUserBannerDownloadUrl(userId);
+    return { downloadUrl };
+  }
+
+  /**
+   * Redirecionamento HTTP 302 para URL assinada do banner (para tags <img>)
+   */
+  @Get('banner/:userId')
+  async getBannerRedirect(
+    @Param('userId') userId: string,
+    @Res() res: any,
+  ) {
+    try {
+      const url = await this.storageService.getUserBannerDownloadUrl(userId);
+      return res.redirect(url);
+    } catch {
+      return res.status(404).send('Banner não encontrado');
+    }
+  }
+
+  /**
    * Upload de Ícone de Servidor (WebP 256x256, armazenado privadamente no R2)
    */
   @Post('server/:serverId/icon')

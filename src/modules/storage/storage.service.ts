@@ -447,6 +447,75 @@ export class StorageService {
   }
 
   /**
+   * Upload e compressão de Banner do Usuário (Zona Privada)
+   */
+  async uploadUserBanner(
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ bannerUrl: string; bannerKey: string }> {
+    if (!file || !file.buffer) {
+      throw new BadRequestException('Arquivo não enviado.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    const processed = await this.mediaCompression.processBanner(file.buffer);
+
+    if (user.bannerKey) {
+      try {
+        await this.storagePort.deleteFile(user.bannerKey);
+      } catch (err) {
+        this.logger.warn(`Não foi possível remover banner anterior do R2: ${String(err)}`);
+      }
+    }
+
+    const key = `private/banners/${userId}/banner_${Date.now()}.webp`;
+    await this.storagePort.uploadFile({
+      key,
+      buffer: processed.buffer,
+      contentType: processed.mimeType,
+      isPublic: false,
+    });
+
+    const bannerUrl = `/api/storage/banner/${userId}`;
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        bannerUrl,
+        bannerKey: key,
+      },
+    });
+
+    return {
+      bannerUrl,
+      bannerKey: key,
+    };
+  }
+
+  /**
+   * Obtém URL assinada temporária para download de banner privado de usuário
+   */
+  async getUserBannerDownloadUrl(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { bannerKey: true },
+    });
+
+    if (!user || !user.bannerKey) {
+      throw new NotFoundException('Banner não encontrado para este usuário.');
+    }
+
+    return this.storagePort.getPresignedDownloadUrl(user.bannerKey, 14400);
+  }
+
+  /**
    * Obtém URL assinada temporária para download de avatar privado de usuário
    */
   async getUserAvatarDownloadUrl(userId: string): Promise<string> {
@@ -459,7 +528,7 @@ export class StorageService {
       throw new NotFoundException('Avatar não encontrado para este usuário.');
     }
 
-    return this.storagePort.getPresignedDownloadUrl(user.avatarKey, 3600);
+    return this.storagePort.getPresignedDownloadUrl(user.avatarKey, 14400);
   }
 
   /**
@@ -475,7 +544,8 @@ export class StorageService {
       throw new NotFoundException('Ícone não encontrado para este servidor.');
     }
 
-    return this.storagePort.getPresignedDownloadUrl(server.iconKey, 3600);
+    return this.storagePort.getPresignedDownloadUrl(server.iconKey, 14400);
   }
 }
+
 
