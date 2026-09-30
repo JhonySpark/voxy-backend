@@ -155,7 +155,7 @@ describe('ChannelsService', () => {
 
       const result = await service.saveChannelMessage('c1', 'u1', 'hello');
 
-      expect(channelRepo.saveMessage).toHaveBeenCalledWith('c1', 'u1', 'hello');
+      expect(channelRepo.saveMessage).toHaveBeenCalledWith('c1', 'u1', 'hello', undefined);
       expect(result).toEqual(mockSaved);
     });
   });

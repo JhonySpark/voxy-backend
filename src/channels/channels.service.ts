@@ -69,6 +69,7 @@ export class ChannelsService {
     channelId: string,
     senderId: string,
     content: string,
+    attachmentId?: string,
   ) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
@@ -78,7 +79,7 @@ export class ChannelsService {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    return this.channelRepo.saveMessage(channelId, senderId, content);
+    return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId);
   }
 
   async getVoiceToken(channelId: string, user: { sub: string; username: string }, isScreen: boolean = false) {

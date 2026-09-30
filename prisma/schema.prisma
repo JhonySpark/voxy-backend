@@ -16,6 +16,8 @@ model User {
   username  String   @unique
   email     String   @unique
   password  String
+  avatarUrl String?
+  avatarKey String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -50,13 +52,16 @@ model Message {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender      User         @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User         @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  attachments Attachment[]
 }
 
 model Server {
   id         String   @id @default(uuid())
   name       String
+  iconUrl    String?
+  iconKey    String?
   ownerId    String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -97,6 +102,33 @@ model ChannelMessage {
   channelId  String
   createdAt  DateTime @default(now())
 
-  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender      User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
 }
+
+model Attachment {
+  id               String          @id @default(uuid())
+  fileName         String
+  fileKey          String
+  fileType         String          // IMAGE, AUDIO, VIDEO, DOCUMENT
+  mimeType         String
+  fileSize         Int             // tamanho comprimido em bytes
+  originalSize     Int             // tamanho antes da compressão em bytes
+  thumbnailKey     String?         // Chave R2 da thumbnail/capa (WebP ~10-15KB)
+  url              String?         // URL pública ou de cache (para avatares/públicos)
+  createdAt        DateTime        @default(now())
+
+  // Associação opcional com mensagem direta
+  messageId        String?
+  message          Message?        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Associação opcional com mensagem de canal
+  channelMessageId String?
+  channelMessage   ChannelMessage? @relation(fields: [channelMessageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([channelMessageId])
+  @@index([createdAt])
+}
+

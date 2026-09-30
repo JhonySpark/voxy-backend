@@ -33,6 +33,7 @@ describe('PrismaChatRepository', () => {
       },
       include: {
         sender: true,
+        attachments: true,
       },
     });
     expect(result).toEqual(savedMsg);
@@ -55,6 +56,7 @@ describe('PrismaChatRepository', () => {
       },
       include: {
         sender: true,
+        attachments: true,
       },
     });
     expect(result).toEqual(messages);

@@ -8,8 +8,8 @@ export class ChatService {
     @Inject(CHAT_REPOSITORY) private readonly chatRepo: IChatRepository,
   ) {}
 
-  async saveMessage(senderId: string, receiverId: string, content: string) {
-    return this.chatRepo.saveDirectMessage(senderId, receiverId, content);
+  async saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string) {
+    return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId);
   }
 
   async getMessagesBetweenUsers(userId1: string, userId2: string) {

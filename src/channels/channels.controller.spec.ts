@@ -62,7 +62,7 @@ describe('ChannelsController', () => {
 
     const result = await controller.getVoiceToken(req, 'c1');
 
-    expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user);
+    expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user, false);
     expect(result).toEqual({ token: 'jwt123' });
   });
 
@@ -72,7 +72,7 @@ describe('ChannelsController', () => {
 
     const result = await controller.getVoiceTokenGet(req, 'c1');
 
-    expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user);
+    expect(channelsService.getVoiceToken).toHaveBeenCalledWith('c1', req.user, false);
     expect(result).toEqual({ token: 'jwt123' });
   });
 });

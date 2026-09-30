@@ -57,7 +57,7 @@ let ChannelsService = class ChannelsService {
         }
         return this.channelRepo.getMessages(channelId);
     }
-    async saveChannelMessage(channelId, senderId, content) {
+    async saveChannelMessage(channelId, senderId, content, attachmentId) {
         const channel = await this.channelRepo.findById(channelId);
         if (!channel)
             throw new NotFoundException('Channel not found');
@@ -65,7 +65,7 @@ let ChannelsService = class ChannelsService {
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
-        return this.channelRepo.saveMessage(channelId, senderId, content);
+        return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId);
     }
     async getVoiceToken(channelId, user, isScreen = false) {
         const channel = await this.channelRepo.findById(channelId);

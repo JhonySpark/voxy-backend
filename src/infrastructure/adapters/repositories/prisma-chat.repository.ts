@@ -6,8 +6,13 @@ import { IChatRepository } from '../../../core/ports/repositories/chat.repositor
 export class PrismaChatRepository implements IChatRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async saveDirectMessage(senderId: string, receiverId: string, content: string): Promise<any> {
-    return this.prisma.message.create({
+  async saveDirectMessage(
+    senderId: string,
+    receiverId: string,
+    content: string,
+    attachmentId?: string,
+  ): Promise<any> {
+    const msg = await this.prisma.message.create({
       data: {
         senderId,
         receiverId,
@@ -15,8 +20,25 @@ export class PrismaChatRepository implements IChatRepository {
       },
       include: {
         sender: true,
+        attachments: true,
       },
     });
+
+    if (attachmentId) {
+      await this.prisma.attachment.update({
+        where: { id: attachmentId },
+        data: { messageId: msg.id },
+      });
+      return this.prisma.message.findUnique({
+        where: { id: msg.id },
+        include: {
+          sender: true,
+          attachments: true,
+        },
+      });
+    }
+
+    return msg;
   }
 
   async getDirectMessages(userId1: string, userId2: string): Promise<any[]> {
@@ -32,6 +54,7 @@ export class PrismaChatRepository implements IChatRepository {
       },
       include: {
         sender: true,
+        attachments: true,
       },
     });
   }

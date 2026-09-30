@@ -17,8 +17,8 @@ let ChatService = class ChatService {
     constructor(chatRepo) {
         this.chatRepo = chatRepo;
     }
-    async saveMessage(senderId, receiverId, content) {
-        return this.chatRepo.saveDirectMessage(senderId, receiverId, content);
+    async saveMessage(senderId, receiverId, content, attachmentId) {
+        return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId);
     }
     async getMessagesBetweenUsers(userId1, userId2) {
         return this.chatRepo.getDirectMessages(userId1, userId2);

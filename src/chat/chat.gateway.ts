@@ -76,11 +76,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async handleMessage(
-    @MessageBody() data: { receiverId: string; content: string },
+    @MessageBody() data: { receiverId: string; content: string; attachmentId?: string },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.user.sub;
-    const message = await this.chatService.saveMessage(senderId, data.receiverId, data.content);
+    const message = await this.chatService.saveMessage(
+      senderId,
+      data.receiverId,
+      data.content,
+      data.attachmentId,
+    );
 
     // Send to receiver if online
     this.server.to(data.receiverId).emit('newMessage', message);
@@ -103,12 +108,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendChannelMessage')
   async handleChannelMessage(
-    @MessageBody() data: { channelId: string; content: string },
+    @MessageBody() data: { channelId: string; content: string; attachmentId?: string },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.user.sub;
     try {
-      const message = await this.channelsService.saveChannelMessage(data.channelId, senderId, data.content);
+      const message = await this.channelsService.saveChannelMessage(
+        data.channelId,
+        senderId,
+        data.content,
+        data.attachmentId,
+      );
       // Broadcast to everyone in the channel
       this.server.to(data.channelId).emit('newChannelMessage', message);
       return message;

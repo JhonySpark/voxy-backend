@@ -15,6 +15,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleMessage(data: {
         receiverId: string;
         content: string;
+        attachmentId?: string;
     }, client: Socket): Promise<any>;
     handleJoinChannel(data: {
         channelId: string;
@@ -25,6 +26,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleChannelMessage(data: {
         channelId: string;
         content: string;
+        attachmentId?: string;
     }, client: Socket): Promise<any>;
     private voiceStates;
     private channelStartTimes;

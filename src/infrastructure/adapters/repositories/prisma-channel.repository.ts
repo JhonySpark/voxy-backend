@@ -49,8 +49,13 @@ export class PrismaChannelRepository implements IChannelRepository {
     return rawList.map(raw => this.toDomain(raw)!);
   }
 
-  async saveMessage(channelId: string, senderId: string, content: string): Promise<any> {
-    return this.prisma.channelMessage.create({
+  async saveMessage(
+    channelId: string,
+    senderId: string,
+    content: string,
+    attachmentId?: string,
+  ): Promise<any> {
+    const msg = await this.prisma.channelMessage.create({
       data: {
         channelId,
         senderId,
@@ -58,15 +63,35 @@ export class PrismaChannelRepository implements IChannelRepository {
       },
       include: {
         sender: true,
+        attachments: true,
       },
     });
+
+    if (attachmentId) {
+      await this.prisma.attachment.update({
+        where: { id: attachmentId },
+        data: { channelMessageId: msg.id },
+      });
+      return this.prisma.channelMessage.findUnique({
+        where: { id: msg.id },
+        include: {
+          sender: true,
+          attachments: true,
+        },
+      });
+    }
+
+    return msg;
   }
 
   async getMessages(channelId: string): Promise<any[]> {
     return this.prisma.channelMessage.findMany({
       where: { channelId },
       orderBy: { createdAt: 'asc' },
-      include: { sender: true },
+      include: {
+        sender: true,
+        attachments: true,
+      },
     });
   }
 }
