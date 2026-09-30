@@ -89,12 +89,18 @@ let UsersService = class UsersService {
                 bannerKey: true,
                 bannerColor: true,
                 createdAt: true,
+                updatedAt: true,
             },
         });
         if (!user) {
             throw new NotFoundException('Usuário não encontrado.');
         }
-        return user;
+        const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
+        return {
+            ...user,
+            avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,
+            bannerUrl: user.bannerUrl ? `${user.bannerUrl.split('?')[0]}${version}` : null,
+        };
     }
     async updateProfile(userId, data) {
         const updated = await this.prisma.user.update({
@@ -113,9 +119,15 @@ let UsersService = class UsersService {
                 avatarUrl: true,
                 bannerUrl: true,
                 bannerColor: true,
+                updatedAt: true,
             },
         });
-        return updated;
+        const version = updated.updatedAt ? `?v=${new Date(updated.updatedAt).getTime()}` : '';
+        return {
+            ...updated,
+            avatarUrl: updated.avatarUrl ? `${updated.avatarUrl.split('?')[0]}${version}` : null,
+            bannerUrl: updated.bannerUrl ? `${updated.bannerUrl.split('?')[0]}${version}` : null,
+        };
     }
     async changePassword(userId, currentPass, newPass) {
         if (!currentPass || !newPass) {

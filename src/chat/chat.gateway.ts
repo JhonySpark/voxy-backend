@@ -162,6 +162,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`server-${data.serverId}`).emit('serverUpdated');
   }
 
+  @SubscribeMessage('serverUpdated')
+  handleServerUpdated(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
+    this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+  }
+
+  @SubscribeMessage('userProfileUpdated')
+  handleUserProfileUpdated(
+    @MessageBody()
+    data: {
+      userId: string;
+      displayName?: string | null;
+      bio?: string | null;
+      avatarUrl?: string | null;
+      bannerUrl?: string | null;
+      bannerColor?: string | null;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data?.user?.sub || data.userId;
+    this.server.emit('userProfileUpdated', { ...data, userId });
+  }
+
   // WebRTC Signaling
   @SubscribeMessage('joinVoice')
   handleJoinVoice(@MessageBody() data: { serverId: string, channelId: string }, @ConnectedSocket() client: Socket) {

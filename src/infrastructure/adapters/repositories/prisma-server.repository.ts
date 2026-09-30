@@ -46,7 +46,9 @@ export class PrismaServerRepository implements IServerRepository {
       members,
       channels,
       raw.iconUrl,
-      raw.iconKey
+      raw.iconKey,
+      raw.createdAt,
+      raw.updatedAt
     ).getValue();
   }
 

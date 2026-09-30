@@ -42,6 +42,17 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleChannelCreated(data: {
         serverId: string;
     }, client: Socket): void;
+    handleServerUpdated(data: {
+        serverId: string;
+    }, client: Socket): void;
+    handleUserProfileUpdated(data: {
+        userId: string;
+        displayName?: string | null;
+        bio?: string | null;
+        avatarUrl?: string | null;
+        bannerUrl?: string | null;
+        bannerColor?: string | null;
+    }, client: Socket): void;
     handleJoinVoice(data: {
         serverId: string;
         channelId: string;

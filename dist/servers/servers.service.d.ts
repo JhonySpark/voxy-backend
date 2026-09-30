@@ -31,8 +31,8 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
-        iconUrl: any;
-        iconKey: any;
+        iconUrl: string | null;
+        iconKey: string | null | undefined;
         channels: {
             id: string;
             name: string;
@@ -54,8 +54,8 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
-        iconUrl: any;
-        iconKey: any;
+        iconUrl: string | null;
+        iconKey: string | null | undefined;
         channels: {
             id: string;
             name: string;
@@ -67,8 +67,8 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
-        iconUrl: any;
-        iconKey: any;
+        iconUrl: string | null;
+        iconKey: string | null | undefined;
         channels: {
             id: string;
             name: string;
@@ -90,8 +90,8 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
-        iconUrl: any;
-        iconKey: any;
+        iconUrl: string | null;
+        iconKey: string | null | undefined;
         channels: {
             id: string;
             name: string;

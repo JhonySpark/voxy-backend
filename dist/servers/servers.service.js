@@ -85,19 +85,23 @@ let ServersService = class ServersService {
     }
     async getUserServers(userId) {
         const servers = await this.serverRepo.findUserServers(userId);
-        return servers.map(s => ({
-            id: s.id,
-            name: s.name,
-            ownerId: s.ownerId,
-            iconUrl: s.iconUrl,
-            iconKey: s.iconKey,
-            channels: s.channels.map(c => ({
-                id: c.id,
-                name: c.name,
-                type: c.type.value,
-                serverId: c.serverId,
-            })),
-        }));
+        return servers.map(s => {
+            const version = s.updatedAt ? `?v=${new Date(s.updatedAt).getTime()}` : '';
+            const baseIconUrl = s.iconUrl ? s.iconUrl.split('?')[0] : null;
+            return {
+                id: s.id,
+                name: s.name,
+                ownerId: s.ownerId,
+                iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
+                iconKey: s.iconKey,
+                channels: s.channels.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    type: c.type.value,
+                    serverId: c.serverId,
+                })),
+            };
+        });
     }
     async getServerById(serverId, userId) {
         const isMember = await this.serverRepo.isMember(serverId, userId);
@@ -108,11 +112,13 @@ let ServersService = class ServersService {
         if (!server) {
             throw new NotFoundException('Server not found');
         }
+        const version = server.updatedAt ? `?v=${new Date(server.updatedAt).getTime()}` : '';
+        const baseIconUrl = server.iconUrl ? server.iconUrl.split('?')[0] : null;
         return {
             id: server.id,
             name: server.name,
             ownerId: server.ownerId,
-            iconUrl: server.iconUrl,
+            iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
             iconKey: server.iconKey,
             channels: server.channels.map(c => ({
                 id: c.id,

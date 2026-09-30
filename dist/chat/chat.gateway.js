@@ -116,6 +116,13 @@ let ChatGateway = class ChatGateway {
     handleChannelCreated(data, client) {
         this.server.to(`server-${data.serverId}`).emit('serverUpdated');
     }
+    handleServerUpdated(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+    }
+    handleUserProfileUpdated(data, client) {
+        const userId = client.data?.user?.sub || data.userId;
+        this.server.emit('userProfileUpdated', { ...data, userId });
+    }
     handleJoinVoice(data, client) {
         client.join(`voice-${data.channelId}`);
         if (!this.voiceStates.has(data.channelId)) {
@@ -247,6 +254,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleChannelCreated", null);
+__decorate([
+    SubscribeMessage('serverUpdated'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleServerUpdated", null);
+__decorate([
+    SubscribeMessage('userProfileUpdated'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleUserProfileUpdated", null);
 __decorate([
     SubscribeMessage('joinVoice'),
     __param(0, MessageBody()),

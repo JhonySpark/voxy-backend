@@ -35,31 +35,33 @@ export declare class UsersService {
         password: string;
     } | null>;
     getProfile(userId: string): Promise<{
+        avatarUrl: string | null;
+        bannerUrl: string | null;
         id: string;
         username: string;
         email: string;
-        avatarUrl: string | null;
         avatarKey: string | null;
         displayName: string | null;
         bio: string | null;
-        bannerUrl: string | null;
         bannerKey: string | null;
         bannerColor: string | null;
         createdAt: Date;
+        updatedAt: Date;
     }>;
     updateProfile(userId: string, data: {
         displayName?: string;
         bio?: string;
         bannerColor?: string;
     }): Promise<{
+        avatarUrl: string | null;
+        bannerUrl: string | null;
         id: string;
         username: string;
         email: string;
-        avatarUrl: string | null;
         displayName: string | null;
         bio: string | null;
-        bannerUrl: string | null;
         bannerColor: string | null;
+        updatedAt: Date;
     }>;
     changePassword(userId: string, currentPass: string, newPass: string): Promise<{
         message: string;

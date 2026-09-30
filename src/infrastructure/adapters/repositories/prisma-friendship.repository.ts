@@ -74,7 +74,18 @@ export class PrismaFriendshipRepository implements IFriendshipRepository {
       },
     });
 
-    return friendships.map((f: any) => (f.userId === userId ? f.friend : f.user));
+    return friendships.map((f: any) => {
+      const u = f.userId === userId ? f.friend : f.user;
+      if (u && u.avatarUrl) {
+        const version = u.updatedAt ? `?v=${new Date(u.updatedAt).getTime()}` : '';
+        return {
+          ...u,
+          avatarUrl: `${u.avatarUrl.split('?')[0]}${version}`,
+          bannerUrl: u.bannerUrl ? `${u.bannerUrl.split('?')[0]}${version}` : u.bannerUrl,
+        };
+      }
+      return u;
+    });
   }
 
   async findPendingRequests(userId: string): Promise<any[]> {

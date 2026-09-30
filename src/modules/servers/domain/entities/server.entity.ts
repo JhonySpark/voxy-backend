@@ -150,7 +150,9 @@ export class Server extends AggregateRoot<ServerProps> {
     existingMembers?: ServerMember[],
     existingChannels?: Channel[],
     iconUrl?: string | null,
-    iconKey?: string | null
+    iconKey?: string | null,
+    createdAt?: Date,
+    updatedAt?: Date
   ): Result<Server> {
     if (!name || name.trim().length === 0) {
       return Result.fail<Server>('Nome do servidor não pode ser vazio.');
@@ -199,8 +201,8 @@ export class Server extends AggregateRoot<ServerProps> {
         iconKey: iconKey || null,
         members,
         channels,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: createdAt || new Date(),
+        updatedAt: updatedAt || new Date(),
       },
       serverId
     );

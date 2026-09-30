@@ -80,7 +80,7 @@ export class StorageService {
     });
 
     return {
-      avatarUrl,
+      avatarUrl: `${avatarUrl}?v=${Date.now()}`,
       avatarKey: key,
     };
   }
@@ -145,7 +145,7 @@ export class StorageService {
     });
 
     return {
-      iconUrl,
+      iconUrl: `${iconUrl}?v=${Date.now()}`,
       iconKey: key,
     };
   }
@@ -494,7 +494,7 @@ export class StorageService {
     });
 
     return {
-      bannerUrl,
+      bannerUrl: `${bannerUrl}?v=${Date.now()}`,
       bannerKey: key,
     };
   }

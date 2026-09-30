@@ -97,19 +97,23 @@ export class ServersService {
 
   async getUserServers(userId: string) {
     const servers = await this.serverRepo.findUserServers(userId);
-    return servers.map(s => ({
-      id: s.id,
-      name: s.name,
-      ownerId: s.ownerId,
-      iconUrl: (s as any).iconUrl,
-      iconKey: (s as any).iconKey,
-      channels: s.channels.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type.value,
-        serverId: c.serverId,
-      })),
-    }));
+    return servers.map(s => {
+      const version = s.updatedAt ? `?v=${new Date(s.updatedAt).getTime()}` : '';
+      const baseIconUrl = s.iconUrl ? s.iconUrl.split('?')[0] : null;
+      return {
+        id: s.id,
+        name: s.name,
+        ownerId: s.ownerId,
+        iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
+        iconKey: s.iconKey,
+        channels: s.channels.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type.value,
+          serverId: c.serverId,
+        })),
+      };
+    });
   }
 
   async getServerById(serverId: string, userId: string) {
@@ -123,12 +127,15 @@ export class ServersService {
       throw new NotFoundException('Server not found');
     }
 
+    const version = server.updatedAt ? `?v=${new Date(server.updatedAt).getTime()}` : '';
+    const baseIconUrl = server.iconUrl ? server.iconUrl.split('?')[0] : null;
+
     return {
       id: server.id,
       name: server.name,
       ownerId: server.ownerId,
-      iconUrl: (server as any).iconUrl,
-      iconKey: (server as any).iconKey,
+      iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
+      iconKey: server.iconKey,
       channels: server.channels.map(c => ({
         id: c.id,
         name: c.name,

@@ -60,6 +60,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       const url = await this.storageService.getUserAvatarDownloadUrl(userId);
       return res.redirect(url);
     } catch {
@@ -103,6 +104,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       const url = await this.storageService.getUserBannerDownloadUrl(userId);
       return res.redirect(url);
     } catch {
@@ -147,6 +149,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       const url = await this.storageService.getServerIconDownloadUrl(serverId);
       return res.redirect(url);
     } catch {
