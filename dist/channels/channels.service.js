@@ -67,6 +67,26 @@ let ChannelsService = class ChannelsService {
         }
         await this.channelRepo.delete(channelId);
     }
+    async renameChannel(channelId, userId, name) {
+        const channel = await this.channelRepo.findById(channelId);
+        if (!channel)
+            throw new NotFoundException('Channel not found');
+        const role = await this.serverRepo.getMemberRole(channel.serverId, userId);
+        if (role !== 'OWNER') {
+            throw new ForbiddenException('Only the owner can rename channels');
+        }
+        const renameResult = channel.rename(name);
+        if (renameResult.isFailure) {
+            throw new ForbiddenException(renameResult.error);
+        }
+        const updated = await this.channelRepo.update(channel);
+        return {
+            id: updated.id,
+            name: updated.name,
+            type: updated.type.value,
+            serverId: updated.serverId,
+        };
+    }
     async saveChannelMessage(channelId, senderId, content, attachmentId) {
         const channel = await this.channelRepo.findById(channelId);
         if (!channel)

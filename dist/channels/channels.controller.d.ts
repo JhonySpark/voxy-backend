@@ -11,6 +11,12 @@ export declare class ChannelsController {
     deleteChannel(req: any, channelId: string): Promise<{
         success: boolean;
     }>;
+    renameChannel(req: any, channelId: string, name: string): Promise<{
+        id: string;
+        name: string;
+        type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+        serverId: string;
+    }>;
     getMessages(req: any, channelId: string): Promise<any[]>;
     getVoiceToken(req: any, channelId: string, screen?: string): Promise<{
         token: string;

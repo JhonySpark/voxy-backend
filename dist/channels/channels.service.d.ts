@@ -14,6 +14,12 @@ export declare class ChannelsService {
     }>;
     getChannelMessages(channelId: string, userId: string): Promise<any[]>;
     deleteChannel(channelId: string, userId: string): Promise<void>;
+    renameChannel(channelId: string, userId: string, name: string): Promise<{
+        id: string;
+        name: string;
+        type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+        serverId: string;
+    }>;
     saveChannelMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
     getVoiceToken(channelId: string, user: {
         sub: string;

@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let ChannelsController = class ChannelsController {
@@ -24,6 +24,9 @@ let ChannelsController = class ChannelsController {
     async deleteChannel(req, channelId) {
         await this.channelsService.deleteChannel(channelId, req.user.sub);
         return { success: true };
+    }
+    async renameChannel(req, channelId, name) {
+        return this.channelsService.renameChannel(channelId, req.user.sub, name);
     }
     async getMessages(req, channelId) {
         return this.channelsService.getChannelMessages(channelId, req.user.sub);
@@ -53,6 +56,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "deleteChannel", null);
+__decorate([
+    Patch(':channelId'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __param(2, Body('name')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "renameChannel", null);
 __decorate([
     Get(':channelId/messages'),
     __param(0, Request()),
