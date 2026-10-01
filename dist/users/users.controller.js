@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Patch, Body, UseGuards, Request, } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request, } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let UsersController = class UsersController {
@@ -19,7 +19,10 @@ let UsersController = class UsersController {
         this.usersService = usersService;
     }
     async getProfile(req) {
-        return this.usersService.getProfile(req.user.sub);
+        return this.usersService.getProfile(req.user.sub, req.user.sub);
+    }
+    async getUserProfile(req, id) {
+        return this.usersService.getProfile(id, req.user.sub);
     }
     async updateProfile(req, body) {
         return this.usersService.updateProfile(req.user.sub, body);
@@ -35,6 +38,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getProfile", null);
+__decorate([
+    Get(':id'),
+    __param(0, Request()),
+    __param(1, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getUserProfile", null);
 __decorate([
     Patch('profile'),
     __param(0, Request()),

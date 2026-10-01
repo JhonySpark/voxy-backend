@@ -7,10 +7,12 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { Optional } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -23,6 +25,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService: ChatService,
     private channelsService: ChannelsService,
     private jwtService: JwtService,
+    @Optional() private prisma?: PrismaService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -128,7 +131,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private voiceStates = new Map<string, Map<string, { userId: string, username: string, socketId: string, serverId: string, isMuted: boolean }>>(); // channelId -> map of socketId -> user
+  private voiceStates = new Map<
+    string,
+    Map<
+      string,
+      {
+        userId: string;
+        username: string;
+        displayName?: string | null;
+        avatarUrl?: string | null;
+        socketId: string;
+        serverId: string;
+        isMuted: boolean;
+      }
+    >
+  >(); // channelId -> map of socketId -> user
   private channelStartTimes = new Map<string, number>(); // channelId -> timestamp
 
   @SubscribeMessage('joinServer')
@@ -182,11 +199,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = client.data?.user?.sub || data.userId;
     this.server.emit('userProfileUpdated', { ...data, userId });
+
+    // Atualiza estados de voz ativos com o novo avatar e displayName
+    for (const [channelId, participants] of this.voiceStates.entries()) {
+      let changed = false;
+      let targetServerId: string | null = null;
+      for (const user of participants.values()) {
+        if (user.userId === userId) {
+          if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
+          if (data.displayName !== undefined) user.displayName = data.displayName;
+          changed = true;
+          targetServerId = user.serverId;
+        }
+      }
+      if (changed && targetServerId) {
+        this.server.to(`server-${targetServerId}`).emit('serverVoiceUpdate', {
+          channelId,
+          participants: Array.from(participants.values()),
+          startedAt: this.channelStartTimes.get(channelId),
+        });
+      }
+    }
   }
 
   // WebRTC Signaling
   @SubscribeMessage('joinVoice')
-  handleJoinVoice(@MessageBody() data: { serverId: string, channelId: string }, @ConnectedSocket() client: Socket) {
+  async handleJoinVoice(
+    @MessageBody() data: { serverId: string; channelId: string; avatarUrl?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
     client.join(`voice-${data.channelId}`);
     
     if (!this.voiceStates.has(data.channelId)) {
@@ -202,16 +243,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
+    let avatarUrl = data.avatarUrl;
+    let displayName = client.data.user.username;
+    if (this.prisma) {
+      try {
+        const userRecord = await this.prisma.user.findUnique({
+          where: { id: client.data.user.sub },
+          select: { avatarUrl: true, displayName: true },
+        });
+        if (userRecord) {
+          avatarUrl = userRecord.avatarUrl || avatarUrl;
+          displayName = userRecord.displayName || displayName;
+        }
+      } catch (_) {}
+    }
+
     participants.set(client.id, { 
       userId: client.data.user.sub, 
-      username: client.data.user.username, 
+      username: client.data.user.username,
+      displayName,
+      avatarUrl,
       socketId: client.id,
       serverId: data.serverId,
       isMuted: false
     });
 
     // Notify users in the voice room (for WebRTC)
-    client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+    client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { 
+      userId: client.data.user.sub, 
+      username: client.data.user.username, 
+      displayName,
+      avatarUrl,
+      socketId: client.id 
+    });
     
     // Notify EVERYONE in the server about the voice state update
     this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Param,
   Body,
   UseGuards,
   Request,
@@ -16,7 +17,12 @@ export class UsersController {
 
   @Get('me')
   async getProfile(@Request() req: any) {
-    return this.usersService.getProfile(req.user.sub);
+    return this.usersService.getProfile(req.user.sub, req.user.sub);
+  }
+
+  @Get(':id')
+  async getUserProfile(@Request() req: any, @Param('id') id: string) {
+    return this.usersService.getProfile(id, req.user.sub);
   }
 
   @Patch('profile')

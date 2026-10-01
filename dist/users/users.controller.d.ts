@@ -3,18 +3,26 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     getProfile(req: any): Promise<{
-        avatarUrl: string | null;
-        bannerUrl: string | null;
         id: string;
         username: string;
-        email: string;
-        avatarKey: string | null;
         displayName: string | null;
         bio: string | null;
-        bannerKey: string | null;
+        avatarUrl: string | null;
+        bannerUrl: string | null;
         bannerColor: string | null;
         createdAt: Date;
-        updatedAt: Date;
+        email: string | undefined;
+    }>;
+    getUserProfile(req: any, id: string): Promise<{
+        id: string;
+        username: string;
+        displayName: string | null;
+        bio: string | null;
+        avatarUrl: string | null;
+        bannerUrl: string | null;
+        bannerColor: string | null;
+        createdAt: Date;
+        email: string | undefined;
     }>;
     updateProfile(req: any, body: {
         displayName?: string;

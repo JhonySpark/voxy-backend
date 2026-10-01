@@ -3,13 +3,15 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service.js';
 export declare class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService;
     private channelsService;
     private jwtService;
+    private prisma?;
     server: Server;
     private connectedUsers;
-    constructor(chatService: ChatService, channelsService: ChannelsService, jwtService: JwtService);
+    constructor(chatService: ChatService, channelsService: ChannelsService, jwtService: JwtService, prisma?: PrismaService | undefined);
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): void;
     handleMessage(data: {
@@ -56,7 +58,8 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleJoinVoice(data: {
         serverId: string;
         channelId: string;
-    }, client: Socket): void;
+        avatarUrl?: string;
+    }, client: Socket): Promise<void>;
     handleLeaveVoice(data: {
         serverId: string;
         channelId: string;

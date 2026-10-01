@@ -66,7 +66,7 @@ export class UsersService {
     };
   }
 
-  async getProfile(userId: string) {
+  async getProfile(userId: string, requestingUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -90,10 +90,18 @@ export class UsersService {
     }
 
     const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
+    const isSelf = !requestingUserId || requestingUserId === userId;
+
     return {
-      ...user,
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      bio: user.bio,
       avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,
       bannerUrl: user.bannerUrl ? `${user.bannerUrl.split('?')[0]}${version}` : null,
+      bannerColor: user.bannerColor,
+      createdAt: user.createdAt,
+      email: isSelf ? user.email : undefined,
     };
   }
 

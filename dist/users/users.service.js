@@ -74,7 +74,7 @@ let UsersService = class UsersService {
             password: user.password,
         };
     }
-    async getProfile(userId) {
+    async getProfile(userId, requestingUserId) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -96,10 +96,17 @@ let UsersService = class UsersService {
             throw new NotFoundException('Usuário não encontrado.');
         }
         const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
+        const isSelf = !requestingUserId || requestingUserId === userId;
         return {
-            ...user,
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+            bio: user.bio,
             avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,
             bannerUrl: user.bannerUrl ? `${user.bannerUrl.split('?')[0]}${version}` : null,
+            bannerColor: user.bannerColor,
+            createdAt: user.createdAt,
+            email: isSelf ? user.email : undefined,
         };
     }
     async updateProfile(userId, data) {

@@ -34,19 +34,16 @@ export declare class UsersService {
         email: string;
         password: string;
     } | null>;
-    getProfile(userId: string): Promise<{
-        avatarUrl: string | null;
-        bannerUrl: string | null;
+    getProfile(userId: string, requestingUserId?: string): Promise<{
         id: string;
         username: string;
-        email: string;
-        avatarKey: string | null;
         displayName: string | null;
         bio: string | null;
-        bannerKey: string | null;
+        avatarUrl: string | null;
+        bannerUrl: string | null;
         bannerColor: string | null;
         createdAt: Date;
-        updatedAt: Date;
+        email: string | undefined;
     }>;
     updateProfile(userId: string, data: {
         displayName?: string;

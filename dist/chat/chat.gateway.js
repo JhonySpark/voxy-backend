@@ -11,20 +11,24 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, ConnectedSocket, } from '@nestjs/websockets';
+import { Optional } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service.js';
 let ChatGateway = class ChatGateway {
     chatService;
     channelsService;
     jwtService;
+    prisma;
     server;
     connectedUsers = new Map();
-    constructor(chatService, channelsService, jwtService) {
+    constructor(chatService, channelsService, jwtService, prisma) {
         this.chatService = chatService;
         this.channelsService = channelsService;
         this.jwtService = jwtService;
+        this.prisma = prisma;
     }
     async handleConnection(client) {
         try {
@@ -122,8 +126,29 @@ let ChatGateway = class ChatGateway {
     handleUserProfileUpdated(data, client) {
         const userId = client.data?.user?.sub || data.userId;
         this.server.emit('userProfileUpdated', { ...data, userId });
+        for (const [channelId, participants] of this.voiceStates.entries()) {
+            let changed = false;
+            let targetServerId = null;
+            for (const user of participants.values()) {
+                if (user.userId === userId) {
+                    if (data.avatarUrl !== undefined)
+                        user.avatarUrl = data.avatarUrl;
+                    if (data.displayName !== undefined)
+                        user.displayName = data.displayName;
+                    changed = true;
+                    targetServerId = user.serverId;
+                }
+            }
+            if (changed && targetServerId) {
+                this.server.to(`server-${targetServerId}`).emit('serverVoiceUpdate', {
+                    channelId,
+                    participants: Array.from(participants.values()),
+                    startedAt: this.channelStartTimes.get(channelId),
+                });
+            }
+        }
     }
-    handleJoinVoice(data, client) {
+    async handleJoinVoice(data, client) {
         client.join(`voice-${data.channelId}`);
         if (!this.voiceStates.has(data.channelId)) {
             this.voiceStates.set(data.channelId, new Map());
@@ -135,14 +160,37 @@ let ChatGateway = class ChatGateway {
                 participants.delete(socketId);
             }
         }
+        let avatarUrl = data.avatarUrl;
+        let displayName = client.data.user.username;
+        if (this.prisma) {
+            try {
+                const userRecord = await this.prisma.user.findUnique({
+                    where: { id: client.data.user.sub },
+                    select: { avatarUrl: true, displayName: true },
+                });
+                if (userRecord) {
+                    avatarUrl = userRecord.avatarUrl || avatarUrl;
+                    displayName = userRecord.displayName || displayName;
+                }
+            }
+            catch (_) { }
+        }
         participants.set(client.id, {
             userId: client.data.user.sub,
             username: client.data.user.username,
+            displayName,
+            avatarUrl,
             socketId: client.id,
             serverId: data.serverId,
             isMuted: false
         });
-        client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+        client.to(`voice-${data.channelId}`).emit('userJoinedVoice', {
+            userId: client.data.user.sub,
+            username: client.data.user.username,
+            displayName,
+            avatarUrl,
+            socketId: client.id
+        });
         this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
             channelId: data.channelId,
             participants: Array.from(participants.values()),
@@ -276,7 +324,7 @@ __decorate([
     __param(1, ConnectedSocket()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Socket]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleJoinVoice", null);
 __decorate([
     SubscribeMessage('leaveVoice'),
@@ -304,9 +352,11 @@ __decorate([
 ], ChatGateway.prototype, "handleWebrtcSignal", null);
 ChatGateway = __decorate([
     WebSocketGateway({ cors: { origin: '*' } }),
+    __param(3, Optional()),
     __metadata("design:paramtypes", [ChatService,
         ChannelsService,
-        JwtService])
+        JwtService,
+        PrismaService])
 ], ChatGateway);
 export { ChatGateway };
 //# sourceMappingURL=chat.gateway.js.map
