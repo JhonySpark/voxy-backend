@@ -4,12 +4,14 @@ export declare class ServersService {
     private readonly serverRepo;
     private readonly prisma;
     constructor(serverRepo: IServerRepository, prisma: PrismaService);
+    private generateInviteCode;
     createServer(ownerId: string, name: string, iconUrl?: string, iconKey?: string): Promise<{
         id: string;
         name: string;
         ownerId: string;
         iconUrl: any;
         iconKey: any;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -33,6 +35,7 @@ export declare class ServersService {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -56,6 +59,7 @@ export declare class ServersService {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -69,6 +73,7 @@ export declare class ServersService {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -86,12 +91,13 @@ export declare class ServersService {
             };
         }[];
     }>;
-    joinServer(serverId: string, userId: string): Promise<{
+    joinServer(inviteCode: string, userId: string): Promise<{
         id: string;
         name: string;
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;

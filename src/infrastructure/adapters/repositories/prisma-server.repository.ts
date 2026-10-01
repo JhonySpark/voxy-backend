@@ -48,7 +48,8 @@ export class PrismaServerRepository implements IServerRepository {
       raw.iconUrl,
       raw.iconKey,
       raw.createdAt,
-      raw.updatedAt
+      raw.updatedAt,
+      raw.inviteCode,
     ).getValue();
   }
 
@@ -60,6 +61,7 @@ export class PrismaServerRepository implements IServerRepository {
         ownerId: server.ownerId,
         iconUrl: server.iconUrl,
         iconKey: server.iconKey,
+        inviteCode: server.inviteCode || `VOXY-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
         members: {
           create: server.members.map(m => ({
             userId: m.userId,
@@ -91,6 +93,7 @@ export class PrismaServerRepository implements IServerRepository {
         name: server.name,
         iconUrl: server.iconUrl,
         iconKey: server.iconKey,
+        inviteCode: server.inviteCode,
         updatedAt: server.updatedAt,
       },
       include: {

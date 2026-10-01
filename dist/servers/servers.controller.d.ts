@@ -8,6 +8,7 @@ export declare class ServersController {
         ownerId: string;
         iconUrl: any;
         iconKey: any;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -31,6 +32,7 @@ export declare class ServersController {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -54,6 +56,7 @@ export declare class ServersController {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -67,6 +70,7 @@ export declare class ServersController {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
@@ -90,6 +94,7 @@ export declare class ServersController {
         ownerId: string;
         iconUrl: string | null;
         iconKey: string | null | undefined;
+        inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;

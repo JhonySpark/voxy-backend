@@ -38,7 +38,9 @@ describe('ChannelsService', () => {
   beforeEach(async () => {
     channelRepo = {
       create: vi.fn(),
+      update: vi.fn(),
       findById: vi.fn(),
+      delete: vi.fn(),
       getMessages: vi.fn(),
       saveMessage: vi.fn(),
     };
@@ -128,6 +130,49 @@ describe('ChannelsService', () => {
 
       expect(channelRepo.getMessages).toHaveBeenCalledWith('c1');
       expect(result).toEqual(mockMessages);
+    });
+  });
+
+  describe('deleteChannel', () => {
+    it('should only allow the owner to delete a channel', async () => {
+      const channel = createDomainChannel('c1', 'general', 's1');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.getMemberRole.mockResolvedValue('MEMBER');
+
+      await expect(service.deleteChannel('c1', 'u1')).rejects.toThrow(ForbiddenException);
+      expect(channelRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('should delete a channel for the owner', async () => {
+      const channel = createDomainChannel('c1', 'general', 's1');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.getMemberRole.mockResolvedValue('OWNER');
+
+      await service.deleteChannel('c1', 'u1');
+
+      expect(channelRepo.delete).toHaveBeenCalledWith('c1');
+    });
+  });
+
+  describe('renameChannel', () => {
+    it('should rename a channel for the owner', async () => {
+      const channel = createDomainChannel('c1', 'general', 's1');
+      channelRepo.findById.mockResolvedValue(channel);
+      channelRepo.update.mockImplementation(async (updatedChannel) => updatedChannel);
+      serverRepo.getMemberRole.mockResolvedValue('OWNER');
+
+      const result = await service.renameChannel('c1', 'u1', 'novidades');
+
+      expect(channelRepo.update).toHaveBeenCalledWith(channel);
+      expect(result.name).toBe('novidades');
+    });
+
+    it('should reject a blank channel name', async () => {
+      const channel = createDomainChannel('c1', 'general', 's1');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.getMemberRole.mockResolvedValue('OWNER');
+
+      await expect(service.renameChannel('c1', 'u1', ' ')).rejects.toThrow(ForbiddenException);
     });
   });
 

@@ -89,7 +89,8 @@ let ChatGateway = class ChatGateway {
         const senderId = client.data.user.sub;
         try {
             const message = await this.channelsService.saveChannelMessage(data.channelId, senderId, data.content, data.attachmentId);
-            this.server.to(data.channelId).emit('newChannelMessage', message);
+            client.emit('channelMessageSent', message);
+            client.to(data.channelId).emit('newChannelMessage', message);
             return message;
         }
         catch (e) {

@@ -122,8 +122,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.content,
         data.attachmentId,
       );
-      // Broadcast to everyone in the channel
-      this.server.to(data.channelId).emit('newChannelMessage', message);
+      // Confirma diretamente ao remetente e entrega imediatamente aos demais membros.
+      // Isso evita depender da entrada prévia do remetente na sala para atualizar a própria tela.
+      client.emit('channelMessageSent', message);
+      client.to(data.channelId).emit('newChannelMessage', message);
       return message;
     } catch (e) {
       // Forbidden or NotFound

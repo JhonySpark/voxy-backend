@@ -130,6 +130,8 @@ describe('ChatGateway', () => {
     it('should save channel message and broadcast to channel', async () => {
       const mockSocket: any = {
         data: { user: { sub: 'u1' } },
+        emit: vi.fn(),
+        to: vi.fn().mockReturnThis(),
       };
       const mockSaved = { id: 'cm1', content: 'hello channel', channelId: 'c1', senderId: 'u1' };
       channelsService.saveChannelMessage.mockResolvedValue(mockSaved);
@@ -137,8 +139,9 @@ describe('ChatGateway', () => {
       const result = await gateway.handleChannelMessage({ channelId: 'c1', content: 'hello channel' }, mockSocket);
 
       expect(channelsService.saveChannelMessage).toHaveBeenCalledWith('c1', 'u1', 'hello channel', undefined);
-      expect(mockServer.to).toHaveBeenCalledWith('c1');
-      expect(mockServer.emit).toHaveBeenCalledWith('newChannelMessage', mockSaved);
+      expect(mockSocket.emit).toHaveBeenCalledWith('channelMessageSent', mockSaved);
+      expect(mockSocket.to).toHaveBeenCalledWith('c1');
+      expect(mockSocket.emit).toHaveBeenCalledWith('newChannelMessage', mockSaved);
       expect(result).toEqual(mockSaved);
     });
 

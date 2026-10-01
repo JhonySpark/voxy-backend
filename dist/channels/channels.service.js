@@ -57,6 +57,16 @@ let ChannelsService = class ChannelsService {
         }
         return this.channelRepo.getMessages(channelId);
     }
+    async deleteChannel(channelId, userId) {
+        const channel = await this.channelRepo.findById(channelId);
+        if (!channel)
+            throw new NotFoundException('Channel not found');
+        const role = await this.serverRepo.getMemberRole(channel.serverId, userId);
+        if (role !== 'OWNER') {
+            throw new ForbiddenException('Only the owner can delete channels');
+        }
+        await this.channelRepo.delete(channelId);
+    }
     async saveChannelMessage(channelId, senderId, content, attachmentId) {
         const channel = await this.channelRepo.findById(channelId);
         if (!channel)

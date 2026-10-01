@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let ChannelsController = class ChannelsController {
@@ -20,6 +20,10 @@ let ChannelsController = class ChannelsController {
     }
     async createChannel(req, serverId, name, type) {
         return this.channelsService.createChannel(serverId, req.user.sub, name, type);
+    }
+    async deleteChannel(req, channelId) {
+        await this.channelsService.deleteChannel(channelId, req.user.sub);
+        return { success: true };
     }
     async getMessages(req, channelId) {
         return this.channelsService.getChannelMessages(channelId, req.user.sub);
@@ -41,6 +45,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "createChannel", null);
+__decorate([
+    Delete(':channelId'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "deleteChannel", null);
 __decorate([
     Get(':channelId/messages'),
     __param(0, Request()),

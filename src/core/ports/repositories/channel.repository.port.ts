@@ -2,8 +2,10 @@ import { Channel } from '../../../modules/servers/domain/entities/channel.entity
 
 export interface IChannelRepository {
   create(channel: Channel): Promise<Channel>;
+  update(channel: Channel): Promise<Channel>;
   findById(id: string): Promise<Channel | null>;
   findServerChannels(serverId: string): Promise<Channel[]>;
+  delete(channelId: string): Promise<void>;
   saveMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
   getMessages(channelId: string): Promise<any[]>;
 }

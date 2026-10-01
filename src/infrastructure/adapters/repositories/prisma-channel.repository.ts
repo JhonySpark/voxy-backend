@@ -35,6 +35,14 @@ export class PrismaChannelRepository implements IChannelRepository {
     return this.toDomain(raw)!;
   }
 
+  async update(channel: Channel): Promise<Channel> {
+    const raw = await this.prisma.channel.update({
+      where: { id: channel.id },
+      data: { name: channel.name },
+    });
+    return this.toDomain(raw)!;
+  }
+
   async findById(id: string): Promise<Channel | null> {
     const raw = await this.prisma.channel.findUnique({
       where: { id },
@@ -47,6 +55,10 @@ export class PrismaChannelRepository implements IChannelRepository {
       where: { serverId },
     });
     return rawList.map(raw => this.toDomain(raw)!);
+  }
+
+  async delete(channelId: string): Promise<void> {
+    await this.prisma.channel.delete({ where: { id: channelId } });
   }
 
   async saveMessage(

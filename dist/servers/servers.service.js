@@ -21,12 +21,24 @@ let ServersService = class ServersService {
         this.serverRepo = serverRepo;
         this.prisma = prisma;
     }
+    async generateInviteCode() {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+            const bytes = crypto.getRandomValues(new Uint8Array(8));
+            const code = `VOXY-${Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')}`;
+            const existing = await this.prisma.server.findUnique({ where: { inviteCode: code }, select: { id: true } });
+            if (!existing)
+                return code;
+        }
+        throw new ForbiddenException('Não foi possível gerar um código de convite único.');
+    }
     async createServer(ownerId, name, iconUrl, iconKey) {
         const serverOrError = Server.create(name, ownerId);
         if (serverOrError.isFailure) {
             throw new ForbiddenException(serverOrError.error);
         }
         const server = serverOrError.getValue();
+        server.setInviteCode(await this.generateInviteCode());
         const created = await this.serverRepo.create(server);
         if ((iconUrl || iconKey) && this.prisma?.server) {
             await this.prisma.server.update({
@@ -43,6 +55,7 @@ let ServersService = class ServersService {
             ownerId: created.ownerId,
             iconUrl: created.iconUrl || iconUrl,
             iconKey: created.iconKey || iconKey,
+            inviteCode: created.inviteCode,
             channels: created.channels.map(c => ({
                 id: c.id,
                 name: c.name,
@@ -94,6 +107,7 @@ let ServersService = class ServersService {
                 ownerId: s.ownerId,
                 iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
                 iconKey: s.iconKey,
+                inviteCode: s.inviteCode,
                 channels: s.channels.map(c => ({
                     id: c.id,
                     name: c.name,
@@ -120,6 +134,7 @@ let ServersService = class ServersService {
             ownerId: server.ownerId,
             iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
             iconKey: server.iconKey,
+            inviteCode: server.inviteCode,
             channels: server.channels.map(c => ({
                 id: c.id,
                 name: c.name,
@@ -135,7 +150,13 @@ let ServersService = class ServersService {
             })),
         };
     }
-    async joinServer(serverId, userId) {
+    async joinServer(inviteCode, userId) {
+        const normalizedInviteCode = inviteCode.trim().toUpperCase();
+        const isLegacyId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(inviteCode);
+        const invite = isLegacyId
+            ? { id: inviteCode }
+            : await this.prisma.server.findUnique({ where: { inviteCode: normalizedInviteCode }, select: { id: true } });
+        const serverId = invite?.id || inviteCode;
         const server = await this.serverRepo.findById(serverId);
         if (!server)
             throw new NotFoundException('Server not found');

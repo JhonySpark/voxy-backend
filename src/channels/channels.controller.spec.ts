@@ -8,6 +8,8 @@ describe('ChannelsController', () => {
   let controller: ChannelsController;
   let channelsService: {
     createChannel: ReturnType<typeof vi.fn>;
+    renameChannel: ReturnType<typeof vi.fn>;
+    deleteChannel: ReturnType<typeof vi.fn>;
     getChannelMessages: ReturnType<typeof vi.fn>;
     getVoiceToken: ReturnType<typeof vi.fn>;
   };
@@ -15,6 +17,8 @@ describe('ChannelsController', () => {
   beforeEach(async () => {
     channelsService = {
       createChannel: vi.fn(),
+      renameChannel: vi.fn(),
+      deleteChannel: vi.fn(),
       getChannelMessages: vi.fn(),
       getVoiceToken: vi.fn(),
     };
@@ -54,6 +58,26 @@ describe('ChannelsController', () => {
 
     expect(channelsService.getChannelMessages).toHaveBeenCalledWith('c1', 'u1');
     expect(result).toEqual([{ id: 'm1' }]);
+  });
+
+  it('should delete a channel for the authenticated user', async () => {
+    const req = { user: { sub: 'u1' } };
+    channelsService.deleteChannel.mockResolvedValue(undefined);
+
+    const result = await controller.deleteChannel(req, 'c1');
+
+    expect(channelsService.deleteChannel).toHaveBeenCalledWith('c1', 'u1');
+    expect(result).toEqual({ success: true });
+  });
+
+  it('should rename a channel for the authenticated user', async () => {
+    const req = { user: { sub: 'u1' } };
+    channelsService.renameChannel.mockResolvedValue({ id: 'c1', name: 'novo-nome' });
+
+    const result = await controller.renameChannel(req, 'c1', 'novo-nome');
+
+    expect(channelsService.renameChannel).toHaveBeenCalledWith('c1', 'u1', 'novo-nome');
+    expect(result).toEqual({ id: 'c1', name: 'novo-nome' });
   });
 
   it('should get voice token for channel', async () => {

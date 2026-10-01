@@ -65,6 +65,7 @@ model Message {
 model Server {
   id         String   @id @default(uuid())
   name       String
+  inviteCode String   @unique
   iconUrl    String?
   iconKey    String?
   ownerId    String

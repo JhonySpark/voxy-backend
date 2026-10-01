@@ -10,6 +10,7 @@ export interface ServerProps {
   ownerId: string;
   iconUrl?: string | null;
   iconKey?: string | null;
+  inviteCode?: string;
   createdAt?: Date;
   updatedAt?: Date;
   members: ServerMember[];
@@ -31,6 +32,14 @@ export class Server extends AggregateRoot<ServerProps> {
 
   get iconKey(): string | null | undefined {
     return this.props.iconKey;
+  }
+
+  get inviteCode(): string | undefined {
+    return this.props.inviteCode;
+  }
+
+  public setInviteCode(inviteCode: string): void {
+    this.props.inviteCode = inviteCode;
   }
 
   get members(): ServerMember[] {
@@ -152,7 +161,8 @@ export class Server extends AggregateRoot<ServerProps> {
     iconUrl?: string | null,
     iconKey?: string | null,
     createdAt?: Date,
-    updatedAt?: Date
+    updatedAt?: Date,
+    inviteCode?: string,
   ): Result<Server> {
     if (!name || name.trim().length === 0) {
       return Result.fail<Server>('Nome do servidor não pode ser vazio.');
@@ -199,6 +209,7 @@ export class Server extends AggregateRoot<ServerProps> {
         ownerId,
         iconUrl: iconUrl || null,
         iconKey: iconKey || null,
+        inviteCode,
         members,
         channels,
         createdAt: createdAt || new Date(),

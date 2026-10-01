@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 
@@ -15,6 +15,21 @@ export class ChannelsController {
     @Body('type') type: 'TEXT' | 'VOICE'
   ) {
     return this.channelsService.createChannel(serverId, req.user.sub, name, type);
+  }
+
+  @Delete(':channelId')
+  async deleteChannel(@Request() req: any, @Param('channelId') channelId: string) {
+    await this.channelsService.deleteChannel(channelId, req.user.sub);
+    return { success: true };
+  }
+
+  @Patch(':channelId')
+  async renameChannel(
+    @Request() req: any,
+    @Param('channelId') channelId: string,
+    @Body('name') name: string,
+  ) {
+    return this.channelsService.renameChannel(channelId, req.user.sub, name);
   }
 
   @Get(':channelId/messages')

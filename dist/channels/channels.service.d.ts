@@ -13,6 +13,7 @@ export declare class ChannelsService {
         serverId: string;
     }>;
     getChannelMessages(channelId: string, userId: string): Promise<any[]>;
+    deleteChannel(channelId: string, userId: string): Promise<void>;
     saveChannelMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
     getVoiceToken(channelId: string, user: {
         sub: string;

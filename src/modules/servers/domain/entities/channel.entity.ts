@@ -26,6 +26,14 @@ export class Channel extends Entity<ChannelProps> {
     return this.props.createdAt || new Date();
   }
 
+  public rename(name: string): Result<void> {
+    if (!name || !name.trim()) {
+      return Result.fail<void>('Nome do canal não pode ser vazio.');
+    }
+    this.props.name = name.trim();
+    return Result.ok<void>();
+  }
+
   private constructor(props: ChannelProps, id?: string) {
     super(props, id);
   }
