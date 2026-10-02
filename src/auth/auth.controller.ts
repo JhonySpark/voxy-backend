@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { Prisma } from '@prisma/client';
 
@@ -18,5 +18,10 @@ export class AuthController {
   @Post('register')
   async register(@Body() body: Prisma.UserCreateInput) {
     return this.authService.register(body);
+  }
+
+  @Get('check-username')
+  async checkUsername(@Query('username') username: string) {
+    return this.authService.checkUsername(username);
   }
 }

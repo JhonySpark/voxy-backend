@@ -6,13 +6,19 @@ import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: { validateUser: ReturnType<typeof vi.fn>; login: ReturnType<typeof vi.fn>; register: ReturnType<typeof vi.fn> };
+  let authService: {
+    validateUser: ReturnType<typeof vi.fn>;
+    login: ReturnType<typeof vi.fn>;
+    register: ReturnType<typeof vi.fn>;
+    checkUsername: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     authService = {
       validateUser: vi.fn(),
       login: vi.fn(),
       register: vi.fn(),
+      checkUsername: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +67,17 @@ describe('AuthController', () => {
 
       expect(authService.register).toHaveBeenCalledWith(registerData);
       expect(result).toEqual(createdUser);
+    });
+  });
+
+  describe('checkUsername', () => {
+    it('should return availability info from authService', async () => {
+      authService.checkUsername.mockResolvedValue({ available: true, message: 'Disponível' });
+
+      const result = await controller.checkUsername('testuser');
+
+      expect(authService.checkUsername).toHaveBeenCalledWith('testuser');
+      expect(result).toEqual({ available: true, message: 'Disponível' });
     });
   });
 });

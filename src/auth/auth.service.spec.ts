@@ -8,13 +8,18 @@ import { TOKEN_SERVICE_PORT, ITokenServicePort } from '../core/ports/security/to
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: { findByEmail: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  let usersService: {
+    findByEmail: ReturnType<typeof vi.fn>;
+    findByUsername: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+  };
   let tokenService: { sign: ReturnType<typeof vi.fn>; verify: ReturnType<typeof vi.fn> };
   let passwordHasher: { hash: ReturnType<typeof vi.fn>; compare: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     usersService = {
       findByEmail: vi.fn(),
+      findByUsername: vi.fn(),
       create: vi.fn(),
     };
     tokenService = {
@@ -88,17 +93,73 @@ describe('AuthService', () => {
     });
   });
 
-  describe('register', () => {
-    it('should throw BadRequestException if user already exists', async () => {
-      usersService.findByEmail.mockResolvedValue({ id: 'existing' });
+  describe('checkUsername', () => {
+    it('should return available false if username is empty', async () => {
+      const result = await service.checkUsername('');
+      expect(result.available).toBe(false);
+    });
 
+    it('should return available false if username has invalid format', async () => {
+      const result = await service.checkUsername('ab'); // less than 3
+      expect(result.available).toBe(false);
+    });
+
+    it('should return available false if username is taken', async () => {
+      usersService.findByUsername.mockResolvedValue({ id: 'u1', username: 'john_doe' });
+
+      const result = await service.checkUsername('john_doe');
+      expect(result.available).toBe(false);
+      expect(result.message).toContain('já está em uso');
+    });
+
+    it('should return available true if username is valid and not taken', async () => {
+      usersService.findByUsername.mockResolvedValue(null);
+
+      const result = await service.checkUsername('john_doe');
+      expect(result.available).toBe(true);
+      expect(result.message).toContain('disponível');
+    });
+  });
+
+  describe('register', () => {
+    it('should throw BadRequestException if email is invalid', async () => {
       await expect(
-        service.register({ email: 'existing@example.com', username: 'existing', password: 'pass' } as any)
+        service.register({ email: 'invalid-email', username: 'valid_user', password: 'ValidPass@123' })
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should hash password and create user', async () => {
+    it('should throw BadRequestException if username is invalid', async () => {
+      await expect(
+        service.register({ email: 'valid@example.com', username: 'x', password: 'ValidPass@123' })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if password is too simple', async () => {
+      await expect(
+        service.register({ email: 'valid@example.com', username: 'valid_user', password: 'simplepassword' })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if email already exists', async () => {
+      usersService.findByEmail.mockResolvedValue({ id: 'existing' });
+
+      await expect(
+        service.register({ email: 'existing@example.com', username: 'newuser', password: 'ValidPass@123' })
+      ).rejects.toThrow('Este endereço de e-mail já está cadastrado.');
+    });
+
+    it('should throw BadRequestException if username already exists', async () => {
       usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByUsername.mockResolvedValue({ id: 'existing' });
+
+      await expect(
+        service.register({ email: 'new@example.com', username: 'existing', password: 'ValidPass@123' })
+      ).rejects.toThrow('Este nome de usuário já está em uso.');
+    });
+
+    it('should hash password and create user when inputs are valid', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByUsername.mockResolvedValue(null);
       passwordHasher.hash.mockResolvedValue('hashed_secret');
       usersService.create.mockResolvedValue({
         id: 'new_id',
@@ -110,10 +171,10 @@ describe('AuthService', () => {
       const result = await service.register({
         email: 'new@example.com',
         username: 'newuser',
-        password: 'plain_password',
-      } as any);
+        password: 'ValidPass@123',
+      });
 
-      expect(passwordHasher.hash).toHaveBeenCalledWith('plain_password');
+      expect(passwordHasher.hash).toHaveBeenCalledWith('ValidPass@123');
       expect(usersService.create).toHaveBeenCalledWith({
         email: 'new@example.com',
         username: 'newuser',
