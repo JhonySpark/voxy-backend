@@ -13,7 +13,11 @@ export class LivekitVoiceAdapter implements IVoiceEnginePort {
       name: options.participantName,
     });
 
-    at.addGrant({ roomJoin: true, room: options.roomName });
+    at.addGrant({
+      roomJoin: true,
+      room: options.roomName,
+      canUpdateOwnMetadata: options.canUpdateOwnMetadata === true,
+    });
 
     return at.toJwt();
   }

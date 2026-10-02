@@ -130,6 +130,7 @@ export class ChannelsService {
       roomName: channelId,
       participantId: isScreen ? `${user.sub}#screen` : user.sub,
       participantName: isScreen ? `${user.username} (Tela)` : user.username,
+      canUpdateOwnMetadata: isScreen,
     });
 
     return { token };

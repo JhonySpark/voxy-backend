@@ -232,6 +232,7 @@ describe('ChannelsService', () => {
         roomName: 'c1',
         participantId: 'u1',
         participantName: 'user1',
+        canUpdateOwnMetadata: false,
       });
       expect(result).toEqual({ token: 'mock_voice_token' });
     });

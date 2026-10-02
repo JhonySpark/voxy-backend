@@ -2,6 +2,7 @@ export interface CreateVoiceTokenOptions {
   roomName: string;
   participantId: string;
   participantName: string;
+  canUpdateOwnMetadata?: boolean;
 }
 
 export interface IVoiceEnginePort {

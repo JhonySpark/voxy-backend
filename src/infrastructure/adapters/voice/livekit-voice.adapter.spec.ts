@@ -24,7 +24,11 @@ describe('LivekitVoiceAdapter', () => {
       participantName: 'Alice',
     });
 
-    expect(mockAddGrant).toHaveBeenCalledWith({ roomJoin: true, room: 'room-1' });
+    expect(mockAddGrant).toHaveBeenCalledWith({
+      roomJoin: true,
+      room: 'room-1',
+      canUpdateOwnMetadata: false,
+    });
     expect(mockToJwt).toHaveBeenCalled();
     expect(token).toBe('mock_livekit_token');
   });
