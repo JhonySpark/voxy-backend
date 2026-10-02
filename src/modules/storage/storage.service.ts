@@ -22,11 +22,34 @@ export interface UploadAttachmentContext {
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
 
+  private readonly presignedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(STORAGE_PORT) private readonly storagePort: IStoragePort,
     private readonly mediaCompression: MediaCompressionService,
   ) {}
+
+  private getCachedUrl(cacheKey: string): string | null {
+    const cached = this.presignedUrlCache.get(cacheKey);
+    // Presigned URLs são geradas para 14400s (4h). Reutilizamos enquanto faltar mais de 30min para expirar.
+    if (cached && Date.now() < cached.expiresAt - 1800000) {
+      return cached.url;
+    }
+    this.presignedUrlCache.delete(cacheKey);
+    return null;
+  }
+
+  private setCachedUrl(cacheKey: string, url: string, ttlSeconds: number = 14400) {
+    this.presignedUrlCache.set(cacheKey, {
+      url,
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    });
+  }
+
+  public invalidateMediaCache(cacheKey: string) {
+    this.presignedUrlCache.delete(cacheKey);
+  }
 
   /**
    * Upload e compressão de Avatar do Usuário (Zona Privada)
@@ -78,6 +101,8 @@ export class StorageService {
         avatarKey: key,
       },
     });
+
+    this.invalidateMediaCache(`avatar:${userId}`);
 
     return {
       avatarUrl: `${avatarUrl}?v=${Date.now()}`,
@@ -143,6 +168,8 @@ export class StorageService {
         iconKey: key,
       },
     });
+
+    this.invalidateMediaCache(`server_icon:${serverId}`);
 
     return {
       iconUrl: `${iconUrl}?v=${Date.now()}`,
@@ -493,6 +520,8 @@ export class StorageService {
       },
     });
 
+    this.invalidateMediaCache(`banner:${userId}`);
+
     return {
       bannerUrl: `${bannerUrl}?v=${Date.now()}`,
       bannerKey: key,
@@ -503,6 +532,10 @@ export class StorageService {
    * Obtém URL assinada temporária para download de banner privado de usuário
    */
   async getUserBannerDownloadUrl(userId: string): Promise<string> {
+    const cacheKey = `banner:${userId}`;
+    const cached = this.getCachedUrl(cacheKey);
+    if (cached) return cached;
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { bannerKey: true },
@@ -512,13 +545,19 @@ export class StorageService {
       throw new NotFoundException('Banner não encontrado para este usuário.');
     }
 
-    return this.storagePort.getPresignedDownloadUrl(user.bannerKey, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(user.bannerKey, 14400);
+    this.setCachedUrl(cacheKey, url, 14400);
+    return url;
   }
 
   /**
    * Obtém URL assinada temporária para download de avatar privado de usuário
    */
   async getUserAvatarDownloadUrl(userId: string): Promise<string> {
+    const cacheKey = `avatar:${userId}`;
+    const cached = this.getCachedUrl(cacheKey);
+    if (cached) return cached;
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { avatarKey: true },
@@ -528,13 +567,19 @@ export class StorageService {
       throw new NotFoundException('Avatar não encontrado para este usuário.');
     }
 
-    return this.storagePort.getPresignedDownloadUrl(user.avatarKey, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(user.avatarKey, 14400);
+    this.setCachedUrl(cacheKey, url, 14400);
+    return url;
   }
 
   /**
    * Obtém URL assinada temporária para download de ícone privado de servidor
    */
   async getServerIconDownloadUrl(serverId: string): Promise<string> {
+    const cacheKey = `server_icon:${serverId}`;
+    const cached = this.getCachedUrl(cacheKey);
+    if (cached) return cached;
+
     const server = await this.prisma.server.findUnique({
       where: { id: serverId },
       select: { iconKey: true },
@@ -544,7 +589,9 @@ export class StorageService {
       throw new NotFoundException('Ícone não encontrado para este servidor.');
     }
 
-    return this.storagePort.getPresignedDownloadUrl(server.iconKey, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(server.iconKey, 14400);
+    this.setCachedUrl(cacheKey, url, 14400);
+    return url;
   }
 }
 
