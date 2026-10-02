@@ -8,6 +8,16 @@ import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
 import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
 import { Password } from '../modules/identity/domain/value-objects/password.vo.js';
 
+export const AuthErrorCodes = {
+  INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
+  INVALID_USERNAME: 'AUTH_INVALID_USERNAME',
+  WEAK_PASSWORD: 'AUTH_WEAK_PASSWORD',
+  EMAIL_ALREADY_EXISTS: 'AUTH_EMAIL_ALREADY_EXISTS',
+  USERNAME_ALREADY_EXISTS: 'AUTH_USERNAME_ALREADY_EXISTS',
+  USERNAME_AVAILABLE: 'AUTH_USERNAME_AVAILABLE',
+  INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
+} as const;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,54 +42,85 @@ export class AuthService {
     };
   }
 
-  async checkUsername(username: string): Promise<{ available: boolean; message: string }> {
+  async checkUsername(username: string): Promise<{ available: boolean; code: string; message: string }> {
     if (!username || username.trim().length === 0) {
-      return { available: false, message: 'Nome de usuário não informado.' };
+      return {
+        available: false,
+        code: AuthErrorCodes.INVALID_USERNAME,
+        message: 'Nome de usuário não informado.',
+      };
     }
 
     const usernameOrError = Username.create(username);
     if (usernameOrError.isFailure) {
-      return { available: false, message: usernameOrError.error };
+      return {
+        available: false,
+        code: AuthErrorCodes.INVALID_USERNAME,
+        message: usernameOrError.error,
+      };
     }
 
     const cleanUsername = usernameOrError.getValue().value;
     const existing = await this.usersService.findByUsername(cleanUsername);
     if (existing) {
-      return { available: false, message: 'Este nome de usuário já está em uso.' };
+      return {
+        available: false,
+        code: AuthErrorCodes.USERNAME_ALREADY_EXISTS,
+        message: 'Este nome de usuário já está em uso.',
+      };
     }
 
-    return { available: true, message: 'Nome de usuário disponível!' };
+    return {
+      available: true,
+      code: AuthErrorCodes.USERNAME_AVAILABLE,
+      message: 'Nome de usuário disponível!',
+    };
   }
 
   async register(data: { email: string; username: string; password?: string }) {
     // 1. Validar formato de e-mail via Value Object
     const emailOrError = Email.create(data.email || '');
     if (emailOrError.isFailure) {
-      throw new BadRequestException(emailOrError.error);
+      throw new BadRequestException({
+        code: AuthErrorCodes.INVALID_EMAIL,
+        message: emailOrError.error,
+      });
     }
 
     // 2. Validar formato de nome de usuário via Value Object
     const usernameOrError = Username.create(data.username || '');
     if (usernameOrError.isFailure) {
-      throw new BadRequestException(usernameOrError.error);
+      throw new BadRequestException({
+        code: AuthErrorCodes.INVALID_USERNAME,
+        message: usernameOrError.error,
+      });
     }
 
     // 3. Validar complexidade e segurança da senha via Value Object
     const passwordOrError = Password.create(data.password || '');
     if (passwordOrError.isFailure) {
-      throw new BadRequestException(passwordOrError.error);
+      throw new BadRequestException({
+        code: AuthErrorCodes.WEAK_PASSWORD,
+        message: passwordOrError.error,
+      });
     }
 
     // 4. Checar duplicidade de e-mail
     const emailExists = await this.usersService.findByEmail(emailOrError.getValue().value);
     if (emailExists) {
-      throw new BadRequestException('Este endereço de e-mail já está cadastrado.');
+      throw new BadRequestException({
+        code: AuthErrorCodes.EMAIL_ALREADY_EXISTS,
+        message: 'Este endereço de e-mail já está cadastrado.',
+      });
     }
 
     // 5. Checar duplicidade de nome de usuário (nickname)
     const usernameExists = await this.usersService.findByUsername(usernameOrError.getValue().value);
     if (usernameExists) {
-      throw new BadRequestException('Este nome de usuário já está em uso.');
+      throw new BadRequestException({
+        code: AuthErrorCodes.USERNAME_ALREADY_EXISTS,
+        message: 'Este nome de usuário já está em uso.',
+      });
     }
 
     const hashedPassword = await this.passwordHasher.hash(passwordOrError.getValue().value);
