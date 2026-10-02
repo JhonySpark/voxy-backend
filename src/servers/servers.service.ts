@@ -171,13 +171,21 @@ export class ServersService {
     const normalizedInviteCode = inviteCode.trim().toUpperCase();
     const isLegacyId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(inviteCode);
     const invite = isLegacyId
-      ? { id: inviteCode }
-      : await this.prisma.server.findUnique({ where: { inviteCode: normalizedInviteCode }, select: { id: true } });
+      ? { id: inviteCode, deletedAt: null }
+      : await this.prisma.server.findUnique({ where: { inviteCode: normalizedInviteCode }, select: { id: true, deletedAt: true } });
+    if ((invite as any)?.deletedAt) {
+      throw new NotFoundException('Server not found');
+    }
     // Mantém compatibilidade com os UUIDs que já haviam sido compartilhados
     // antes dos códigos amigáveis, inclusive bases legadas.
     const serverId = invite?.id || inviteCode;
     const server = await this.serverRepo.findById(serverId);
-    if (!server) throw new NotFoundException('Server not found');
+    if (!server || server.isDeleted?.()) throw new NotFoundException('Server not found');
+
+    const isBanned = await this.serverRepo.isBanned(serverId, userId);
+    if (isBanned) {
+      throw new ForbiddenException('Você está banido deste servidor.');
+    }
 
     const isMember = await this.serverRepo.isMember(serverId, userId);
     if (!isMember) {
@@ -185,5 +193,241 @@ export class ServersService {
     }
 
     return this.getServerById(serverId, userId);
+  }
+
+  async getUserPermissions(serverId: string, userId: string) {
+    const server = await this.serverRepo.findById(serverId);
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+
+    if (server.ownerId === userId) {
+      return {
+        role: 'OWNER',
+        canInvite: true,
+        canDeleteMessages: true,
+        canKickMembers: true,
+        canBanMembers: true,
+        canManageChannels: true,
+        canManageServer: true,
+      };
+    }
+
+    const role = await this.serverRepo.getMemberRole(serverId, userId);
+    if (!role) throw new ForbiddenException('Você não é membro deste servidor.');
+
+    const defaultPermissions: Record<string, {
+      canInvite: boolean;
+      canDeleteMessages: boolean;
+      canKickMembers: boolean;
+      canBanMembers: boolean;
+      canManageChannels: boolean;
+      canManageServer: boolean;
+    }> = {
+      ADMIN: {
+        canInvite: true,
+        canDeleteMessages: true,
+        canKickMembers: true,
+        canBanMembers: true,
+        canManageChannels: true,
+        canManageServer: false,
+      },
+      MODERATOR: {
+        canInvite: true,
+        canDeleteMessages: true,
+        canKickMembers: true,
+        canBanMembers: false,
+        canManageChannels: false,
+        canManageServer: false,
+      },
+      MEMBER: {
+        canInvite: true,
+        canDeleteMessages: false,
+        canKickMembers: false,
+        canBanMembers: false,
+        canManageChannels: false,
+        canManageServer: false,
+      },
+    };
+
+    const rolePerms = await this.serverRepo.getRolePermissions(serverId);
+    const custom = rolePerms.find((p: any) => p.role === role);
+
+    const base = defaultPermissions[role] || defaultPermissions.MEMBER;
+
+    return {
+      role,
+      canInvite: custom?.canInvite ?? base.canInvite,
+      canDeleteMessages: custom?.canDeleteMessages ?? base.canDeleteMessages,
+      canKickMembers: custom?.canKickMembers ?? base.canKickMembers,
+      canBanMembers: custom?.canBanMembers ?? base.canBanMembers,
+      canManageChannels: custom?.canManageChannels ?? base.canManageChannels,
+      canManageServer: custom?.canManageServer ?? base.canManageServer,
+    };
+  }
+
+  async addMembers(serverId: string, requesterUserId: string, targetUserIds: string[]) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (!permissions.canInvite && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Você não tem permissão para convidar amigos para este servidor.');
+    }
+
+    const added: string[] = [];
+    for (const targetId of targetUserIds) {
+      const isBanned = await this.serverRepo.isBanned(serverId, targetId);
+      if (isBanned) continue;
+
+      const isMember = await this.serverRepo.isMember(serverId, targetId);
+      if (!isMember) {
+        await this.serverRepo.addMember(serverId, targetId, 'MEMBER');
+        added.push(targetId);
+      }
+    }
+
+    return { added, success: true };
+  }
+
+  async deleteServer(serverId: string, requesterUserId: string) {
+    const server = await this.serverRepo.findById(serverId);
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+
+    if (server.ownerId !== requesterUserId) {
+      throw new ForbiddenException('Apenas o dono pode excluir o servidor.');
+    }
+
+    await this.serverRepo.softDelete(serverId);
+    return { success: true };
+  }
+
+  async getServerMembers(serverId: string, requesterUserId: string) {
+    const isMember = await this.serverRepo.isMember(serverId, requesterUserId);
+    if (!isMember) throw new ForbiddenException('Você não é membro deste servidor.');
+
+    return this.serverRepo.getServerMembers(serverId);
+  }
+
+  async updateMemberRole(
+    serverId: string,
+    requesterUserId: string,
+    targetUserId: string,
+    newRole: string,
+  ) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (permissions.role !== 'OWNER' && !permissions.canManageServer) {
+      throw new ForbiddenException('Você não tem permissão para alterar cargos neste servidor.');
+    }
+
+    const server = await this.serverRepo.findById(serverId);
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+
+    if (server.ownerId === targetUserId) {
+      throw new ForbiddenException('Não é possível alterar o cargo do dono do servidor.');
+    }
+
+    const validRoles = ['ADMIN', 'MODERATOR', 'MEMBER'];
+    if (!validRoles.includes(newRole)) {
+      throw new ForbiddenException('Cargo inválido.');
+    }
+
+    await this.serverRepo.updateMemberRole(serverId, targetUserId, newRole);
+    return { success: true, role: newRole };
+  }
+
+  async kickMember(serverId: string, requesterUserId: string, targetUserId: string) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (!permissions.canKickMembers && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Você não tem permissão para expulsar membros deste servidor.');
+    }
+
+    const server = await this.serverRepo.findById(serverId);
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+
+    if (server.ownerId === targetUserId) {
+      throw new ForbiddenException('Não é possível expulsar o dono do servidor.');
+    }
+
+    const targetRole = await this.serverRepo.getMemberRole(serverId, targetUserId);
+    if (targetRole === 'OWNER') {
+      throw new ForbiddenException('Não é possível expulsar o dono do servidor.');
+    }
+    if (targetRole === 'ADMIN' && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Apenas o dono pode expulsar um administrador.');
+    }
+
+    await this.serverRepo.removeMember(serverId, targetUserId);
+    return { success: true };
+  }
+
+  async banMember(
+    serverId: string,
+    requesterUserId: string,
+    targetUserId: string,
+    reason?: string,
+  ) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (!permissions.canBanMembers && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Você não tem permissão para banir membros deste servidor.');
+    }
+
+    const server = await this.serverRepo.findById(serverId);
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+
+    if (server.ownerId === targetUserId) {
+      throw new ForbiddenException('Não é possível banir o dono do servidor.');
+    }
+
+    const targetRole = await this.serverRepo.getMemberRole(serverId, targetUserId);
+    if (targetRole === 'OWNER') {
+      throw new ForbiddenException('Não é possível banir o dono do servidor.');
+    }
+    if (targetRole === 'ADMIN' && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Apenas o dono pode banir um administrador.');
+    }
+
+    await this.serverRepo.banMember(serverId, targetUserId, reason);
+    return { success: true };
+  }
+
+  async unbanMember(serverId: string, requesterUserId: string, targetUserId: string) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (!permissions.canBanMembers && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Você não tem permissão para desbanir membros deste servidor.');
+    }
+
+    await this.serverRepo.unbanMember(serverId, targetUserId);
+    return { success: true };
+  }
+
+  async getServerBans(serverId: string, requesterUserId: string) {
+    const permissions = await this.getUserPermissions(serverId, requesterUserId);
+    if (!permissions.canBanMembers && permissions.role !== 'OWNER') {
+      throw new ForbiddenException('Você não tem permissão para visualizar banimentos deste servidor.');
+    }
+
+    return this.serverRepo.getServerBans(serverId);
+  }
+
+  async getRolePermissions(serverId: string, requesterUserId: string) {
+    const isMember = await this.serverRepo.isMember(serverId, requesterUserId);
+    if (!isMember) throw new ForbiddenException('Você não é membro deste servidor.');
+
+    return this.serverRepo.getRolePermissions(serverId);
+  }
+
+  async updateRolePermissions(
+    serverId: string,
+    requesterUserId: string,
+    role: string,
+    permissions: any,
+  ) {
+    const userPerms = await this.getUserPermissions(serverId, requesterUserId);
+    if (userPerms.role !== 'OWNER' && !userPerms.canManageServer) {
+      throw new ForbiddenException('Você não tem permissão para configurar permissões de cargos.');
+    }
+
+    const validRoles = ['ADMIN', 'MODERATOR', 'MEMBER'];
+    if (!validRoles.includes(role)) {
+      throw new ForbiddenException('Cargo inválido.');
+    }
+
+    return this.serverRepo.upsertRolePermissions(serverId, role, permissions);
   }
 }

@@ -29,6 +29,16 @@ describe('ServersService', () => {
       isMember: vi.fn(),
       getMemberRole: vi.fn(),
       addMember: vi.fn(),
+      removeMember: vi.fn(),
+      updateMemberRole: vi.fn(),
+      softDelete: vi.fn(),
+      isBanned: vi.fn().mockResolvedValue(false),
+      banMember: vi.fn(),
+      unbanMember: vi.fn(),
+      getServerBans: vi.fn().mockResolvedValue([]),
+      getServerMembers: vi.fn().mockResolvedValue([]),
+      getRolePermissions: vi.fn().mockResolvedValue([]),
+      upsertRolePermissions: vi.fn().mockResolvedValue({}),
     };
 
     const module: TestingModule = await Test.createTestingModule({

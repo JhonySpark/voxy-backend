@@ -35,6 +35,18 @@ export class ServerMember extends Entity<ServerMemberProps> {
     return this.props.role.isOwner();
   }
 
+  public isAdmin(): boolean {
+    return this.props.role.isAdmin();
+  }
+
+  public isModerator(): boolean {
+    return this.props.role.isModerator();
+  }
+
+  public changeRole(role: ServerRole): void {
+    this.props.role = role;
+  }
+
   private constructor(props: ServerMemberProps, id?: string) {
     super(props, id);
   }

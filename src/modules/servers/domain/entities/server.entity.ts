@@ -11,6 +11,7 @@ export interface ServerProps {
   iconUrl?: string | null;
   iconKey?: string | null;
   inviteCode?: string;
+  deletedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
   members: ServerMember[];
@@ -50,6 +51,14 @@ export class Server extends AggregateRoot<ServerProps> {
     return this.props.channels;
   }
 
+  get deletedAt(): Date | null | undefined {
+    return this.props.deletedAt;
+  }
+
+  public isDeleted(): boolean {
+    return !!this.props.deletedAt;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt || new Date();
   }
@@ -60,6 +69,28 @@ export class Server extends AggregateRoot<ServerProps> {
 
   private constructor(props: ServerProps, id?: string) {
     super(props, id);
+  }
+
+  public softDelete(requesterUserId: string): Result<void> {
+    if (!this.isOwner(requesterUserId)) {
+      return Result.fail<void>('Apenas o dono do servidor pode excluir o servidor.');
+    }
+    this.props.deletedAt = new Date();
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
+  public removeMember(userId: string): Result<void> {
+    if (this.isOwner(userId)) {
+      return Result.fail<void>('Não é possível remover o dono do servidor.');
+    }
+    const exists = this.isMember(userId);
+    if (!exists) {
+      return Result.fail<void>('Usuário não é membro deste servidor.');
+    }
+    this.props.members = this.props.members.filter(m => m.userId !== userId);
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
   }
 
   public isMember(userId: string): boolean {
@@ -163,6 +194,7 @@ export class Server extends AggregateRoot<ServerProps> {
     createdAt?: Date,
     updatedAt?: Date,
     inviteCode?: string,
+    deletedAt?: Date | null,
   ): Result<Server> {
     if (!name || name.trim().length === 0) {
       return Result.fail<Server>('Nome do servidor não pode ser vazio.');
@@ -210,6 +242,7 @@ export class Server extends AggregateRoot<ServerProps> {
         iconUrl: iconUrl || null,
         iconKey: iconKey || null,
         inviteCode,
+        deletedAt: deletedAt || null,
         members,
         channels,
         createdAt: createdAt || new Date(),

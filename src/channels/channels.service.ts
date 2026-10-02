@@ -117,6 +117,38 @@ export class ChannelsService {
     return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId);
   }
 
+  async deleteChannelMessage(channelId: string, messageId: string, userId: string) {
+    const channel = await this.channelRepo.findById(channelId);
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const message = await this.channelRepo.findMessageById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId === userId) {
+      await this.channelRepo.deleteMessage(messageId);
+      return { success: true };
+    }
+
+    const role = await this.serverRepo.getMemberRole(channel.serverId, userId);
+    if (!role) throw new ForbiddenException('You are not a member of this server');
+
+    if (role === 'OWNER') {
+      await this.channelRepo.deleteMessage(messageId);
+      return { success: true };
+    }
+
+    const rolePerms = await this.serverRepo.getRolePermissions(channel.serverId);
+    const custom = rolePerms.find((p: any) => p.role === role);
+    const canDeleteMessages = custom?.canDeleteMessages ?? (role === 'ADMIN' || role === 'MODERATOR');
+
+    if (!canDeleteMessages) {
+      throw new ForbiddenException('You do not have permission to delete this message');
+    }
+
+    await this.channelRepo.deleteMessage(messageId);
+    return { success: true };
+  }
+
   async getVoiceToken(channelId: string, user: { sub: string; username: string }, isScreen: boolean = false) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');

@@ -8,6 +8,8 @@ export interface IChannelRepository {
   delete(channelId: string): Promise<void>;
   saveMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
   getMessages(channelId: string): Promise<any[]>;
+  deleteMessage(messageId: string): Promise<void>;
+  findMessageById(messageId: string): Promise<any | null>;
 }
 
 export const CHANNEL_REPOSITORY = Symbol('CHANNEL_REPOSITORY');

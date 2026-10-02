@@ -33,6 +33,7 @@ model User {
   receivedMessages  Message[]    @relation("ReceivedMessages")
   ownedServers      Server[]       @relation("ServerOwner")
   serverMemberships ServerMember[]
+  serverBans        ServerBan[]    @relation("BannedFromServers")
   channelMessages   ChannelMessage[]
 }
 
@@ -63,31 +64,68 @@ model Message {
 }
 
 model Server {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   name       String
-  inviteCode String   @unique
+  inviteCode String    @unique
   iconUrl    String?
   iconKey    String?
   ownerId    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  owner     User           @relation("ServerOwner", fields: [ownerId], references: [id])
-  members   ServerMember[]
-  channels  Channel[]
+  owner           User                   @relation("ServerOwner", fields: [ownerId], references: [id])
+  members         ServerMember[]
+  channels        Channel[]
+  bans            ServerBan[]
+  rolePermissions ServerRolePermission[]
 }
 
 model ServerMember {
   id        String   @id @default(uuid())
   serverId  String
   userId    String
-  role      String   @default("MEMBER") // OWNER, MEMBER
+  role      String   @default("MEMBER") // OWNER, ADMIN, MODERATOR, MEMBER
   createdAt DateTime @default(now())
 
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, userId])
+}
+
+model ServerBan {
+  id        String   @id @default(uuid())
+  serverId  String
+  userId    String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user      User     @relation("BannedFromServers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@index([serverId])
+  @@index([userId])
+}
+
+model ServerRolePermission {
+  id                String   @id @default(uuid())
+  serverId          String
+  role              String   // ADMIN, MODERATOR, MEMBER
+  canInvite         Boolean  @default(true)
+  canDeleteMessages Boolean  @default(false)
+  canKickMembers    Boolean  @default(false)
+  canBanMembers     Boolean  @default(false)
+  canManageChannels Boolean  @default(false)
+  canManageServer   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  server            Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, role])
+  @@index([serverId])
 }
 
 model Channel {

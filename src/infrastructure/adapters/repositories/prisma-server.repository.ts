@@ -110,6 +110,7 @@ export class PrismaServerRepository implements IServerRepository {
   async findUserServers(userId: string): Promise<Server[]> {
     const rawList = await this.prisma.server.findMany({
       where: {
+        deletedAt: null,
         members: {
           some: { userId },
         },
@@ -133,6 +134,7 @@ export class PrismaServerRepository implements IServerRepository {
       },
     });
 
+    if (!raw || raw.deletedAt) return null;
     return this.toDomain(raw);
   }
 
@@ -161,6 +163,131 @@ export class PrismaServerRepository implements IServerRepository {
         members: {
           create: { userId, role },
         },
+      },
+    });
+  }
+
+  async removeMember(serverId: string, userId: string): Promise<void> {
+    await this.prisma.serverMember.deleteMany({
+      where: { serverId, userId },
+    });
+  }
+
+  async updateMemberRole(serverId: string, userId: string, role: string): Promise<void> {
+    await this.prisma.serverMember.update({
+      where: {
+        serverId_userId: { serverId, userId },
+      },
+      data: { role },
+    });
+  }
+
+  async softDelete(serverId: string): Promise<void> {
+    await this.prisma.server.update({
+      where: { id: serverId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async isBanned(serverId: string, userId: string): Promise<boolean> {
+    const ban = await this.prisma.serverBan.findUnique({
+      where: {
+        serverId_userId: { serverId, userId },
+      },
+    });
+    return !!ban;
+  }
+
+  async banMember(serverId: string, userId: string, reason?: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.serverMember.deleteMany({
+        where: { serverId, userId },
+      }),
+      this.prisma.serverBan.upsert({
+        where: {
+          serverId_userId: { serverId, userId },
+        },
+        create: {
+          serverId,
+          userId,
+          reason,
+        },
+        update: {
+          reason,
+        },
+      }),
+    ]);
+  }
+
+  async unbanMember(serverId: string, userId: string): Promise<void> {
+    await this.prisma.serverBan.deleteMany({
+      where: { serverId, userId },
+    });
+  }
+
+  async getServerBans(serverId: string): Promise<any[]> {
+    return this.prisma.serverBan.findMany({
+      where: { serverId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getServerMembers(serverId: string): Promise<any[]> {
+    return this.prisma.serverMember.findMany({
+      where: { serverId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            bio: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async getRolePermissions(serverId: string): Promise<any[]> {
+    return this.prisma.serverRolePermission.findMany({
+      where: { serverId },
+    });
+  }
+
+  async upsertRolePermissions(serverId: string, role: string, permissions: any): Promise<any> {
+    return this.prisma.serverRolePermission.upsert({
+      where: {
+        serverId_role: { serverId, role },
+      },
+      create: {
+        serverId,
+        role,
+        canInvite: permissions.canInvite ?? true,
+        canDeleteMessages: permissions.canDeleteMessages ?? false,
+        canKickMembers: permissions.canKickMembers ?? false,
+        canBanMembers: permissions.canBanMembers ?? false,
+        canManageChannels: permissions.canManageChannels ?? false,
+        canManageServer: permissions.canManageServer ?? false,
+      },
+      update: {
+        ...(permissions.canInvite !== undefined ? { canInvite: permissions.canInvite } : {}),
+        ...(permissions.canDeleteMessages !== undefined ? { canDeleteMessages: permissions.canDeleteMessages } : {}),
+        ...(permissions.canKickMembers !== undefined ? { canKickMembers: permissions.canKickMembers } : {}),
+        ...(permissions.canBanMembers !== undefined ? { canBanMembers: permissions.canBanMembers } : {}),
+        ...(permissions.canManageChannels !== undefined ? { canManageChannels: permissions.canManageChannels } : {}),
+        ...(permissions.canManageServer !== undefined ? { canManageServer: permissions.canManageServer } : {}),
       },
     });
   }

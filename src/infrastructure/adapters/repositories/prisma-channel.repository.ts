@@ -106,4 +106,19 @@ export class PrismaChannelRepository implements IChannelRepository {
       },
     });
   }
+
+  async findMessageById(messageId: string): Promise<any | null> {
+    return this.prisma.channelMessage.findUnique({
+      where: { id: messageId },
+      include: {
+        channel: true,
+      },
+    });
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await this.prisma.channelMessage.delete({
+      where: { id: messageId },
+    });
+  }
 }

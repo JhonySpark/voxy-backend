@@ -133,6 +133,43 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('deleteChannelMessage')
+  async handleDeleteChannelMessage(
+    @MessageBody() data: { channelId: string; messageId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const senderId = client.data.user.sub;
+    try {
+      await this.channelsService.deleteChannelMessage(data.channelId, data.messageId, senderId);
+      this.server.to(data.channelId).emit('channelMessageDeleted', {
+        channelId: data.channelId,
+        messageId: data.messageId,
+      });
+      client.emit('channelMessageDeleted', {
+        channelId: data.channelId,
+        messageId: data.messageId,
+      });
+      return { success: true };
+    } catch (e: any) {
+      return { error: e.message || 'Unauthorized' };
+    }
+  }
+
+  @SubscribeMessage('serverDeleted')
+  handleServerDeleted(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
+    this.server.to(`server-${data.serverId}`).emit('serverDeleted', { serverId: data.serverId });
+    this.server.emit('serverDeleted', { serverId: data.serverId });
+  }
+
+  @SubscribeMessage('serverMemberAction')
+  handleServerMemberAction(@MessageBody() data: { serverId: string; targetUserId?: string }, @ConnectedSocket() client: Socket) {
+    this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+    this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+    if (data.targetUserId) {
+      this.server.to(data.targetUserId).emit('serverMembershipChanged', { serverId: data.serverId });
+    }
+  }
+
   private voiceStates = new Map<
     string,
     Map<
