@@ -64,6 +64,30 @@ export declare class ServersController {
             serverId: string;
         }[];
     }[]>;
+    joinServer(req: any, inviteCode: string): Promise<{
+        id: string;
+        name: string;
+        ownerId: string;
+        iconUrl: string | null;
+        iconKey: string | null | undefined;
+        inviteCode: string | undefined;
+        channels: {
+            id: string;
+            name: string;
+            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            serverId: string;
+        }[];
+        members: {
+            id: string;
+            userId: string;
+            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            serverId: string;
+            user: {
+                id: string;
+                username: string;
+            };
+        }[];
+    }>;
     getServerById(req: any, id: string): Promise<{
         id: string;
         name: string;
@@ -88,28 +112,37 @@ export declare class ServersController {
             };
         }[];
     }>;
-    joinServer(req: any, inviteCode: string): Promise<{
-        id: string;
-        name: string;
-        ownerId: string;
-        iconUrl: string | null;
-        iconKey: string | null | undefined;
-        inviteCode: string | undefined;
-        channels: {
-            id: string;
-            name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
-            serverId: string;
-        }[];
-        members: {
-            id: string;
-            userId: string;
-            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
-            serverId: string;
-            user: {
-                id: string;
-                username: string;
-            };
-        }[];
+    deleteServer(req: any, serverId: string): Promise<{
+        success: boolean;
+    }>;
+    getServerMembers(req: any, serverId: string): Promise<any[]>;
+    addMembers(req: any, serverId: string, userIds: string[]): Promise<{
+        added: string[];
+        success: boolean;
+    }>;
+    updateMemberRole(req: any, serverId: string, targetUserId: string, role: string): Promise<{
+        success: boolean;
+        role: string;
+    }>;
+    kickMember(req: any, serverId: string, targetUserId: string): Promise<{
+        success: boolean;
+    }>;
+    getServerBans(req: any, serverId: string): Promise<any[]>;
+    banMember(req: any, serverId: string, targetUserId: string, reason?: string): Promise<{
+        success: boolean;
+    }>;
+    unbanMember(req: any, serverId: string, targetUserId: string): Promise<{
+        success: boolean;
+    }>;
+    getRolePermissions(req: any, serverId: string): Promise<any[]>;
+    updateRolePermissions(req: any, serverId: string, role: string, permissions: any): Promise<any>;
+    getMyPermissions(req: any, serverId: string): Promise<{
+        role: string;
+        canInvite: any;
+        canDeleteMessages: any;
+        canKickMembers: any;
+        canBanMembers: any;
+        canManageChannels: any;
+        canManageServer: any;
     }>;
 }

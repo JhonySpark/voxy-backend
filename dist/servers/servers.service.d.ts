@@ -115,4 +115,37 @@ export declare class ServersService {
             };
         }[];
     }>;
+    getUserPermissions(serverId: string, userId: string): Promise<{
+        role: string;
+        canInvite: any;
+        canDeleteMessages: any;
+        canKickMembers: any;
+        canBanMembers: any;
+        canManageChannels: any;
+        canManageServer: any;
+    }>;
+    addMembers(serverId: string, requesterUserId: string, targetUserIds: string[]): Promise<{
+        added: string[];
+        success: boolean;
+    }>;
+    deleteServer(serverId: string, requesterUserId: string): Promise<{
+        success: boolean;
+    }>;
+    getServerMembers(serverId: string, requesterUserId: string): Promise<any[]>;
+    updateMemberRole(serverId: string, requesterUserId: string, targetUserId: string, newRole: string): Promise<{
+        success: boolean;
+        role: string;
+    }>;
+    kickMember(serverId: string, requesterUserId: string, targetUserId: string): Promise<{
+        success: boolean;
+    }>;
+    banMember(serverId: string, requesterUserId: string, targetUserId: string, reason?: string): Promise<{
+        success: boolean;
+    }>;
+    unbanMember(serverId: string, requesterUserId: string, targetUserId: string): Promise<{
+        success: boolean;
+    }>;
+    getServerBans(serverId: string, requesterUserId: string): Promise<any[]>;
+    getRolePermissions(serverId: string, requesterUserId: string): Promise<any[]>;
+    updateRolePermissions(serverId: string, requesterUserId: string, role: string, permissions: any): Promise<any>;
 }

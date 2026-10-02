@@ -24,6 +24,8 @@ let ChatGateway = class ChatGateway {
     prisma;
     server;
     connectedUsers = new Map();
+    userSockets = new Map();
+    userStatuses = new Map();
     constructor(chatService, channelsService, jwtService, prisma) {
         this.chatService = chatService;
         this.channelsService = channelsService;
@@ -43,7 +45,42 @@ let ChatGateway = class ChatGateway {
             const userId = payload.sub;
             client.data.user = payload;
             this.connectedUsers.set(userId, client.id);
+            if (!this.userSockets.has(userId)) {
+                this.userSockets.set(userId, new Set());
+            }
+            this.userSockets.get(userId).add(client.id);
             client.join(userId);
+            let userStatus = 'ONLINE';
+            let customStatus = undefined;
+            const existingStatus = this.userStatuses.get(userId);
+            if (existingStatus && existingStatus.status !== 'OFFLINE') {
+                userStatus = existingStatus.status;
+                customStatus = existingStatus.customStatus;
+            }
+            else if (this.prisma) {
+                try {
+                    const userDb = await this.prisma.user.findUnique({
+                        where: { id: userId },
+                        select: { status: true, customStatus: true },
+                    });
+                    if (userDb?.status)
+                        userStatus = userDb.status;
+                    if (userDb?.customStatus)
+                        customStatus = userDb.customStatus;
+                }
+                catch (_) { }
+            }
+            this.userStatuses.set(userId, { status: userStatus, customStatus });
+            this.server.emit('userStatusUpdate', {
+                userId,
+                status: userStatus,
+                customStatus,
+            });
+            const allStatuses = {};
+            for (const [uid, s] of this.userStatuses.entries()) {
+                allStatuses[uid] = s;
+            }
+            client.emit('allUserStatuses', allStatuses);
         }
         catch (e) {
             client.disconnect();
@@ -51,7 +88,23 @@ let ChatGateway = class ChatGateway {
     }
     handleDisconnect(client) {
         if (client.data.user) {
-            this.connectedUsers.delete(client.data.user.sub);
+            const userId = client.data.user.sub;
+            const sockets = this.userSockets.get(userId);
+            if (sockets) {
+                sockets.delete(client.id);
+                if (sockets.size === 0) {
+                    this.userSockets.delete(userId);
+                    this.connectedUsers.delete(userId);
+                    this.userStatuses.set(userId, { status: 'OFFLINE' });
+                    this.server.emit('userStatusUpdate', {
+                        userId,
+                        status: 'OFFLINE',
+                    });
+                }
+            }
+            else {
+                this.connectedUsers.delete(userId);
+            }
             for (const [channelId, participants] of this.voiceStates.entries()) {
                 if (participants.has(client.id)) {
                     const user = participants.get(client.id);
@@ -95,6 +148,35 @@ let ChatGateway = class ChatGateway {
         }
         catch (e) {
             return { error: 'Unauthorized' };
+        }
+    }
+    async handleDeleteChannelMessage(data, client) {
+        const senderId = client.data.user.sub;
+        try {
+            await this.channelsService.deleteChannelMessage(data.channelId, data.messageId, senderId);
+            this.server.to(data.channelId).emit('channelMessageDeleted', {
+                channelId: data.channelId,
+                messageId: data.messageId,
+            });
+            client.emit('channelMessageDeleted', {
+                channelId: data.channelId,
+                messageId: data.messageId,
+            });
+            return { success: true };
+        }
+        catch (e) {
+            return { error: e.message || 'Unauthorized' };
+        }
+    }
+    handleServerDeleted(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverDeleted', { serverId: data.serverId });
+        this.server.emit('serverDeleted', { serverId: data.serverId });
+    }
+    handleServerMemberAction(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+        this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+        if (data.targetUserId) {
+            this.server.to(data.targetUserId).emit('serverMembershipChanged', { serverId: data.serverId });
         }
     }
     voiceStates = new Map();
@@ -234,6 +316,40 @@ let ChatGateway = class ChatGateway {
             signal: data.signal
         });
     }
+    handleGetUserStatuses(client) {
+        const allStatuses = {};
+        for (const [uid, s] of this.userStatuses.entries()) {
+            allStatuses[uid] = s;
+        }
+        client.emit('allUserStatuses', allStatuses);
+    }
+    async handleUpdateStatus(data, client) {
+        const userId = client.data?.user?.sub;
+        if (!userId || !data?.status)
+            return;
+        this.userStatuses.set(userId, {
+            status: data.status,
+            customStatus: data.customStatus,
+        });
+        if (this.prisma) {
+            await this.prisma.user
+                .update({
+                where: { id: userId },
+                data: {
+                    status: data.status,
+                    customStatus: data.customStatus !== undefined
+                        ? data.customStatus.trim() || null
+                        : undefined,
+                },
+            })
+                .catch(() => { });
+        }
+        this.server.emit('userStatusUpdate', {
+            userId,
+            status: data.status,
+            customStatus: data.customStatus,
+        });
+    }
 };
 __decorate([
     WebSocketServer(),
@@ -271,6 +387,30 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleChannelMessage", null);
+__decorate([
+    SubscribeMessage('deleteChannelMessage'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleDeleteChannelMessage", null);
+__decorate([
+    SubscribeMessage('serverDeleted'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleServerDeleted", null);
+__decorate([
+    SubscribeMessage('serverMemberAction'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleServerMemberAction", null);
 __decorate([
     SubscribeMessage('joinServer'),
     __param(0, MessageBody()),
@@ -351,6 +491,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleWebrtcSignal", null);
+__decorate([
+    SubscribeMessage('getUserStatuses'),
+    __param(0, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleGetUserStatuses", null);
+__decorate([
+    SubscribeMessage('updateStatus'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleUpdateStatus", null);
 ChatGateway = __decorate([
     WebSocketGateway({ cors: { origin: '*' } }),
     __param(3, Optional()),

@@ -20,6 +20,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private connectedUsers = new Map<string, string>(); // userId -> socketId
+  private userSockets = new Map<string, Set<string>>(); // userId -> Set<socketId>
+  private userStatuses = new Map<string, { status: string; customStatus?: string }>(); // userId -> status
 
   constructor(
     private chatService: ChatService,
@@ -41,9 +43,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const userId = payload.sub;
       client.data.user = payload;
       this.connectedUsers.set(userId, client.id);
+
+      if (!this.userSockets.has(userId)) {
+        this.userSockets.set(userId, new Set());
+      }
+      this.userSockets.get(userId)!.add(client.id);
       
       // Also join a room specifically for this user to easily send DMs
       client.join(userId);
+
+      // Determine user status
+      let userStatus = 'ONLINE';
+      let customStatus: string | undefined = undefined;
+
+      const existingStatus = this.userStatuses.get(userId);
+      if (existingStatus && existingStatus.status !== 'OFFLINE') {
+        userStatus = existingStatus.status;
+        customStatus = existingStatus.customStatus;
+      }
+
+      this.userStatuses.set(userId, { status: userStatus, customStatus });
+
+      // Broadcast status update
+      this.server.emit('userStatusUpdate', {
+        userId,
+        status: userStatus,
+        customStatus,
+      });
+
+      // Send all current statuses to newly connected client
+      const allStatuses: Record<string, { status: string; customStatus?: string }> = {};
+      for (const [uid, s] of this.userStatuses.entries()) {
+        allStatuses[uid] = s;
+      }
+      client.emit?.('allUserStatuses', allStatuses);
     } catch (e) {
       client.disconnect();
     }
@@ -51,7 +84,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     if (client.data.user) {
-      this.connectedUsers.delete(client.data.user.sub);
+      const userId = client.data.user.sub;
+      const sockets = this.userSockets.get(userId);
+      if (sockets) {
+        sockets.delete(client.id);
+        if (sockets.size === 0) {
+          this.userSockets.delete(userId);
+          this.connectedUsers.delete(userId);
+          this.userStatuses.set(userId, { status: 'OFFLINE' });
+          this.server.emit('userStatusUpdate', {
+            userId,
+            status: 'OFFLINE',
+          });
+        }
+      } else {
+        this.connectedUsers.delete(userId);
+      }
       
       // Cleanup voice states on sudden disconnect
       for (const [channelId, participants] of this.voiceStates.entries()) {
@@ -371,6 +419,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       userId: client.data.user.sub,
       username: client.data.user.username,
       signal: data.signal
+    });
+  }
+
+  @SubscribeMessage('getUserStatuses')
+  handleGetUserStatuses(@ConnectedSocket() client: Socket) {
+    const allStatuses: Record<string, { status: string; customStatus?: string }> = {};
+    for (const [uid, s] of this.userStatuses.entries()) {
+      allStatuses[uid] = s;
+    }
+    client.emit('allUserStatuses', allStatuses);
+  }
+
+  @SubscribeMessage('updateStatus')
+  async handleUpdateStatus(
+    @MessageBody() data: { status: string; customStatus?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data?.user?.sub;
+    if (!userId || !data?.status) return;
+
+    this.userStatuses.set(userId, {
+      status: data.status,
+      customStatus: data.customStatus,
+    });
+
+    this.server.emit('userStatusUpdate', {
+      userId,
+      status: data.status,
+      customStatus: data.customStatus,
     });
   }
 }

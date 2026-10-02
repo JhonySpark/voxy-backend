@@ -11,6 +11,8 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     private prisma?;
     server: Server;
     private connectedUsers;
+    private userSockets;
+    private userStatuses;
     constructor(chatService: ChatService, channelsService: ChannelsService, jwtService: JwtService, prisma?: PrismaService | undefined);
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): void;
@@ -30,6 +32,23 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         content: string;
         attachmentId?: string;
     }, client: Socket): Promise<any>;
+    handleDeleteChannelMessage(data: {
+        channelId: string;
+        messageId: string;
+    }, client: Socket): Promise<{
+        success: boolean;
+        error?: undefined;
+    } | {
+        error: any;
+        success?: undefined;
+    }>;
+    handleServerDeleted(data: {
+        serverId: string;
+    }, client: Socket): void;
+    handleServerMemberAction(data: {
+        serverId: string;
+        targetUserId?: string;
+    }, client: Socket): void;
     private voiceStates;
     private channelStartTimes;
     handleJoinServer(data: {
@@ -73,4 +92,9 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         to: string;
         signal: any;
     }, client: Socket): void;
+    handleGetUserStatuses(client: Socket): void;
+    handleUpdateStatus(data: {
+        status: string;
+        customStatus?: string;
+    }, client: Socket): Promise<void>;
 }

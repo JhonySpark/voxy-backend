@@ -18,6 +18,9 @@ export declare class ChannelsController {
         serverId: string;
     }>;
     getMessages(req: any, channelId: string): Promise<any[]>;
+    deleteMessage(req: any, channelId: string, messageId: string): Promise<{
+        success: boolean;
+    }>;
     getVoiceToken(req: any, channelId: string, screen?: string): Promise<{
         token: string;
     }>;

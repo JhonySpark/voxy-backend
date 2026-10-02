@@ -31,6 +31,9 @@ let ChannelsController = class ChannelsController {
     async getMessages(req, channelId) {
         return this.channelsService.getChannelMessages(channelId, req.user.sub);
     }
+    async deleteMessage(req, channelId, messageId) {
+        return this.channelsService.deleteChannelMessage(channelId, messageId, req.user.sub);
+    }
     async getVoiceToken(req, channelId, screen) {
         return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
     }
@@ -73,6 +76,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "getMessages", null);
+__decorate([
+    Delete(':channelId/messages/:messageId'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __param(2, Param('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "deleteMessage", null);
 __decorate([
     Post(':channelId/voice-token'),
     __param(0, Request()),

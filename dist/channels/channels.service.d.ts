@@ -21,6 +21,9 @@ export declare class ChannelsService {
         serverId: string;
     }>;
     saveChannelMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
+    deleteChannelMessage(channelId: string, messageId: string, userId: string): Promise<{
+        success: boolean;
+    }>;
     getVoiceToken(channelId: string, user: {
         sub: string;
         username: string;
