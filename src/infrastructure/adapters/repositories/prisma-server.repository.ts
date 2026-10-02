@@ -243,7 +243,7 @@ export class PrismaServerRepository implements IServerRepository {
   }
 
   async getServerMembers(serverId: string): Promise<any[]> {
-    return this.prisma.serverMember.findMany({
+    const members = await this.prisma.serverMember.findMany({
       where: { serverId },
       include: {
         user: {
@@ -252,11 +252,30 @@ export class PrismaServerRepository implements IServerRepository {
             username: true,
             displayName: true,
             avatarUrl: true,
+            bannerUrl: true,
+            bannerColor: true,
             bio: true,
+            createdAt: true,
+            updatedAt: true,
           },
         },
       },
       orderBy: { createdAt: 'asc' },
+    });
+
+    return members.map((m: any) => {
+      if (m.user) {
+        const version = m.user.updatedAt ? `?v=${new Date(m.user.updatedAt).getTime()}` : '';
+        return {
+          ...m,
+          user: {
+            ...m.user,
+            avatarUrl: m.user.avatarUrl ? `${m.user.avatarUrl.split('?')[0]}${version}` : null,
+            bannerUrl: m.user.bannerUrl ? `${m.user.bannerUrl.split('?')[0]}${version}` : null,
+          },
+        };
+      }
+      return m;
     });
   }
 
