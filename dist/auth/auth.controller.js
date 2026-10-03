@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { Prisma } from '@prisma/client';
 let AuthController = class AuthController {
@@ -21,12 +21,18 @@ let AuthController = class AuthController {
     async login(body) {
         const user = await this.authService.validateUser(body.email, body.password);
         if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException({
+                code: 'AUTH_INVALID_CREDENTIALS',
+                message: 'Invalid credentials',
+            });
         }
         return this.authService.login(user);
     }
     async register(body) {
         return this.authService.register(body);
+    }
+    async checkUsername(username) {
+        return this.authService.checkUsername(username);
     }
 };
 __decorate([
@@ -43,6 +49,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    Get('check-username'),
+    __param(0, Query('username')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "checkUsername", null);
 AuthController = __decorate([
     Controller('auth'),
     __metadata("design:paramtypes", [AuthService])

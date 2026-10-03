@@ -88,8 +88,6 @@ let UsersService = class UsersService {
                 bannerUrl: true,
                 bannerKey: true,
                 bannerColor: true,
-                status: true,
-                customStatus: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -107,8 +105,6 @@ let UsersService = class UsersService {
             avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,
             bannerUrl: user.bannerUrl ? `${user.bannerUrl.split('?')[0]}${version}` : null,
             bannerColor: user.bannerColor,
-            status: user.status || 'ONLINE',
-            customStatus: user.customStatus || null,
             createdAt: user.createdAt,
             email: isSelf ? user.email : undefined,
         };
@@ -120,8 +116,6 @@ let UsersService = class UsersService {
                 ...(data.displayName !== undefined ? { displayName: data.displayName.trim() || null } : {}),
                 ...(data.bio !== undefined ? { bio: data.bio.trim() || null } : {}),
                 ...(data.bannerColor !== undefined ? { bannerColor: data.bannerColor.trim() || null } : {}),
-                ...(data.status !== undefined ? { status: data.status } : {}),
-                ...(data.customStatus !== undefined ? { customStatus: data.customStatus.trim() || null } : {}),
             },
             select: {
                 id: true,
@@ -132,8 +126,6 @@ let UsersService = class UsersService {
                 avatarUrl: true,
                 bannerUrl: true,
                 bannerColor: true,
-                status: true,
-                customStatus: true,
                 updatedAt: true,
             },
         });

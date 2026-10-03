@@ -56,7 +56,7 @@ export class AuthService {
       return {
         available: false,
         code: AuthErrorCodes.INVALID_USERNAME,
-        message: usernameOrError.error,
+        message: usernameOrError.error ?? 'Nome de usuário inválido.',
       };
     }
 

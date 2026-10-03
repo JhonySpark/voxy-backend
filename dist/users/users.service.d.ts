@@ -42,8 +42,6 @@ export declare class UsersService {
         avatarUrl: string | null;
         bannerUrl: string | null;
         bannerColor: string | null;
-        status: string;
-        customStatus: string | null;
         createdAt: Date;
         email: string | undefined;
     }>;
@@ -51,8 +49,6 @@ export declare class UsersService {
         displayName?: string;
         bio?: string;
         bannerColor?: string;
-        status?: string;
-        customStatus?: string;
     }): Promise<{
         avatarUrl: string | null;
         bannerUrl: string | null;
@@ -62,8 +58,6 @@ export declare class UsersService {
         displayName: string | null;
         bio: string | null;
         bannerColor: string | null;
-        status: string | null;
-        customStatus: string | null;
         updatedAt: Date;
     }>;
     changePassword(userId: string, currentPass: string, newPass: string): Promise<{

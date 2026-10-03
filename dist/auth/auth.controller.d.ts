@@ -11,4 +11,9 @@ export declare class AuthController {
         username: string;
         email: string;
     }>;
+    checkUsername(username: string): Promise<{
+        available: boolean;
+        code: string;
+        message: string;
+    }>;
 }

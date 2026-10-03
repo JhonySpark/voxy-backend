@@ -57,19 +57,6 @@ let ChatGateway = class ChatGateway {
                 userStatus = existingStatus.status;
                 customStatus = existingStatus.customStatus;
             }
-            else if (this.prisma) {
-                try {
-                    const userDb = await this.prisma.user.findUnique({
-                        where: { id: userId },
-                        select: { status: true, customStatus: true },
-                    });
-                    if (userDb?.status)
-                        userStatus = userDb.status;
-                    if (userDb?.customStatus)
-                        customStatus = userDb.customStatus;
-                }
-                catch (_) { }
-            }
             this.userStatuses.set(userId, { status: userStatus, customStatus });
             this.server.emit('userStatusUpdate', {
                 userId,
@@ -80,7 +67,7 @@ let ChatGateway = class ChatGateway {
             for (const [uid, s] of this.userStatuses.entries()) {
                 allStatuses[uid] = s;
             }
-            client.emit('allUserStatuses', allStatuses);
+            client.emit?.('allUserStatuses', allStatuses);
         }
         catch (e) {
             client.disconnect();
@@ -331,19 +318,6 @@ let ChatGateway = class ChatGateway {
             status: data.status,
             customStatus: data.customStatus,
         });
-        if (this.prisma) {
-            await this.prisma.user
-                .update({
-                where: { id: userId },
-                data: {
-                    status: data.status,
-                    customStatus: data.customStatus !== undefined
-                        ? data.customStatus.trim() || null
-                        : undefined,
-                },
-            })
-                .catch(() => { });
-        }
         this.server.emit('userStatusUpdate', {
             userId,
             status: data.status,
