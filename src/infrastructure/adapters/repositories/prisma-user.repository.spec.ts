@@ -6,13 +6,14 @@ import { Username } from '../../../modules/identity/domain/value-objects/usernam
 
 describe('PrismaUserRepository', () => {
   let repo: PrismaUserRepository;
-  let prismaMock: { user: { create: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn> } };
+  let prismaMock: { user: { create: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn>; findFirst: ReturnType<typeof vi.fn> } };
 
   beforeEach(() => {
     prismaMock = {
       user: {
         create: vi.fn(),
         findUnique: vi.fn(),
+        findFirst: vi.fn(),
       },
     };
     repo = new PrismaUserRepository(prismaMock as any);
@@ -44,7 +45,7 @@ describe('PrismaUserRepository', () => {
   });
 
   it('should find user by username or return null', async () => {
-    prismaMock.user.findUnique.mockResolvedValueOnce({
+    prismaMock.user.findFirst.mockResolvedValueOnce({
       id: 'u1',
       username: 'alice',
       email: 'alice@example.com',
@@ -60,7 +61,7 @@ describe('PrismaUserRepository', () => {
   });
 
   it('should find user by email or return null', async () => {
-    prismaMock.user.findUnique.mockResolvedValueOnce({
+    prismaMock.user.findFirst.mockResolvedValueOnce({
       id: 'u1',
       username: 'alice',
       email: 'alice@example.com',
