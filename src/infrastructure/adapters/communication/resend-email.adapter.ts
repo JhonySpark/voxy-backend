@@ -28,37 +28,68 @@ export class ResendEmailAdapter implements IEmailServicePort {
     }
 
     try {
+      const digits = (input.code || '000000').split('');
+      const digitsHtml = digits.map((d) => `
+        <td style="padding: 0 4px;">
+          <div style="width: 44px; height: 54px; background-color: #070a13; border: 1.5px solid rgba(52, 211, 153, 0.5); border-radius: 10px; font-size: 28px; font-weight: 800; color: #34d399; text-align: center; line-height: 54px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);">
+            ${d}
+          </div>
+        </td>
+      `).join('');
+
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Código de Verificação - Voxy</title>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #f1f5f9; margin: 0; padding: 30px; }
-            .container { max-width: 500px; margin: 0 auto; background: #121824; border: 1px solid #1e293b; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            .header { text-align: center; margin-bottom: 24px; }
-            .brand { font-size: 26px; font-weight: 800; color: #34d399; letter-spacing: -0.5px; }
-            .title { font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 16px; margin-bottom: 8px; }
-            .subtitle { font-size: 14px; color: #94a3b8; line-height: 1.5; }
-            .code-box { background: #1a2234; border: 2px dashed #34d399; border-radius: 12px; padding: 20px; text-align: center; margin: 28px 0; }
-            .code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #34d399; font-family: monospace; }
-            .info { font-size: 13px; color: #64748b; line-height: 1.5; text-align: center; }
-            .footer { margin-top: 32px; font-size: 12px; color: #475569; text-align: center; border-top: 1px solid #1e293b; padding-top: 20px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #060911; color: #f8fafc; margin: 0; padding: 24px; -webkit-font-smoothing: antialiased; }
+            .wrapper { width: 100%; table-layout: fixed; background-color: #060911; padding-bottom: 30px; }
+            .container { max-width: 460px; margin: 0 auto; background: #0c111d; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
+            .accent-bar { height: 4px; background: linear-gradient(90deg, #059669 0%, #10b981 35%, #34d399 70%, #06b6d4 100%); width: 100%; }
+            .content { padding: 32px 28px; text-align: center; }
+            .icon-wrapper { width: 56px; height: 56px; margin: 0 auto 16px auto; background-color: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 50%; text-align: center; line-height: 56px; box-shadow: 0 0 25px rgba(52, 211, 153, 0.25); }
+            .brand-tag { font-size: 11px; font-weight: 800; color: #34d399; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+            .title { font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; letter-spacing: -0.3px; }
+            .subtitle { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px 0; }
+            .alert-box { background: rgba(52, 211, 153, 0.06); border: 1px solid rgba(52, 211, 153, 0.15); border-radius: 10px; padding: 12px 16px; margin-top: 24px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+            .footer { padding: 20px 28px; border-top: 1px solid rgba(255, 255, 255, 0.06); background-color: #090d16; font-size: 12px; color: #475569; text-align: center; }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <div class="brand">VOXY</div>
-              <h1 class="title">Verifique seu endereço de e-mail</h1>
-              <p class="subtitle">Olá, <strong>${input.username}</strong>! Use o código de 6 dígitos abaixo para confirmar sua conta no Voxy.</p>
-            </div>
-            <div class="code-box">
-              <div class="code">${input.code}</div>
-            </div>
-            <p class="info">Este código expira em 15 minutos. Se você não solicitou este cadastro, ignore esta mensagem com segurança.</p>
-            <div class="footer">
-              &copy; ${new Date().getFullYear()} Voxy. Todos os direitos reservados.
+          <div class="wrapper">
+            <div class="container">
+              <div class="accent-bar"></div>
+              <div class="content">
+                <div class="icon-wrapper">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                  </svg>
+                </div>
+                <div class="brand-tag">VOXY SECURITY</div>
+                <h1 class="title">Confirme seu e-mail</h1>
+                <p class="subtitle">
+                  Olá, <strong style="color: #ffffff;">${input.username}</strong>!<br>
+                  Insira o código de 6 dígitos abaixo para ativar sua conta no Voxy:
+                </p>
+
+                <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 20px auto;">
+                  <tr>
+                    ${digitsHtml}
+                  </tr>
+                </table>
+
+                <div class="alert-box">
+                  ⏱️ Este código expira em <strong style="color: #ffffff;">15 minutos</strong>.<br>
+                  Se você não solicitou este cadastro, ignore esta mensagem com segurança.
+                </div>
+              </div>
+              <div class="footer">
+                &copy; ${new Date().getFullYear()} Voxy. Todos os direitos reservados.
+              </div>
             </div>
           </div>
         </body>
