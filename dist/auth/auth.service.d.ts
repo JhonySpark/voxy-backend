@@ -3,6 +3,7 @@ import type { IPasswordHasherPort } from '../core/ports/security/password-hasher
 import type { ITokenServicePort } from '../core/ports/security/token-service.port.js';
 import type { IEmailServicePort } from '../core/ports/communication/email-service.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 export declare const AuthErrorCodes: {
     readonly INVALID_EMAIL: "AUTH_INVALID_EMAIL";
     readonly INVALID_USERNAME: "AUTH_INVALID_USERNAME";
@@ -24,7 +25,8 @@ export declare class AuthService {
     private tokenService;
     private passwordHasher;
     private emailService;
-    constructor(usersService: UsersService, prisma: PrismaService, tokenService: ITokenServicePort, passwordHasher: IPasswordHasherPort, emailService: IEmailServicePort);
+    private logger?;
+    constructor(usersService: UsersService, prisma: PrismaService, tokenService: ITokenServicePort, passwordHasher: IPasswordHasherPort, emailService: IEmailServicePort, logger?: BetterStackLoggerService | undefined);
     validateUser(emailOrUsername: string, pass: string): Promise<any>;
     login(user: any): Promise<{
         requireEmailVerification: boolean;

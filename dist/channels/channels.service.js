@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Inject, } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Inject, Optional, } from '@nestjs/common';
 import { CHANNEL_REPOSITORY } from '../core/ports/repositories/channel.repository.port.js';
 import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
 import { VOICE_ENGINE_PORT } from '../core/ports/voice-engine.port.js';
@@ -18,16 +18,19 @@ import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassificationEnum } from '../core/enums/index.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 let ChannelsService = class ChannelsService {
     channelRepo;
     serverRepo;
     voiceEngine;
     prisma;
-    constructor(channelRepo, serverRepo, voiceEngine, prisma) {
+    logger;
+    constructor(channelRepo, serverRepo, voiceEngine, prisma, logger) {
         this.channelRepo = channelRepo;
         this.serverRepo = serverRepo;
         this.voiceEngine = voiceEngine;
         this.prisma = prisma;
+        this.logger = logger;
     }
     async createChannel(serverId, userId, name, type = 'TEXT') {
         const role = await this.serverRepo.getMemberRole(serverId, userId);
@@ -187,6 +190,12 @@ let ChannelsService = class ChannelsService {
             participantName: isScreen ? `${user.username} (Tela)` : user.username,
             canUpdateOwnMetadata: isScreen,
         });
+        this.logger?.logBusinessEvent('LIVEKIT_TOKEN_ISSUED', {
+            userId: user.sub,
+            channelId,
+            serverId: channel.serverId,
+            isScreen: Boolean(isScreen),
+        });
         return { token };
     }
 };
@@ -195,7 +204,9 @@ ChannelsService = __decorate([
     __param(0, Inject(CHANNEL_REPOSITORY)),
     __param(1, Inject(SERVER_REPOSITORY)),
     __param(2, Inject(VOICE_ENGINE_PORT)),
-    __metadata("design:paramtypes", [Object, Object, Object, PrismaService])
+    __param(4, Optional()),
+    __metadata("design:paramtypes", [Object, Object, Object, PrismaService,
+        BetterStackLoggerService])
 ], ChannelsService);
 export { ChannelsService };
 //# sourceMappingURL=channels.service.js.map

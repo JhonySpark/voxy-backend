@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   Inject,
+  Optional,
 } from '@nestjs/common';
 import { CHANNEL_REPOSITORY } from '../core/ports/repositories/channel.repository.port.js';
 import type { IChannelRepository } from '../core/ports/repositories/channel.repository.port.js';
@@ -15,6 +16,7 @@ import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassificationEnum } from '../core/enums/index.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 
 @Injectable()
 export class ChannelsService {
@@ -23,6 +25,7 @@ export class ChannelsService {
     @Inject(SERVER_REPOSITORY) private readonly serverRepo: IServerRepository,
     @Inject(VOICE_ENGINE_PORT) private readonly voiceEngine: IVoiceEnginePort,
     private readonly prisma: PrismaService,
+    @Optional() private readonly logger?: BetterStackLoggerService,
   ) {}
 
   async createChannel(
@@ -221,6 +224,13 @@ export class ChannelsService {
       participantId: isScreen ? `${user.sub}#screen` : user.sub,
       participantName: isScreen ? `${user.username} (Tela)` : user.username,
       canUpdateOwnMetadata: isScreen,
+    });
+
+    this.logger?.logBusinessEvent('LIVEKIT_TOKEN_ISSUED', {
+      userId: user.sub,
+      channelId,
+      serverId: channel.serverId,
+      isScreen: Boolean(isScreen),
     });
 
     return { token };

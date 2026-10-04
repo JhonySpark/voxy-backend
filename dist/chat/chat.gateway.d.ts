@@ -4,16 +4,18 @@ import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 export declare class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService;
     private channelsService;
     private jwtService;
     private prisma?;
+    private logger?;
     server: Server;
     private connectedUsers;
     private userSockets;
     private userStatuses;
-    constructor(chatService: ChatService, channelsService: ChannelsService, jwtService: JwtService, prisma?: PrismaService | undefined);
+    constructor(chatService: ChatService, channelsService: ChannelsService, jwtService: JwtService, prisma?: PrismaService | undefined, logger?: BetterStackLoggerService | undefined);
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): void;
     handleMessage(data: {

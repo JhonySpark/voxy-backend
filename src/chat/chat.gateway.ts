@@ -13,6 +13,7 @@ import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -28,6 +29,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private channelsService: ChannelsService,
     private jwtService: JwtService,
     @Optional() private prisma?: PrismaService,
+    @Optional() private logger?: BetterStackLoggerService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -450,6 +452,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       participants: Array.from(participants.values()),
       startedAt: this.channelStartTimes.get(data.channelId)
     });
+
+    this.logger?.logBusinessEvent('VOICE_USER_JOINED', {
+      userId: client.data.user.sub,
+      channelId: data.channelId,
+      serverId: data.serverId,
+    });
   }
 
   @SubscribeMessage('leaveVoice')
@@ -470,6 +478,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       channelId: data.channelId,
       participants: Array.from(this.voiceStates.get(data.channelId)?.values() || []),
       startedAt: this.channelStartTimes.get(data.channelId)
+    });
+
+    this.logger?.logBusinessEvent('VOICE_USER_LEFT', {
+      userId: client.data.user.sub,
+      channelId: data.channelId,
+      serverId: data.serverId,
     });
   }
 

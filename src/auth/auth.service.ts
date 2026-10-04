@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Inject, Optional } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 import type { IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
@@ -13,6 +13,7 @@ import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.v
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource } from '@prisma/client';
 import crypto from 'node:crypto';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 
 export const AuthErrorCodes = {
   INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
@@ -38,6 +39,7 @@ export class AuthService {
     @Inject(TOKEN_SERVICE_PORT) private tokenService: ITokenServicePort,
     @Inject(PASSWORD_HASHER_PORT) private passwordHasher: IPasswordHasherPort,
     @Inject(EMAIL_SERVICE_PORT) private emailService: IEmailServicePort,
+    @Optional() private logger?: BetterStackLoggerService,
   ) {}
 
   async validateUser(emailOrUsername: string, pass: string): Promise<any> {
@@ -54,11 +56,21 @@ export class AuthService {
 
   async login(user: any) {
     if (user.ageClassification === AgeClassification.CHILD) {
+      this.logger?.warn(`Acesso negado: Conta restrita (CHILD) tentou logar: ${user.id}`, 'AuthService', {
+        userId: user.id,
+        username: user.username,
+      });
       throw new ForbiddenException({
         code: AuthErrorCodes.ACCOUNT_CHILD_RESTRICTED,
         message: 'O acesso a esta conta não é permitido para menores de 13 anos (CHILD).',
       });
     }
+
+    this.logger?.logBusinessEvent('USER_LOGGED_IN', {
+      userId: user.id,
+      username: user.username,
+      ageClassification: user.ageClassification,
+    });
 
     if (!user.isEmailVerified) {
       // Reenvia código se necessário
@@ -217,6 +229,13 @@ export class AuthService {
 
     // 7. Envia código de 6 dígitos via Resend
     await this.generateAndSendCode(user.email, user.username);
+
+    this.logger?.logBusinessEvent('USER_REGISTERED', {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      ageClassification: user.ageClassification,
+    });
 
     return {
       id: user.id,
@@ -397,16 +416,16 @@ export class AuthService {
             ) {
               isCryptographicallyVerified = true;
             } else {
-              console.warn(`[Security Alert] Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`);
+              this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`, 'SecurityAlert', { userId });
             }
           } else {
-            console.warn(`[Security Alert] Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`);
+            this.logger?.warn(`Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`, 'SecurityAlert', { userId, nonce: signal.nonce });
           }
         } else {
-          console.warn(`[Security Alert] Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`);
+          this.logger?.warn(`Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`, 'SecurityAlert', { userId, ageDiff });
         }
       } else {
-        console.warn(`[Security Alert] Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`);
+        this.logger?.warn(`Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`, 'SecurityAlert', { userId });
       }
 
       if (isCryptographicallyVerified) {

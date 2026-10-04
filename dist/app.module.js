@@ -15,6 +15,8 @@ import { ChatModule } from './chat/chat.module.js';
 import { ServersModule } from './servers/servers.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
+import { LoggingModule } from './infrastructure/logging/logging.module.js';
+import { HealthModule } from './modules/health/health.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -41,6 +43,8 @@ AppModule = __decorate([
                     limit: 100,
                 }]),
             ScheduleModule.forRoot(),
+            LoggingModule,
+            HealthModule,
             PrismaModule,
             UsersModule,
             AuthModule,

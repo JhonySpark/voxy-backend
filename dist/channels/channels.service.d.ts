@@ -2,12 +2,14 @@ import type { IChannelRepository } from '../core/ports/repositories/channel.repo
 import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import type { IVoiceEnginePort } from '../core/ports/voice-engine.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 export declare class ChannelsService {
     private readonly channelRepo;
     private readonly serverRepo;
     private readonly voiceEngine;
     private readonly prisma;
-    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService);
+    private readonly logger?;
+    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService, logger?: BetterStackLoggerService | undefined);
     createChannel(serverId: string, userId: string, name: string, type?: 'TEXT' | 'VOICE'): Promise<{
         id: string;
         name: string;

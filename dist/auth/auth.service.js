@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Inject, Optional } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 import { TOKEN_SERVICE_PORT } from '../core/ports/security/token-service.port.js';
@@ -22,6 +22,7 @@ import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.v
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource } from '@prisma/client';
 import crypto from 'node:crypto';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 export const AuthErrorCodes = {
     INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
     INVALID_USERNAME: 'AUTH_INVALID_USERNAME',
@@ -43,12 +44,14 @@ let AuthService = class AuthService {
     tokenService;
     passwordHasher;
     emailService;
-    constructor(usersService, prisma, tokenService, passwordHasher, emailService) {
+    logger;
+    constructor(usersService, prisma, tokenService, passwordHasher, emailService, logger) {
         this.usersService = usersService;
         this.prisma = prisma;
         this.tokenService = tokenService;
         this.passwordHasher = passwordHasher;
         this.emailService = emailService;
+        this.logger = logger;
     }
     async validateUser(emailOrUsername, pass) {
         const cleanIdentifier = (emailOrUsername || '').trim();
@@ -62,11 +65,20 @@ let AuthService = class AuthService {
     }
     async login(user) {
         if (user.ageClassification === AgeClassification.CHILD) {
+            this.logger?.warn(`Acesso negado: Conta restrita (CHILD) tentou logar: ${user.id}`, 'AuthService', {
+                userId: user.id,
+                username: user.username,
+            });
             throw new ForbiddenException({
                 code: AuthErrorCodes.ACCOUNT_CHILD_RESTRICTED,
                 message: 'O acesso a esta conta não é permitido para menores de 13 anos (CHILD).',
             });
         }
+        this.logger?.logBusinessEvent('USER_LOGGED_IN', {
+            userId: user.id,
+            username: user.username,
+            ageClassification: user.ageClassification,
+        });
         if (!user.isEmailVerified) {
             await this.generateAndSendCode(user.email, user.username).catch(() => { });
             return {
@@ -198,6 +210,12 @@ let AuthService = class AuthService {
             birthDate: birthDateVO.value,
         });
         await this.generateAndSendCode(user.email, user.username);
+        this.logger?.logBusinessEvent('USER_REGISTERED', {
+            userId: user.id,
+            email: user.email,
+            username: user.username,
+            ageClassification: user.ageClassification,
+        });
         return {
             id: user.id,
             username: user.username,
@@ -331,19 +349,19 @@ let AuthService = class AuthService {
                             isCryptographicallyVerified = true;
                         }
                         else {
-                            console.warn(`[Security Alert] Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`);
+                            this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`, 'SecurityAlert', { userId });
                         }
                     }
                     else {
-                        console.warn(`[Security Alert] Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`);
+                        this.logger?.warn(`Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`, 'SecurityAlert', { userId, nonce: signal.nonce });
                     }
                 }
                 else {
-                    console.warn(`[Security Alert] Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`);
+                    this.logger?.warn(`Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`, 'SecurityAlert', { userId, ageDiff });
                 }
             }
             else {
-                console.warn(`[Security Alert] Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`);
+                this.logger?.warn(`Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`, 'SecurityAlert', { userId });
             }
             if (isCryptographicallyVerified) {
                 source = AgeSignalSource.WINDOWS_OS;
@@ -402,8 +420,9 @@ AuthService = __decorate([
     __param(2, Inject(TOKEN_SERVICE_PORT)),
     __param(3, Inject(PASSWORD_HASHER_PORT)),
     __param(4, Inject(EMAIL_SERVICE_PORT)),
+    __param(5, Optional()),
     __metadata("design:paramtypes", [UsersService,
-        PrismaService, Object, Object, Object])
+        PrismaService, Object, Object, Object, BetterStackLoggerService])
 ], AuthService);
 export { AuthService };
 //# sourceMappingURL=auth.service.js.map

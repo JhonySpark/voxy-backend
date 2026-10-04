@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import 'multer';
 import { randomUUID } from 'crypto';
@@ -18,6 +19,8 @@ export interface UploadAttachmentContext {
   receiverId?: string;
 }
 
+import { BetterStackLoggerService } from '../../infrastructure/logging/better-stack-logger.service.js';
+
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
@@ -28,6 +31,7 @@ export class StorageService {
     private readonly prisma: PrismaService,
     @Inject(STORAGE_PORT) private readonly storagePort: IStoragePort,
     private readonly mediaCompression: MediaCompressionService,
+    @Optional() private readonly betterStackLogger?: BetterStackLoggerService,
   ) {}
 
   private getCachedUrl(cacheKey: string): string | null {
@@ -104,6 +108,12 @@ export class StorageService {
 
     this.invalidateMediaCache(`avatar:${userId}`);
 
+    this.betterStackLogger?.logBusinessEvent('USER_AVATAR_UPLOADED', {
+      userId,
+      key,
+      fileSize: processed.compressedSize,
+    });
+
     return {
       avatarUrl: `${avatarUrl}?v=${Date.now()}`,
       avatarKey: key,
@@ -170,6 +180,13 @@ export class StorageService {
     });
 
     this.invalidateMediaCache(`server_icon:${serverId}`);
+
+    this.betterStackLogger?.logBusinessEvent('SERVER_ICON_UPLOADED', {
+      serverId,
+      userId,
+      key,
+      fileSize: processed.compressedSize,
+    });
 
     return {
       iconUrl: `${iconUrl}?v=${Date.now()}`,

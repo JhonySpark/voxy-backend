@@ -17,20 +17,23 @@ import { ChatService } from './chat.service.js';
 import { ChannelsService } from '../channels/channels.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 let ChatGateway = class ChatGateway {
     chatService;
     channelsService;
     jwtService;
     prisma;
+    logger;
     server;
     connectedUsers = new Map();
     userSockets = new Map();
     userStatuses = new Map();
-    constructor(chatService, channelsService, jwtService, prisma) {
+    constructor(chatService, channelsService, jwtService, prisma, logger) {
         this.chatService = chatService;
         this.channelsService = channelsService;
         this.jwtService = jwtService;
         this.prisma = prisma;
+        this.logger = logger;
     }
     async handleConnection(client) {
         try {
@@ -315,6 +318,11 @@ let ChatGateway = class ChatGateway {
             participants: Array.from(participants.values()),
             startedAt: this.channelStartTimes.get(data.channelId)
         });
+        this.logger?.logBusinessEvent('VOICE_USER_JOINED', {
+            userId: client.data.user.sub,
+            channelId: data.channelId,
+            serverId: data.serverId,
+        });
     }
     handleLeaveVoice(data, client) {
         client.leave(`voice-${data.channelId}`);
@@ -330,6 +338,11 @@ let ChatGateway = class ChatGateway {
             channelId: data.channelId,
             participants: Array.from(this.voiceStates.get(data.channelId)?.values() || []),
             startedAt: this.channelStartTimes.get(data.channelId)
+        });
+        this.logger?.logBusinessEvent('VOICE_USER_LEFT', {
+            userId: client.data.user.sub,
+            channelId: data.channelId,
+            serverId: data.serverId,
         });
     }
     handleUpdateVoiceMute(data, client) {
@@ -564,10 +577,12 @@ __decorate([
 ChatGateway = __decorate([
     WebSocketGateway({ cors: { origin: '*' } }),
     __param(3, Optional()),
+    __param(4, Optional()),
     __metadata("design:paramtypes", [ChatService,
         ChannelsService,
         JwtService,
-        PrismaService])
+        PrismaService,
+        BetterStackLoggerService])
 ], ChatGateway);
 export { ChatGateway };
 //# sourceMappingURL=chat.gateway.js.map

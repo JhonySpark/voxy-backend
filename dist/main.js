@@ -10,8 +10,15 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RedisIoAdapter } from './redis.adapter.js';
+import { BetterStackLoggerService } from './infrastructure/logging/better-stack-logger.service.js';
+import { BetterStackExceptionFilter } from './infrastructure/logging/better-stack-exception.filter.js';
+import { HttpLoggingInterceptor } from './infrastructure/logging/http-logging.interceptor.js';
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    const logger = app.get(BetterStackLoggerService);
+    app.useLogger(logger);
+    app.useGlobalFilters(app.get(BetterStackExceptionFilter));
+    app.useGlobalInterceptors(app.get(HttpLoggingInterceptor));
     const config = new DocumentBuilder()
         .setTitle('Voxy API')
         .setDescription('Discord alternative API')
