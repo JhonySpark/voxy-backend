@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IEmailServicePort, SendVerificationEmailInput } from '../../../core/ports/communication/email-service.port.js';
 import { AppEnvironmentConfig } from '../../../core/config/index.js';
+import { VOXY_LOGO_BASE64 } from './assets/voxy-logo.base64.js';
 
 @Injectable()
 export class ResendEmailAdapter implements IEmailServicePort {
@@ -49,9 +50,7 @@ export class ResendEmailAdapter implements IEmailServicePort {
             .wrapper { width: 100%; table-layout: fixed; background-color: #060911; padding-bottom: 30px; }
             .container { max-width: 460px; margin: 0 auto; background: #0c111d; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
             .accent-bar { height: 4px; background: linear-gradient(90deg, #059669 0%, #10b981 35%, #34d399 70%, #06b6d4 100%); width: 100%; }
-            .content { padding: 32px 28px; text-align: center; }
-            .icon-wrapper { width: 56px; height: 56px; margin: 0 auto 16px auto; background-color: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 50%; text-align: center; line-height: 56px; box-shadow: 0 0 25px rgba(52, 211, 153, 0.25); }
-            .brand-tag { font-size: 11px; font-weight: 800; color: #34d399; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+            .content { padding: 36px 28px 32px 28px; text-align: center; }
             .title { font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; letter-spacing: -0.3px; }
             .subtitle { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px 0; }
             .alert-box { background: rgba(52, 211, 153, 0.06); border: 1px solid rgba(52, 211, 153, 0.15); border-radius: 10px; padding: 12px 16px; margin-top: 24px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
@@ -63,20 +62,42 @@ export class ResendEmailAdapter implements IEmailServicePort {
             <div class="container">
               <div class="accent-bar"></div>
               <div class="content">
-                <div class="icon-wrapper">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
-                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-                  </svg>
-                </div>
-                <div class="brand-tag">VOXY SECURITY</div>
+                <!-- Branding Header com Logo Oficial -->
+                <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 22px auto;">
+                  <tr>
+                    <td align="center">
+                      <img
+                        src="cid:voxy-logo"
+                        alt="Voxy"
+                        width="64"
+                        height="64"
+                        style="width: 64px; height: 64px; display: block; border: 0; outline: none; text-decoration: none; margin: 0 auto; filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.4));"
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top: 10px;">
+                      <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 20px; font-weight: 900; letter-spacing: 3px; color: #ffffff; text-transform: uppercase;">
+                        VOXY
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top: 3px;">
+                      <span style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 800; color: #34d399; letter-spacing: 2px; text-transform: uppercase; background-color: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 9999px; padding: 2px 10px;">
+                        SECURITY VERIFICATION
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+
                 <h1 class="title">Confirme seu e-mail</h1>
                 <p class="subtitle">
                   Olá, <strong style="color: #ffffff;">${input.username}</strong>!<br>
-                  Insira o código de 6 dígitos abaixo para ativar sua conta no Voxy:
+                  Insira o código de 6 dígitos abaixo para ativar e acessar sua conta no Voxy:
                 </p>
 
-                <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 20px auto;">
+                <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 22px auto;">
                   <tr>
                     ${digitsHtml}
                   </tr>
@@ -107,6 +128,13 @@ export class ResendEmailAdapter implements IEmailServicePort {
           to: [input.to],
           subject: `${input.code} é o seu código de verificação Voxy`,
           html: htmlContent,
+          attachments: [
+            {
+              filename: 'voxy-logo.png',
+              content: VOXY_LOGO_BASE64,
+              content_id: 'voxy-logo',
+            },
+          ],
         }),
       });
 
