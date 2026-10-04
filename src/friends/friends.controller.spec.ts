@@ -112,4 +112,56 @@ describe('FriendsController', () => {
       expect(result).toEqual([{ id: 'u3', username: 'charlie' }]);
     });
   });
+
+  describe('deleteFriend and removeFriend', () => {
+    it('should remove friendship', async () => {
+      (friendsService as any).removeFriend = vi.fn().mockResolvedValue({ success: true });
+
+      const res1 = await controller.deleteFriend({ user: { sub: 'u1' } }, 'u2');
+      expect(friendsService.removeFriend).toHaveBeenCalledWith('u1', 'u2');
+      expect(res1).toEqual({ success: true, targetId: 'u2' });
+
+      const res2 = await controller.removeFriend({ user: { sub: 'u1' } }, 'u2');
+      expect(res2).toEqual({ success: true, targetId: 'u2' });
+    });
+  });
+
+  describe('blockUser and unblockUser', () => {
+    it('should block user', async () => {
+      (friendsService as any).blockUser = vi.fn().mockResolvedValue({ success: true });
+
+      const result = await controller.blockUser({ user: { sub: 'u1' } }, 'u2');
+      expect((friendsService as any).blockUser).toHaveBeenCalledWith('u1', 'u2');
+      expect(result).toEqual({ success: true, targetId: 'u2' });
+    });
+
+    it('should unblock user', async () => {
+      (friendsService as any).unblockUser = vi.fn().mockResolvedValue({ success: true });
+
+      const result = await controller.unblockUser({ user: { sub: 'u1' } }, 'u2');
+      expect((friendsService as any).unblockUser).toHaveBeenCalledWith('u1', 'u2');
+      expect(result).toEqual({ success: true, targetId: 'u2' });
+    });
+  });
+
+  describe('getBlockedUsers and getRelationshipStatus', () => {
+    it('should return blocked users', async () => {
+      (friendsService as any).getBlockedUsers = vi.fn().mockResolvedValue([{ id: 'u2', username: 'blocked' }]);
+
+      const result = await controller.getBlockedUsers({ user: { sub: 'u1' } });
+      expect(result).toEqual([{ id: 'u2', username: 'blocked' }]);
+    });
+
+    it('should return relationship status', async () => {
+      (friendsService as any).getUserRelationshipStatus = vi.fn().mockResolvedValue({
+        isFriend: true,
+        isPending: false,
+        isBlocked: false,
+        hasBlocked: false,
+      });
+
+      const result = await controller.getRelationshipStatus({ user: { sub: 'u1' } }, 'u2');
+      expect(result).toEqual({ isFriend: true, isPending: false, isBlocked: false, hasBlocked: false });
+    });
+  });
 });

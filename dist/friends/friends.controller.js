@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, UseGuards, Request, Body, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Get, Delete, UseGuards, Request, Body, Param, NotFoundException } from '@nestjs/common';
 import { FriendsService } from './friends.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -37,6 +37,28 @@ let FriendsController = class FriendsController {
     async rejectRequest(req, friendId) {
         await this.friendsService.rejectFriendRequest(req.user.sub, friendId);
         return { success: true, targetId: friendId };
+    }
+    async deleteFriend(req, friendId) {
+        await this.friendsService.removeFriend(req.user.sub, friendId);
+        return { success: true, targetId: friendId };
+    }
+    async removeFriend(req, friendId) {
+        await this.friendsService.removeFriend(req.user.sub, friendId);
+        return { success: true, targetId: friendId };
+    }
+    async blockUser(req, targetId) {
+        await this.friendsService.blockUser(req.user.sub, targetId);
+        return { success: true, targetId };
+    }
+    async unblockUser(req, targetId) {
+        await this.friendsService.unblockUser(req.user.sub, targetId);
+        return { success: true, targetId };
+    }
+    async getBlockedUsers(req) {
+        return this.friendsService.getBlockedUsers(req.user.sub);
+    }
+    async getRelationshipStatus(req, targetId) {
+        return this.friendsService.getUserRelationshipStatus(req.user.sub, targetId);
     }
     async getFriends(req) {
         return this.friendsService.getFriends(req.user.sub);
@@ -69,6 +91,53 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], FriendsController.prototype, "rejectRequest", null);
+__decorate([
+    Delete(':friendId'),
+    __param(0, Request()),
+    __param(1, Param('friendId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "deleteFriend", null);
+__decorate([
+    Post('remove/:friendId'),
+    __param(0, Request()),
+    __param(1, Param('friendId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "removeFriend", null);
+__decorate([
+    Post('block/:targetId'),
+    __param(0, Request()),
+    __param(1, Param('targetId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "blockUser", null);
+__decorate([
+    Post('unblock/:targetId'),
+    __param(0, Request()),
+    __param(1, Param('targetId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "unblockUser", null);
+__decorate([
+    Get('blocked'),
+    __param(0, Request()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "getBlockedUsers", null);
+__decorate([
+    Get('status/:targetId'),
+    __param(0, Request()),
+    __param(1, Param('targetId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FriendsController.prototype, "getRelationshipStatus", null);
 __decorate([
     Get(),
     __param(0, Request()),

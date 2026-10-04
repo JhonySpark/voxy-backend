@@ -16,6 +16,29 @@ export declare class FriendsController {
         success: boolean;
         targetId: string;
     }>;
+    deleteFriend(req: any, friendId: string): Promise<{
+        success: boolean;
+        targetId: string;
+    }>;
+    removeFriend(req: any, friendId: string): Promise<{
+        success: boolean;
+        targetId: string;
+    }>;
+    blockUser(req: any, targetId: string): Promise<{
+        success: boolean;
+        targetId: string;
+    }>;
+    unblockUser(req: any, targetId: string): Promise<{
+        success: boolean;
+        targetId: string;
+    }>;
+    getBlockedUsers(req: any): Promise<any[]>;
+    getRelationshipStatus(req: any, targetId: string): Promise<{
+        isFriend: boolean;
+        isPending: boolean;
+        isBlocked: boolean;
+        hasBlocked: boolean;
+    }>;
     getFriends(req: any): Promise<any[]>;
     getRequests(req: any): Promise<any[]>;
 }

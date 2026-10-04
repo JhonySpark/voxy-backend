@@ -60,6 +60,88 @@ export class PrismaFriendshipRepository implements IFriendshipRepository {
     });
   }
 
+  async deleteBidirectional(userId: string, friendId: string): Promise<void> {
+    await this.prisma.friendship.deleteMany({
+      where: {
+        OR: [
+          { userId, friendId },
+          { userId: friendId, friendId: userId },
+        ],
+      },
+    });
+  }
+
+  async blockUser(userId: string, blockedId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.blockedUser.upsert({
+        where: {
+          userId_blockedId: { userId, blockedId },
+        },
+        create: { userId, blockedId },
+        update: {},
+      }),
+      this.prisma.friendship.deleteMany({
+        where: {
+          OR: [
+            { userId, friendId: blockedId },
+            { userId: blockedId, friendId: userId },
+          ],
+        },
+      }),
+    ]);
+  }
+
+  async unblockUser(userId: string, blockedId: string): Promise<void> {
+    await this.prisma.blockedUser.deleteMany({
+      where: {
+        userId,
+        blockedId,
+      },
+    });
+  }
+
+  async isBlocked(userId1: string, userId2: string): Promise<boolean> {
+    const count = await this.prisma.blockedUser.count({
+      where: {
+        OR: [
+          { userId: userId1, blockedId: userId2 },
+          { userId: userId2, blockedId: userId1 },
+        ],
+      },
+    });
+    return count > 0;
+  }
+
+  async hasBlocked(userId: string, targetId: string): Promise<boolean> {
+    const block = await this.prisma.blockedUser.findUnique({
+      where: {
+        userId_blockedId: { userId, blockedId: targetId },
+      },
+    });
+    return !!block;
+  }
+
+  async findBlockedUsers(userId: string): Promise<any[]> {
+    const blocks = await this.prisma.blockedUser.findMany({
+      where: { userId },
+      include: { blocked: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return blocks.map((b: any) => {
+      const u = b.blocked;
+      if (u && u.avatarUrl) {
+        const version = u.updatedAt ? `?v=${new Date(u.updatedAt).getTime()}` : '';
+        return {
+          ...u,
+          avatarUrl: `${u.avatarUrl.split('?')[0]}${version}`,
+          bannerUrl: u.bannerUrl ? `${u.bannerUrl.split('?')[0]}${version}` : u.bannerUrl,
+        };
+      }
+      return u;
+    });
+  }
+
   async findFriends(userId: string): Promise<any[]> {
     const friendships = await this.prisma.friendship.findMany({
       where: {

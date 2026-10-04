@@ -112,4 +112,68 @@ describe('PrismaFriendshipRepository', () => {
     const pending = await repo.findPendingRequests('u1');
     expect(pending).toEqual([{ id: 'u2', username: 'bob' }]);
   });
+
+  it('should delete friendship bidirectionally', async () => {
+    prismaMock.friendship.deleteMany = vi.fn().mockResolvedValue({ count: 1 });
+
+    await repo.deleteBidirectional('u1', 'u2');
+    expect(prismaMock.friendship.deleteMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { userId: 'u1', friendId: 'u2' },
+          { userId: 'u2', friendId: 'u1' },
+        ],
+      },
+    });
+  });
+
+  it('should block user and remove friendship in transaction', async () => {
+    (prismaMock as any).$transaction = vi.fn().mockResolvedValue([{}, { count: 1 }]);
+    (prismaMock as any).blockedUser = {
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+      count: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+    };
+    prismaMock.friendship.deleteMany = vi.fn();
+
+    await repo.blockUser('u1', 'u2');
+    expect((prismaMock as any).$transaction).toHaveBeenCalled();
+  });
+
+  it('should unblock user', async () => {
+    (prismaMock as any).blockedUser = {
+      deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+    };
+
+    await repo.unblockUser('u1', 'u2');
+    expect((prismaMock as any).blockedUser.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'u1', blockedId: 'u2' },
+    });
+  });
+
+  it('should check isBlocked and hasBlocked', async () => {
+    (prismaMock as any).blockedUser = {
+      count: vi.fn().mockResolvedValue(1),
+      findUnique: vi.fn().mockResolvedValue({ id: 'b1' }),
+    };
+
+    const blocked = await repo.isBlocked('u1', 'u2');
+    expect(blocked).toBe(true);
+
+    const hasBlocked = await repo.hasBlocked('u1', 'u2');
+    expect(hasBlocked).toBe(true);
+  });
+
+  it('should find blocked users list', async () => {
+    (prismaMock as any).blockedUser = {
+      findMany: vi.fn().mockResolvedValue([
+        { blocked: { id: 'u2', username: 'badguy', avatarUrl: null } },
+      ]),
+    };
+
+    const list = await repo.findBlockedUsers('u1');
+    expect(list).toEqual([{ id: 'u2', username: 'badguy', avatarUrl: null }]);
+  });
 });

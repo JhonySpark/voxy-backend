@@ -10,14 +10,23 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, Optional } from '@nestjs/common';
 import { CHAT_REPOSITORY } from '../core/ports/repositories/chat.repository.port.js';
+import { FRIENDSHIP_REPOSITORY } from '../core/ports/repositories/friendship.repository.port.js';
 let ChatService = class ChatService {
     chatRepo;
-    constructor(chatRepo) {
+    friendshipRepo;
+    constructor(chatRepo, friendshipRepo) {
         this.chatRepo = chatRepo;
+        this.friendshipRepo = friendshipRepo;
     }
     async saveMessage(senderId, receiverId, content, attachmentId) {
+        if (this.friendshipRepo) {
+            const blocked = await this.friendshipRepo.isBlocked(senderId, receiverId);
+            if (blocked) {
+                throw new BadRequestException('Não é possível enviar mensagens para este usuário.');
+            }
+        }
         return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId);
     }
     async getMessagesBetweenUsers(userId1, userId2) {
@@ -27,7 +36,9 @@ let ChatService = class ChatService {
 ChatService = __decorate([
     Injectable(),
     __param(0, Inject(CHAT_REPOSITORY)),
-    __metadata("design:paramtypes", [Object])
+    __param(1, Optional()),
+    __param(1, Inject(FRIENDSHIP_REPOSITORY)),
+    __metadata("design:paramtypes", [Object, Object])
 ], ChatService);
 export { ChatService };
 //# sourceMappingURL=chat.service.js.map

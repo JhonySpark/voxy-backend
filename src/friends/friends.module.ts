@@ -13,6 +13,6 @@ import { PrismaFriendshipRepository } from '../infrastructure/adapters/repositor
     },
   ],
   controllers: [FriendsController],
-  exports: [FriendsService],
+  exports: [FriendsService, FRIENDSHIP_REPOSITORY],
 })
 export class FriendsModule {}

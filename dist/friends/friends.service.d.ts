@@ -14,6 +14,22 @@ export declare class FriendsService {
     rejectFriendRequest(userId: string, friendId: string): Promise<{
         success: boolean;
     }>;
+    removeFriend(userId: string, friendId: string): Promise<{
+        success: boolean;
+    }>;
+    blockUser(userId: string, targetId: string): Promise<{
+        success: boolean;
+    }>;
+    unblockUser(userId: string, targetId: string): Promise<{
+        success: boolean;
+    }>;
+    getBlockedUsers(userId: string): Promise<any[]>;
+    getUserRelationshipStatus(userId: string, targetId: string): Promise<{
+        isFriend: boolean;
+        isPending: boolean;
+        isBlocked: boolean;
+        hasBlocked: boolean;
+    }>;
     getFriends(userId: string): Promise<any[]>;
     getPendingRequests(userId: string): Promise<any[]>;
 }

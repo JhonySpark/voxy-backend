@@ -26,8 +26,14 @@ describe('FriendsService', () => {
       create: vi.fn(),
       updateStatus: vi.fn(),
       delete: vi.fn(),
+      deleteBidirectional: vi.fn(),
       findFriends: vi.fn(),
       findPendingRequests: vi.fn(),
+      isBlocked: vi.fn().mockResolvedValue(false),
+      hasBlocked: vi.fn().mockResolvedValue(false),
+      blockUser: vi.fn(),
+      unblockUser: vi.fn(),
+      findBlockedUsers: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -110,15 +116,67 @@ describe('FriendsService', () => {
     });
   });
 
-  describe('getPendingRequests', () => {
-    it('should return pending requests users from repository', async () => {
-      const mockRequests = [{ id: 'u2', username: 'requester' }];
-      friendshipRepo.findPendingRequests.mockResolvedValue(mockRequests);
+  describe('removeFriend', () => {
+    it('should delete friendship bidirectionally', async () => {
+      friendshipRepo.deleteBidirectional = vi.fn().mockResolvedValue(undefined);
 
-      const result = await service.getPendingRequests('u1');
+      const result = await service.removeFriend('u1', 'u2');
 
-      expect(friendshipRepo.findPendingRequests).toHaveBeenCalledWith('u1');
-      expect(result).toEqual(mockRequests);
+      expect(friendshipRepo.deleteBidirectional).toHaveBeenCalledWith('u1', 'u2');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('blockUser', () => {
+    it('should throw BadRequestException when trying to block yourself', async () => {
+      await expect(service.blockUser('u1', 'u1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should block user through repository', async () => {
+      friendshipRepo.blockUser = vi.fn().mockResolvedValue(undefined);
+
+      const result = await service.blockUser('u1', 'u2');
+
+      expect(friendshipRepo.blockUser).toHaveBeenCalledWith('u1', 'u2');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('unblockUser', () => {
+    it('should unblock user through repository', async () => {
+      friendshipRepo.unblockUser = vi.fn().mockResolvedValue(undefined);
+
+      const result = await service.unblockUser('u1', 'u2');
+
+      expect(friendshipRepo.unblockUser).toHaveBeenCalledWith('u1', 'u2');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('getBlockedUsers', () => {
+    it('should return list of blocked users', async () => {
+      friendshipRepo.findBlockedUsers = vi.fn().mockResolvedValue([{ id: 'u2', username: 'spammer' }]);
+
+      const result = await service.getBlockedUsers('u1');
+
+      expect(friendshipRepo.findBlockedUsers).toHaveBeenCalledWith('u1');
+      expect(result).toEqual([{ id: 'u2', username: 'spammer' }]);
+    });
+  });
+
+  describe('getUserRelationshipStatus', () => {
+    it('should return false for everything if checking yourself', async () => {
+      const result = await service.getUserRelationshipStatus('u1', 'u1');
+      expect(result).toEqual({ isFriend: false, isPending: false, isBlocked: false, hasBlocked: false });
+    });
+
+    it('should return relationship status correctly', async () => {
+      friendshipRepo.findFriendship.mockResolvedValueOnce(createMockFriendship('f1', 'u1', 'u2', 'ACCEPTED'));
+      friendshipRepo.isBlocked = vi.fn().mockResolvedValue(false);
+      friendshipRepo.hasBlocked = vi.fn().mockResolvedValue(false);
+
+      const result = await service.getUserRelationshipStatus('u1', 'u2');
+      expect(result).toEqual({ isFriend: true, isPending: false, isBlocked: false, hasBlocked: false });
     });
   });
 });

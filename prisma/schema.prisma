@@ -29,6 +29,8 @@ model User {
   // Relacionamentos
   friends           Friendship[] @relation("UserFriends")
   friendsOf         Friendship[] @relation("FriendOfUser")
+  blockedUsers      BlockedUser[] @relation("UserBlocks")
+  blockedByUsers    BlockedUser[] @relation("BlockedUsers")
   sentMessages      Message[]    @relation("SentMessages")
   receivedMessages  Message[]    @relation("ReceivedMessages")
   ownedServers      Server[]       @relation("ServerOwner")
@@ -44,10 +46,24 @@ model Friendship {
   status    String   @default("PENDING") // PENDING, ACCEPTED
   createdAt DateTime @default(now())
   
-  user      User     @relation("UserFriends", fields: [userId], references: [id])
-  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id])
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  userId    String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserBlocks", fields: [userId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockedUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blockedId])
+  @@index([userId])
+  @@index([blockedId])
 }
 
 model Message {

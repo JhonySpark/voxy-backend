@@ -22,8 +22,15 @@ let FriendsService = class FriendsService {
         if (userId === friendId) {
             throw new BadRequestException('Cannot add yourself');
         }
-        const existing = await this.friendshipRepo.findFriendship(userId, friendId);
+        if (await this.friendshipRepo.isBlocked(userId, friendId)) {
+            throw new BadRequestException('Não é possível enviar pedido de amizade para este usuário.');
+        }
+        const existing = (await this.friendshipRepo.findFriendship(userId, friendId)) ||
+            (await this.friendshipRepo.findFriendship(friendId, userId));
         if (existing) {
+            if (existing.status === 'ACCEPTED') {
+                throw new BadRequestException('Vocês já são amigos');
+            }
             throw new BadRequestException('Friend request already sent');
         }
         const friendship = Friendship.create({
@@ -49,6 +56,48 @@ let FriendsService = class FriendsService {
         await this.friendshipRepo.delete(friendId, userId);
         return {
             success: true,
+        };
+    }
+    async removeFriend(userId, friendId) {
+        await this.friendshipRepo.deleteBidirectional(userId, friendId);
+        return {
+            success: true,
+        };
+    }
+    async blockUser(userId, targetId) {
+        if (userId === targetId) {
+            throw new BadRequestException('Não é possível bloquear a si mesmo.');
+        }
+        await this.friendshipRepo.blockUser(userId, targetId);
+        return {
+            success: true,
+        };
+    }
+    async unblockUser(userId, targetId) {
+        await this.friendshipRepo.unblockUser(userId, targetId);
+        return {
+            success: true,
+        };
+    }
+    async getBlockedUsers(userId) {
+        return this.friendshipRepo.findBlockedUsers(userId);
+    }
+    async getUserRelationshipStatus(userId, targetId) {
+        if (userId === targetId) {
+            return { isFriend: false, isPending: false, isBlocked: false, hasBlocked: false };
+        }
+        const [f1, f2, isBlocked, hasBlocked] = await Promise.all([
+            this.friendshipRepo.findFriendship(userId, targetId),
+            this.friendshipRepo.findFriendship(targetId, userId),
+            this.friendshipRepo.isBlocked(userId, targetId),
+            this.friendshipRepo.hasBlocked(userId, targetId),
+        ]);
+        const friendship = f1 || f2;
+        return {
+            isFriend: friendship?.status === 'ACCEPTED',
+            isPending: friendship?.status === 'PENDING',
+            isBlocked,
+            hasBlocked,
         };
     }
     async getFriends(userId) {

@@ -21,7 +21,7 @@ FriendsModule = __decorate([
             },
         ],
         controllers: [FriendsController],
-        exports: [FriendsService],
+        exports: [FriendsService, FRIENDSHIP_REPOSITORY],
     })
 ], FriendsModule);
 export { FriendsModule };
