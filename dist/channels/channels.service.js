@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Injectable, ForbiddenException, NotFoundException, Inject, } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Inject, } from '@nestjs/common';
 import { CHANNEL_REPOSITORY } from '../core/ports/repositories/channel.repository.port.js';
 import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
 import { VOICE_ENGINE_PORT } from '../core/ports/voice-engine.port.js';
@@ -123,6 +123,37 @@ let ChannelsService = class ChannelsService {
         }
         await this.channelRepo.deleteMessage(messageId);
         return { success: true };
+    }
+    async editChannelMessage(channelId, messageId, userId, newContent) {
+        const trimmed = (newContent || '').trim();
+        if (!trimmed)
+            throw new BadRequestException('Message content cannot be empty');
+        const channel = await this.channelRepo.findById(channelId);
+        if (!channel)
+            throw new NotFoundException('Channel not found');
+        const message = await this.channelRepo.findMessageById(messageId);
+        if (!message)
+            throw new NotFoundException('Message not found');
+        if (message.senderId !== userId) {
+            throw new ForbiddenException('You can only edit your own messages');
+        }
+        return this.channelRepo.updateMessage(messageId, trimmed);
+    }
+    async toggleChannelMessageReaction(channelId, messageId, userId, emoji) {
+        const trimmedEmoji = (emoji || '').trim();
+        if (!trimmedEmoji)
+            throw new BadRequestException('Emoji cannot be empty');
+        const channel = await this.channelRepo.findById(channelId);
+        if (!channel)
+            throw new NotFoundException('Channel not found');
+        const isMember = await this.serverRepo.isMember(channel.serverId, userId);
+        if (!isMember) {
+            throw new ForbiddenException('You are not a member of this server');
+        }
+        const message = await this.channelRepo.findMessageById(messageId);
+        if (!message)
+            throw new NotFoundException('Message not found');
+        return this.channelRepo.toggleReaction(messageId, userId, trimmedEmoji);
     }
     async getVoiceToken(channelId, user, isScreen = false) {
         const channel = await this.channelRepo.findById(channelId);

@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Injectable, Inject, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { CHAT_REPOSITORY } from '../core/ports/repositories/chat.repository.port.js';
 import { FRIENDSHIP_REPOSITORY } from '../core/ports/repositories/friendship.repository.port.js';
 let ChatService = class ChatService {
@@ -31,6 +31,30 @@ let ChatService = class ChatService {
     }
     async getMessagesBetweenUsers(userId1, userId2) {
         return this.chatRepo.getDirectMessages(userId1, userId2);
+    }
+    async editDirectMessage(messageId, userId, newContent) {
+        const trimmed = (newContent || '').trim();
+        if (!trimmed)
+            throw new BadRequestException('Message content cannot be empty');
+        const message = await this.chatRepo.findMessageById(messageId);
+        if (!message)
+            throw new NotFoundException('Message not found');
+        if (message.senderId !== userId) {
+            throw new ForbiddenException('You can only edit your own messages');
+        }
+        return this.chatRepo.updateDirectMessage(messageId, trimmed);
+    }
+    async toggleReaction(messageId, userId, emoji) {
+        const trimmedEmoji = (emoji || '').trim();
+        if (!trimmedEmoji)
+            throw new BadRequestException('Emoji cannot be empty');
+        const message = await this.chatRepo.findMessageById(messageId);
+        if (!message)
+            throw new NotFoundException('Message not found');
+        if (message.senderId !== userId && message.receiverId !== userId) {
+            throw new ForbiddenException('You can only react to messages in your conversations');
+        }
+        return this.chatRepo.toggleReaction(messageId, userId, trimmedEmoji);
     }
 };
 ChatService = __decorate([

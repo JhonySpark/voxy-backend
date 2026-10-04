@@ -155,6 +155,55 @@ let ChatGateway = class ChatGateway {
             return { error: e.message || 'Unauthorized' };
         }
     }
+    async handleEditMessage(data, client) {
+        const senderId = client.data.user.sub;
+        try {
+            const updated = await this.chatService.editDirectMessage(data.messageId, senderId, data.content);
+            this.server.to(updated.receiverId).emit('messageUpdated', updated);
+            client.emit('messageUpdated', updated);
+            return updated;
+        }
+        catch (e) {
+            return { error: e.message || 'Unauthorized' };
+        }
+    }
+    async handleEditChannelMessage(data, client) {
+        const senderId = client.data.user.sub;
+        try {
+            const updated = await this.channelsService.editChannelMessage(data.channelId, data.messageId, senderId, data.content);
+            this.server.to(data.channelId).emit('channelMessageUpdated', updated);
+            client.emit('channelMessageUpdated', updated);
+            return updated;
+        }
+        catch (e) {
+            return { error: e.message || 'Unauthorized' };
+        }
+    }
+    async handleToggleMessageReaction(data, client) {
+        const userId = client.data.user.sub;
+        try {
+            const updated = await this.chatService.toggleReaction(data.messageId, userId, data.emoji);
+            this.server.to(updated.receiverId).emit('messageReactionUpdated', updated);
+            this.server.to(updated.senderId).emit('messageReactionUpdated', updated);
+            client.emit('messageReactionUpdated', updated);
+            return updated;
+        }
+        catch (e) {
+            return { error: e.message || 'Error' };
+        }
+    }
+    async handleToggleChannelMessageReaction(data, client) {
+        const userId = client.data.user.sub;
+        try {
+            const updated = await this.channelsService.toggleChannelMessageReaction(data.channelId, data.messageId, userId, data.emoji);
+            this.server.to(data.channelId).emit('channelMessageReactionUpdated', updated);
+            client.emit('channelMessageReactionUpdated', updated);
+            return updated;
+        }
+        catch (e) {
+            return { error: e.message || 'Error' };
+        }
+    }
     handleServerDeleted(data, client) {
         this.server.to(`server-${data.serverId}`).emit('serverDeleted', { serverId: data.serverId });
         this.server.emit('serverDeleted', { serverId: data.serverId });
@@ -369,6 +418,38 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleDeleteChannelMessage", null);
+__decorate([
+    SubscribeMessage('editMessage'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleEditMessage", null);
+__decorate([
+    SubscribeMessage('editChannelMessage'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleEditChannelMessage", null);
+__decorate([
+    SubscribeMessage('toggleMessageReaction'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleToggleMessageReaction", null);
+__decorate([
+    SubscribeMessage('toggleChannelMessageReaction'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleToggleChannelMessageReaction", null);
 __decorate([
     SubscribeMessage('serverDeleted'),
     __param(0, MessageBody()),

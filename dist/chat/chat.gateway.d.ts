@@ -44,6 +44,24 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         error: any;
         success?: undefined;
     }>;
+    handleEditMessage(data: {
+        messageId: string;
+        content: string;
+    }, client: Socket): Promise<any>;
+    handleEditChannelMessage(data: {
+        channelId: string;
+        messageId: string;
+        content: string;
+    }, client: Socket): Promise<any>;
+    handleToggleMessageReaction(data: {
+        messageId: string;
+        emoji: string;
+    }, client: Socket): Promise<any>;
+    handleToggleChannelMessageReaction(data: {
+        channelId: string;
+        messageId: string;
+        emoji: string;
+    }, client: Socket): Promise<any>;
     handleServerDeleted(data: {
         serverId: string;
     }, client: Socket): void;

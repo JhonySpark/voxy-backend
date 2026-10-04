@@ -24,6 +24,8 @@ export declare class ChannelsService {
     deleteChannelMessage(channelId: string, messageId: string, userId: string): Promise<{
         success: boolean;
     }>;
+    editChannelMessage(channelId: string, messageId: string, userId: string, newContent: string): Promise<any>;
+    toggleChannelMessageReaction(channelId: string, messageId: string, userId: string, emoji: string): Promise<any>;
     getVoiceToken(channelId: string, user: {
         sub: string;
         username: string;

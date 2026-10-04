@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ChatService } from './chat.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 let ChatController = class ChatController {
@@ -21,6 +21,12 @@ let ChatController = class ChatController {
     async getMessages(req, friendId) {
         return this.chatService.getMessagesBetweenUsers(req.user.sub, friendId);
     }
+    async editMessage(req, messageId, content) {
+        return this.chatService.editDirectMessage(messageId, req.user.sub, content);
+    }
+    async toggleReaction(req, messageId, emoji) {
+        return this.chatService.toggleReaction(messageId, req.user.sub, emoji);
+    }
 };
 __decorate([
     Get(':friendId'),
@@ -30,6 +36,24 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ChatController.prototype, "getMessages", null);
+__decorate([
+    Patch('messages/:messageId'),
+    __param(0, Request()),
+    __param(1, Param('messageId')),
+    __param(2, Body('content')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "editMessage", null);
+__decorate([
+    Patch('messages/:messageId/reaction'),
+    __param(0, Request()),
+    __param(1, Param('messageId')),
+    __param(2, Body('emoji')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "toggleReaction", null);
 ChatController = __decorate([
     UseGuards(AuthGuard),
     Controller('chat'),

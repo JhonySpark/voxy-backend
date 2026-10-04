@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IChatRepository } from '../../../core/ports/repositories/chat.repository.port.js';
 
-const MESSAGE_INCLUDE = {
+const MESSAGE_INCLUDE: Prisma.MessageInclude = {
   sender: true,
   attachments: true,
   replyTo: {

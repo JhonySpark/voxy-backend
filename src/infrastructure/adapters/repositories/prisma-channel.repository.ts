@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IChannelRepository } from '../../../core/ports/repositories/channel.repository.port.js';
 import { Channel } from '../../../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../../../modules/servers/domain/value-objects/channel-type.vo.js';
 
-const CHANNEL_MESSAGE_INCLUDE = {
+const CHANNEL_MESSAGE_INCLUDE: Prisma.ChannelMessageInclude = {
   sender: true,
   attachments: true,
   replyTo: {

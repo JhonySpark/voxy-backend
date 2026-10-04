@@ -34,6 +34,12 @@ let ChannelsController = class ChannelsController {
     async deleteMessage(req, channelId, messageId) {
         return this.channelsService.deleteChannelMessage(channelId, messageId, req.user.sub);
     }
+    async editMessage(req, channelId, messageId, content) {
+        return this.channelsService.editChannelMessage(channelId, messageId, req.user.sub, content);
+    }
+    async toggleReaction(req, channelId, messageId, emoji) {
+        return this.channelsService.toggleChannelMessageReaction(channelId, messageId, req.user.sub, emoji);
+    }
     async getVoiceToken(req, channelId, screen) {
         return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');
     }
@@ -85,6 +91,26 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "deleteMessage", null);
+__decorate([
+    Patch(':channelId/messages/:messageId'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __param(2, Param('messageId')),
+    __param(3, Body('content')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "editMessage", null);
+__decorate([
+    Patch(':channelId/messages/:messageId/reaction'),
+    __param(0, Request()),
+    __param(1, Param('channelId')),
+    __param(2, Param('messageId')),
+    __param(3, Body('emoji')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:returntype", Promise)
+], ChannelsController.prototype, "toggleReaction", null);
 __decorate([
     Post(':channelId/voice-token'),
     __param(0, Request()),

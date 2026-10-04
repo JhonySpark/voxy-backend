@@ -21,6 +21,8 @@ export declare class ChannelsController {
     deleteMessage(req: any, channelId: string, messageId: string): Promise<{
         success: boolean;
     }>;
+    editMessage(req: any, channelId: string, messageId: string, content: string): Promise<any>;
+    toggleReaction(req: any, channelId: string, messageId: string, emoji: string): Promise<any>;
     getVoiceToken(req: any, channelId: string, screen?: string): Promise<{
         token: string;
     }>;

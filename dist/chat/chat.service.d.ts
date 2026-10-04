@@ -6,4 +6,6 @@ export declare class ChatService {
     constructor(chatRepo: IChatRepository, friendshipRepo?: IFriendshipRepository | undefined);
     saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string, replyToId?: string): Promise<any>;
     getMessagesBetweenUsers(userId1: string, userId2: string): Promise<any[]>;
+    editDirectMessage(messageId: string, userId: string, newContent: string): Promise<any>;
+    toggleReaction(messageId: string, userId: string, emoji: string): Promise<any>;
 }
