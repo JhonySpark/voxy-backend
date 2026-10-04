@@ -45,7 +45,7 @@ describe('ServersService', () => {
       providers: [
         ServersService,
         { provide: SERVER_REPOSITORY, useValue: serverRepo },
-        { provide: PrismaService, useValue: { server: { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() } } },
+        { provide: PrismaService, useValue: { server: { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn().mockResolvedValue([]) } } },
       ],
     }).compile();
 

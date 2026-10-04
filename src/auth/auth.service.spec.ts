@@ -5,6 +5,8 @@ import { UsersService } from '../users/users.service.js';
 import { BadRequestException } from '@nestjs/common';
 import { PASSWORD_HASHER_PORT, IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
 import { TOKEN_SERVICE_PORT, ITokenServicePort } from '../core/ports/security/token-service.port.js';
+import { EMAIL_SERVICE_PORT } from '../core/ports/communication/email-service.port.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,6 +17,19 @@ describe('AuthService', () => {
   };
   let tokenService: { sign: ReturnType<typeof vi.fn>; verify: ReturnType<typeof vi.fn> };
   let passwordHasher: { hash: ReturnType<typeof vi.fn>; compare: ReturnType<typeof vi.fn> };
+  let emailService: { sendVerificationEmail: ReturnType<typeof vi.fn> };
+  let prisma: {
+    emailVerification: {
+      create: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+    };
+    user: {
+      update: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+    };
+  };
 
   beforeEach(async () => {
     usersService = {
@@ -30,13 +45,30 @@ describe('AuthService', () => {
       hash: vi.fn(),
       compare: vi.fn(),
     };
+    emailService = {
+      sendVerificationEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'm1' }),
+    };
+    prisma = {
+      emailVerification: {
+        create: vi.fn().mockResolvedValue({ id: 'ev1' }),
+        findFirst: vi.fn().mockResolvedValue(null),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      user: {
+        update: vi.fn().mockResolvedValue({ id: 'u1' }),
+        findUnique: vi.fn().mockResolvedValue({ id: 'u1', isEmailVerified: true }),
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
+        { provide: PrismaService, useValue: prisma },
         { provide: TOKEN_SERVICE_PORT, useValue: tokenService },
         { provide: PASSWORD_HASHER_PORT, useValue: passwordHasher },
+        { provide: EMAIL_SERVICE_PORT, useValue: emailService },
       ],
     }).compile();
 
@@ -84,12 +116,23 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should generate an access token for user', async () => {
       tokenService.sign.mockReturnValue('mock_jwt_token');
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        isEmailVerified: true,
+        ageClassification: 'ADULT',
+      });
 
-      const user = { id: 'u1', username: 'tester' };
+      const user = {
+        id: 'u1',
+        username: 'tester',
+        email: 'tester@example.com',
+        isEmailVerified: true,
+        ageClassification: 'ADULT',
+      };
       const result = await service.login(user);
 
       expect(tokenService.sign).toHaveBeenCalledWith({ username: 'tester', sub: 'u1' });
-      expect(result).toEqual({ access_token: 'mock_jwt_token' });
+      expect(result).toMatchObject({ access_token: 'mock_jwt_token' });
     });
   });
 
@@ -124,19 +167,19 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should throw BadRequestException if email is invalid', async () => {
       await expect(
-        service.register({ email: 'invalid-email', username: 'valid_user', password: 'ValidPass@123' })
+        service.register({ email: 'invalid-email', username: 'valid_user', password: 'ValidPass@123', birthDate: '2000-01-01' })
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if username is invalid', async () => {
       await expect(
-        service.register({ email: 'valid@example.com', username: 'x', password: 'ValidPass@123' })
+        service.register({ email: 'valid@example.com', username: 'x', password: 'ValidPass@123', birthDate: '2000-01-01' })
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if password is too simple', async () => {
       await expect(
-        service.register({ email: 'valid@example.com', username: 'valid_user', password: 'simplepassword' })
+        service.register({ email: 'valid@example.com', username: 'valid_user', password: 'simplepassword', birthDate: '2000-01-01' })
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -144,7 +187,7 @@ describe('AuthService', () => {
       usersService.findByEmail.mockResolvedValue({ id: 'existing' });
 
       await expect(
-        service.register({ email: 'existing@example.com', username: 'newuser', password: 'ValidPass@123' })
+        service.register({ email: 'existing@example.com', username: 'newuser', password: 'ValidPass@123', birthDate: '2000-01-01' })
       ).rejects.toThrow('Este endereço de e-mail já está cadastrado.');
     });
 
@@ -153,7 +196,7 @@ describe('AuthService', () => {
       usersService.findByUsername.mockResolvedValue({ id: 'existing' });
 
       await expect(
-        service.register({ email: 'new@example.com', username: 'existing', password: 'ValidPass@123' })
+        service.register({ email: 'new@example.com', username: 'existing', password: 'ValidPass@123', birthDate: '2000-01-01' })
       ).rejects.toThrow('Este nome de usuário já está em uso.');
     });
 
@@ -172,6 +215,7 @@ describe('AuthService', () => {
         email: 'new@example.com',
         username: 'newuser',
         password: 'ValidPass@123',
+        birthDate: '2000-01-01',
       });
 
       expect(passwordHasher.hash).toHaveBeenCalledWith('ValidPass@123');
@@ -179,11 +223,14 @@ describe('AuthService', () => {
         email: 'new@example.com',
         username: 'newuser',
         password: 'hashed_secret',
+        birthDate: expect.any(Date),
       });
       expect(result).toEqual({
         id: 'new_id',
         username: 'newuser',
         email: 'new@example.com',
+        requireEmailVerification: true,
+        message: expect.any(String),
       });
       expect((result as any).password).toBeUndefined();
     });

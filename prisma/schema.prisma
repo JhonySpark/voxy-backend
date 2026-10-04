@@ -26,6 +26,13 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  birthDate          DateTime?
+  isEmailVerified    Boolean           @default(false)
+  emailVerifiedAt    DateTime?
+  ageClassification  AgeClassification @default(UNKNOWN)
+  ageSignalSource    AgeSignalSource   @default(NONE)
+  ageSignalCheckedAt DateTime?
+
   // Relacionamentos
   friends           Friendship[] @relation("UserFriends")
   friendsOf         Friendship[] @relation("FriendOfUser")
@@ -40,6 +47,31 @@ model User {
   messageReactions        MessageReaction[]        @relation("UserMessageReactions")
   channelMessageReactions ChannelMessageReaction[] @relation("UserChannelMessageReactions")
 }
+
+enum AgeClassification {
+  UNKNOWN
+  CHILD
+  TEEN
+  ADULT
+}
+
+enum AgeSignalSource {
+  NONE
+  WINDOWS_OS
+  DECLARED
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 
 model Friendship {
   id        String   @id @default(uuid())
@@ -97,6 +129,7 @@ model Server {
   iconKey    String?
   ownerId    String
   deletedAt  DateTime?
+  is18Plus   Boolean   @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 

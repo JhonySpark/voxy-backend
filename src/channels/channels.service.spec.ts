@@ -7,6 +7,7 @@ import { VOICE_ENGINE_PORT, IVoiceEnginePort } from '../core/ports/voice-engine.
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 describe('ChannelsService', () => {
   let service: ChannelsService;
@@ -51,6 +52,14 @@ describe('ChannelsService', () => {
     voiceEngine = {
       generateAccessToken: vi.fn(),
     };
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ ageClassification: 'ADULT' }),
+      },
+      server: {
+        findUnique: vi.fn().mockResolvedValue({ is18Plus: false }),
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,6 +67,7 @@ describe('ChannelsService', () => {
         { provide: CHANNEL_REPOSITORY, useValue: channelRepo },
         { provide: SERVER_REPOSITORY, useValue: serverRepo },
         { provide: VOICE_ENGINE_PORT, useValue: voiceEngine },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 

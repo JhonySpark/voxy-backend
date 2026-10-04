@@ -15,8 +15,10 @@ import { USER_REPOSITORY } from '../core/ports/repositories/user.repository.port
 import { User } from '../modules/identity/domain/entities/user.entity.js';
 import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
 import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
+import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
+import { AgeClassificationEnum, AgeSignalSourceEnum } from '../core/enums/index.js';
 let UsersService = class UsersService {
     userRepo;
     prisma;
@@ -27,10 +29,15 @@ let UsersService = class UsersService {
         this.hasher = hasher;
     }
     async create(data) {
+        const birthDateVO = data.birthDate ? BirthDate.create(data.birthDate).getValue() : null;
         const userOrError = User.create({
             username: Username.create(data.username).getValue(),
             email: Email.create(data.email).getValue(),
             password: data.password || '',
+            birthDate: birthDateVO,
+            isEmailVerified: false,
+            ageClassification: AgeClassificationEnum.UNKNOWN,
+            ageSignalSource: AgeSignalSourceEnum.NONE,
         });
         const user = userOrError.getValue();
         const created = await this.userRepo.create(user);
@@ -39,6 +46,10 @@ let UsersService = class UsersService {
             username: created.username.value,
             email: created.email.value,
             password: created.password,
+            birthDate: created.birthDate?.value || null,
+            isEmailVerified: created.isEmailVerified,
+            ageClassification: created.ageClassification,
+            ageSignalSource: created.ageSignalSource,
         };
     }
     async findByUsername(username) {
@@ -50,6 +61,10 @@ let UsersService = class UsersService {
             username: user.username.value,
             email: user.email.value,
             password: user.password,
+            birthDate: user.birthDate?.value || null,
+            isEmailVerified: user.isEmailVerified,
+            ageClassification: user.ageClassification,
+            ageSignalSource: user.ageSignalSource,
         };
     }
     async findByEmail(email) {
@@ -61,6 +76,10 @@ let UsersService = class UsersService {
             username: user.username.value,
             email: user.email.value,
             password: user.password,
+            birthDate: user.birthDate?.value || null,
+            isEmailVerified: user.isEmailVerified,
+            ageClassification: user.ageClassification,
+            ageSignalSource: user.ageSignalSource,
         };
     }
     async findById(id) {
@@ -72,6 +91,10 @@ let UsersService = class UsersService {
             username: user.username.value,
             email: user.email.value,
             password: user.password,
+            birthDate: user.birthDate?.value || null,
+            isEmailVerified: user.isEmailVerified,
+            ageClassification: user.ageClassification,
+            ageSignalSource: user.ageSignalSource,
         };
     }
     async getProfile(userId, requestingUserId) {
@@ -88,6 +111,10 @@ let UsersService = class UsersService {
                 bannerUrl: true,
                 bannerKey: true,
                 bannerColor: true,
+                birthDate: true,
+                isEmailVerified: true,
+                ageClassification: true,
+                ageSignalSource: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -107,6 +134,14 @@ let UsersService = class UsersService {
             bannerColor: user.bannerColor,
             createdAt: user.createdAt,
             email: isSelf ? user.email : undefined,
+            birthDate: isSelf ? user.birthDate : undefined,
+            isEmailVerified: user.isEmailVerified,
+            ageClassification: user.ageClassification,
+            ageSignalSource: user.ageSignalSource,
+            canShareScreen: user.ageClassification === AgeClassificationEnum.ADULT,
+            canStreamGames: user.ageClassification === AgeClassificationEnum.ADULT || user.ageClassification === AgeClassificationEnum.TEEN,
+            canAccess18Plus: user.ageClassification === AgeClassificationEnum.ADULT,
+            canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD,
         };
     }
     async updateProfile(userId, data) {

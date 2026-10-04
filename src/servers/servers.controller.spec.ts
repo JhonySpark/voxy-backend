@@ -44,7 +44,7 @@ describe('ServersController', () => {
 
     const result = await controller.createServer(req, 'Server A');
 
-    expect(serversService.createServer).toHaveBeenCalledWith('u1', 'Server A');
+    expect(serversService.createServer).toHaveBeenCalledWith('u1', 'Server A', undefined, undefined, undefined);
     expect(result).toEqual({ id: 's1', name: 'Server A' });
   });
 

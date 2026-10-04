@@ -5,23 +5,24 @@ export declare class ServersService {
     private readonly prisma;
     constructor(serverRepo: IServerRepository, prisma: PrismaService);
     private generateInviteCode;
-    createServer(ownerId: string, name: string, iconUrl?: string, iconKey?: string): Promise<{
+    createServer(ownerId: string, name: string, is18Plus?: boolean, iconUrl?: string, iconKey?: string): Promise<{
         id: string;
         name: string;
         ownerId: string;
+        is18Plus: boolean;
         iconUrl: any;
         iconKey: any;
         inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
             serverId: string;
         }[];
         members: {
             id: string;
             userId: string;
-            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            role: import("../core/enums/server-role.enum.js").ServerRoleEnum;
             serverId: string;
         }[];
     }>;
@@ -33,19 +34,20 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
+        is18Plus: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
             serverId: string;
         }[];
         members: {
             id: string;
             userId: string;
-            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            role: import("../core/enums/server-role.enum.js").ServerRoleEnum;
             serverId: string;
             user: {
                 id: string;
@@ -57,13 +59,14 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
+        is18Plus: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
             serverId: string;
         }[];
     }[]>;
@@ -71,19 +74,20 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
+        is18Plus: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
             serverId: string;
         }[];
         members: {
             id: string;
             userId: string;
-            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            role: import("../core/enums/server-role.enum.js").ServerRoleEnum;
             serverId: string;
             user: {
                 id: string;
@@ -95,19 +99,20 @@ export declare class ServersService {
         id: string;
         name: string;
         ownerId: string;
+        is18Plus: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
         channels: {
             id: string;
             name: string;
-            type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+            type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
             serverId: string;
         }[];
         members: {
             id: string;
             userId: string;
-            role: import("../modules/servers/domain/value-objects/server-role.vo.js").ServerRoleType;
+            role: import("../core/enums/server-role.enum.js").ServerRoleEnum;
             serverId: string;
             user: {
                 id: string;

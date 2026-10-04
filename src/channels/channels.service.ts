@@ -13,6 +13,8 @@ import { VOICE_ENGINE_PORT } from '../core/ports/voice-engine.port.js';
 import type { IVoiceEnginePort } from '../core/ports/voice-engine.port.js';
 import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { AgeClassificationEnum } from '../core/enums/index.js';
 
 @Injectable()
 export class ChannelsService {
@@ -20,6 +22,7 @@ export class ChannelsService {
     @Inject(CHANNEL_REPOSITORY) private readonly channelRepo: IChannelRepository,
     @Inject(SERVER_REPOSITORY) private readonly serverRepo: IServerRepository,
     @Inject(VOICE_ENGINE_PORT) private readonly voiceEngine: IVoiceEnginePort,
+    private readonly prisma: PrismaService,
   ) {}
 
   async createChannel(
@@ -189,6 +192,24 @@ export class ChannelsService {
   async getVoiceToken(channelId: string, user: { sub: string; username: string }, isScreen: boolean = false) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
+
+    const userDb = await this.prisma.user.findUnique({
+      where: { id: user.sub },
+      select: { ageClassification: true },
+    });
+
+    if (userDb?.ageClassification === AgeClassificationEnum.CHILD) {
+      throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
+    }
+
+    const serverMeta = await this.prisma.server.findUnique({
+      where: { id: channel.serverId },
+      select: { is18Plus: true },
+    });
+
+    if (serverMeta?.is18Plus && userDb?.ageClassification !== AgeClassificationEnum.ADULT) {
+      throw new ForbiddenException('Este canal pertence a um servidor restrito para maiores de 18 anos (+18).');
+    }
 
     const isMember = await this.serverRepo.isMember(channel.serverId, user.sub);
     if (!isMember) {

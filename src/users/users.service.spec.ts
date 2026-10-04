@@ -66,6 +66,10 @@ describe('UsersService', () => {
         username: 'testuser',
         email: 'test@example.com',
         password: 'hash',
+        birthDate: null,
+        isEmailVerified: false,
+        ageClassification: 'UNKNOWN',
+        ageSignalSource: 'NONE',
       });
     });
   });
@@ -83,6 +87,10 @@ describe('UsersService', () => {
         username: 'john',
         email: 'john@example.com',
         password: 'hashedPassword',
+        birthDate: null,
+        isEmailVerified: false,
+        ageClassification: 'UNKNOWN',
+        ageSignalSource: 'NONE',
       });
     });
 
@@ -107,6 +115,10 @@ describe('UsersService', () => {
         username: 'john',
         email: 'john@example.com',
         password: 'hashedPassword',
+        birthDate: null,
+        isEmailVerified: false,
+        ageClassification: 'UNKNOWN',
+        ageSignalSource: 'NONE',
       });
     });
 
@@ -131,6 +143,10 @@ describe('UsersService', () => {
         username: 'john',
         email: 'john@example.com',
         password: 'hashedPassword',
+        birthDate: null,
+        isEmailVerified: false,
+        ageClassification: 'UNKNOWN',
+        ageSignalSource: 'NONE',
       });
     });
 

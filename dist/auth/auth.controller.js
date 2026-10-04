@@ -10,9 +10,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Get, Body, Query, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UnauthorizedException, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { Prisma } from '@prisma/client';
+import { AuthGuard } from './auth.guard.js';
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -23,13 +23,22 @@ let AuthController = class AuthController {
         if (!user) {
             throw new UnauthorizedException({
                 code: 'AUTH_INVALID_CREDENTIALS',
-                message: 'Invalid credentials',
+                message: 'Credenciais inválidas.',
             });
         }
         return this.authService.login(user);
     }
     async register(body) {
         return this.authService.register(body);
+    }
+    async verifyEmail(body) {
+        return this.authService.verifyEmail(body.email, body.code);
+    }
+    async resendCode(body) {
+        return this.authService.resendCode(body.email);
+    }
+    async syncAgeSignal(req, body) {
+        return this.authService.syncAgeSignal(req.user.sub, body);
     }
     async checkUsername(username) {
         return this.authService.checkUsername(username);
@@ -49,6 +58,29 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    Post('verify-email'),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyEmail", null);
+__decorate([
+    Post('resend-code'),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resendCode", null);
+__decorate([
+    Post('sync-age-signal'),
+    UseGuards(AuthGuard),
+    __param(0, Request()),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "syncAgeSignal", null);
 __decorate([
     Get('check-username'),
     __param(0, Query('username')),

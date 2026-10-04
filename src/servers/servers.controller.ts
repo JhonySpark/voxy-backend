@@ -11,13 +11,11 @@ export class ServersController {
   async createServer(
     @Request() req: any,
     @Body('name') name: string,
+    @Body('is18Plus') is18Plus?: boolean,
     @Body('iconUrl') iconUrl?: string,
     @Body('iconKey') iconKey?: string,
   ) {
-    if (iconUrl !== undefined || iconKey !== undefined) {
-      return this.serversService.createServer(req.user.sub, name, iconUrl, iconKey);
-    }
-    return this.serversService.createServer(req.user.sub, name);
+    return this.serversService.createServer(req.user.sub, name, is18Plus, iconUrl, iconKey);
   }
 
   @Patch(':id')

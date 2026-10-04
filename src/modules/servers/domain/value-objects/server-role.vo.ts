@@ -1,31 +1,32 @@
 import { ValueObject } from '../../../../core/domain/value-object.base.js';
 import { Result } from '../../../../core/logic/result.js';
+import { ServerRoleEnum } from '../../../../core/enums/index.js';
 
-export type ServerRoleType = 'OWNER' | 'ADMIN' | 'MODERATOR' | 'MEMBER';
+export type ServerRoleType = ServerRoleEnum;
 
 interface ServerRoleProps {
-  value: ServerRoleType;
+  value: ServerRoleEnum;
 }
 
 export class ServerRole extends ValueObject<ServerRoleProps> {
-  get value(): ServerRoleType {
+  get value(): ServerRoleEnum {
     return this.props.value;
   }
 
   public isOwner(): boolean {
-    return this.props.value === 'OWNER';
+    return this.props.value === ServerRoleEnum.OWNER;
   }
 
   public isAdmin(): boolean {
-    return this.props.value === 'ADMIN';
+    return this.props.value === ServerRoleEnum.ADMIN;
   }
 
   public isModerator(): boolean {
-    return this.props.value === 'MODERATOR';
+    return this.props.value === ServerRoleEnum.MODERATOR;
   }
 
   public isMember(): boolean {
-    return this.props.value === 'MEMBER';
+    return this.props.value === ServerRoleEnum.MEMBER;
   }
 
   private constructor(props: ServerRoleProps) {
@@ -34,27 +35,27 @@ export class ServerRole extends ValueObject<ServerRoleProps> {
 
   public static create(role: string): Result<ServerRole> {
     const normalized = role?.toUpperCase();
-    const validRoles: ServerRoleType[] = ['OWNER', 'ADMIN', 'MODERATOR', 'MEMBER'];
-    if (!validRoles.includes(normalized as ServerRoleType)) {
+    const validRoles = Object.values(ServerRoleEnum);
+    if (!validRoles.includes(normalized as ServerRoleEnum)) {
       return Result.fail<ServerRole>('Papel de servidor inválido. Deve ser OWNER, ADMIN, MODERATOR ou MEMBER.');
     }
 
-    return Result.ok<ServerRole>(new ServerRole({ value: normalized as ServerRoleType }));
+    return Result.ok<ServerRole>(new ServerRole({ value: normalized as ServerRoleEnum }));
   }
 
   public static owner(): ServerRole {
-    return new ServerRole({ value: 'OWNER' });
+    return new ServerRole({ value: ServerRoleEnum.OWNER });
   }
 
   public static admin(): ServerRole {
-    return new ServerRole({ value: 'ADMIN' });
+    return new ServerRole({ value: ServerRoleEnum.ADMIN });
   }
 
   public static moderator(): ServerRole {
-    return new ServerRole({ value: 'MODERATOR' });
+    return new ServerRole({ value: ServerRoleEnum.MODERATOR });
   }
 
   public static member(): ServerRole {
-    return new ServerRole({ value: 'MEMBER' });
+    return new ServerRole({ value: ServerRoleEnum.MEMBER });
   }
 }

@@ -3,6 +3,7 @@ import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.
 import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AgeClassificationEnum } from '../core/enums/index.js';
 
 @Injectable()
 export class ServersService {
@@ -25,9 +26,20 @@ export class ServersService {
   async createServer(
     ownerId: string,
     name: string,
+    is18Plus?: boolean,
     iconUrl?: string,
     iconKey?: string,
   ) {
+    if (is18Plus) {
+      const owner = await this.prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { ageClassification: true },
+      });
+      if (owner?.ageClassification !== AgeClassificationEnum.ADULT) {
+        throw new ForbiddenException('Apenas usuários adultos (18+) podem criar servidores para maiores de 18 anos.');
+      }
+    }
+
     const serverOrError = Server.create(name, ownerId);
     if (serverOrError.isFailure) {
       throw new ForbiddenException(serverOrError.error);
@@ -37,20 +49,20 @@ export class ServersService {
     server.setInviteCode(await this.generateInviteCode());
     const created = await this.serverRepo.create(server);
 
-    if ((iconUrl || iconKey) && this.prisma?.server) {
-      await this.prisma.server.update({
-        where: { id: created.id },
-        data: {
-          iconUrl: iconUrl || null,
-          iconKey: iconKey || null,
-        },
-      });
-    }
+    await this.prisma.server.update({
+      where: { id: created.id },
+      data: {
+        is18Plus: is18Plus === true,
+        iconUrl: iconUrl || null,
+        iconKey: iconKey || null,
+      },
+    });
 
     return {
       id: created.id,
       name: created.name,
       ownerId: created.ownerId,
+      is18Plus: is18Plus === true,
       iconUrl: (created as any).iconUrl || iconUrl,
       iconKey: (created as any).iconKey || iconKey,
       inviteCode: created.inviteCode,
@@ -110,6 +122,13 @@ export class ServersService {
 
   async getUserServers(userId: string) {
     const servers = await this.serverRepo.findUserServers(userId);
+    const serverIds = servers.map(s => s.id);
+    const prismaServers = await this.prisma.server.findMany({
+      where: { id: { in: serverIds } },
+      select: { id: true, is18Plus: true },
+    });
+    const is18PlusMap = new Map(prismaServers.map(ps => [ps.id, ps.is18Plus]));
+
     return servers.map(s => {
       const version = s.updatedAt ? `?v=${new Date(s.updatedAt).getTime()}` : '';
       const baseIconUrl = s.iconUrl ? s.iconUrl.split('?')[0] : null;
@@ -117,6 +136,7 @@ export class ServersService {
         id: s.id,
         name: s.name,
         ownerId: s.ownerId,
+        is18Plus: is18PlusMap.get(s.id) ?? false,
         iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
         iconKey: s.iconKey,
         inviteCode: s.inviteCode,
@@ -141,6 +161,21 @@ export class ServersService {
       throw new NotFoundException('Server not found');
     }
 
+    const serverMeta = await this.prisma.server.findUnique({
+      where: { id: server.id },
+      select: { is18Plus: true },
+    });
+
+    if (serverMeta?.is18Plus) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { ageClassification: true },
+      });
+      if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
+        throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+      }
+    }
+
     const version = server.updatedAt ? `?v=${new Date(server.updatedAt).getTime()}` : '';
     const baseIconUrl = server.iconUrl ? server.iconUrl.split('?')[0] : null;
 
@@ -148,6 +183,7 @@ export class ServersService {
       id: server.id,
       name: server.name,
       ownerId: server.ownerId,
+      is18Plus: serverMeta?.is18Plus ?? false,
       iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
       iconKey: server.iconKey,
       inviteCode: server.inviteCode,
@@ -181,6 +217,21 @@ export class ServersService {
     const serverId = invite?.id || inviteCode;
     const server = await this.serverRepo.findById(serverId);
     if (!server || server.isDeleted?.()) throw new NotFoundException('Server not found');
+
+    const serverMeta = await this.prisma.server.findUnique({
+      where: { id: serverId },
+      select: { is18Plus: true },
+    });
+
+    if (serverMeta?.is18Plus) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { ageClassification: true },
+      });
+      if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
+        throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+      }
+    }
 
     const isBanned = await this.serverRepo.isBanned(serverId, userId);
     if (isBanned) {

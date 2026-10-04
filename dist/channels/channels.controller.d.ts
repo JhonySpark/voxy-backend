@@ -5,7 +5,7 @@ export declare class ChannelsController {
     createChannel(req: any, serverId: string, name: string, type: 'TEXT' | 'VOICE'): Promise<{
         id: string;
         name: string;
-        type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+        type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
         serverId: string;
     }>;
     deleteChannel(req: any, channelId: string): Promise<{
@@ -14,7 +14,7 @@ export declare class ChannelsController {
     renameChannel(req: any, channelId: string, name: string): Promise<{
         id: string;
         name: string;
-        type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
+        type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
         serverId: string;
     }>;
     getMessages(req: any, channelId: string): Promise<any[]>;

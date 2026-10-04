@@ -4,9 +4,11 @@ import type { IUserRepository } from '../core/ports/repositories/user.repository
 import { User } from '../modules/identity/domain/entities/user.entity.js';
 import { Email } from '../modules/identity/domain/value-objects/email.vo.js';
 import { Username } from '../modules/identity/domain/value-objects/username.vo.js';
+import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 import type { IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
+import { AgeClassificationEnum, AgeSignalSourceEnum } from '../core/enums/index.js';
 
 @Injectable()
 export class UsersService {
@@ -16,11 +18,16 @@ export class UsersService {
     @Inject(PASSWORD_HASHER_PORT) private readonly hasher: IPasswordHasherPort,
   ) {}
 
-  async create(data: { username: string; email: string; password?: string }) {
+  async create(data: { username: string; email: string; password?: string; birthDate?: string | Date }) {
+    const birthDateVO = data.birthDate ? BirthDate.create(data.birthDate).getValue() : null;
     const userOrError = User.create({
       username: Username.create(data.username).getValue(),
       email: Email.create(data.email).getValue(),
       password: data.password || '',
+      birthDate: birthDateVO,
+      isEmailVerified: false,
+      ageClassification: AgeClassificationEnum.UNKNOWN,
+      ageSignalSource: AgeSignalSourceEnum.NONE,
     });
 
     const user = userOrError.getValue();
@@ -30,6 +37,10 @@ export class UsersService {
       username: created.username.value,
       email: created.email.value,
       password: created.password,
+      birthDate: created.birthDate?.value || null,
+      isEmailVerified: created.isEmailVerified,
+      ageClassification: created.ageClassification,
+      ageSignalSource: created.ageSignalSource,
     };
   }
 
@@ -41,6 +52,10 @@ export class UsersService {
       username: user.username.value,
       email: user.email.value,
       password: user.password,
+      birthDate: user.birthDate?.value || null,
+      isEmailVerified: user.isEmailVerified,
+      ageClassification: user.ageClassification,
+      ageSignalSource: user.ageSignalSource,
     };
   }
 
@@ -52,6 +67,10 @@ export class UsersService {
       username: user.username.value,
       email: user.email.value,
       password: user.password,
+      birthDate: user.birthDate?.value || null,
+      isEmailVerified: user.isEmailVerified,
+      ageClassification: user.ageClassification,
+      ageSignalSource: user.ageSignalSource,
     };
   }
 
@@ -63,6 +82,10 @@ export class UsersService {
       username: user.username.value,
       email: user.email.value,
       password: user.password,
+      birthDate: user.birthDate?.value || null,
+      isEmailVerified: user.isEmailVerified,
+      ageClassification: user.ageClassification,
+      ageSignalSource: user.ageSignalSource,
     };
   }
 
@@ -80,6 +103,10 @@ export class UsersService {
         bannerUrl: true,
         bannerKey: true,
         bannerColor: true,
+        birthDate: true,
+        isEmailVerified: true,
+        ageClassification: true,
+        ageSignalSource: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -102,6 +129,14 @@ export class UsersService {
       bannerColor: user.bannerColor,
       createdAt: user.createdAt,
       email: isSelf ? user.email : undefined,
+      birthDate: isSelf ? user.birthDate : undefined,
+      isEmailVerified: user.isEmailVerified,
+      ageClassification: user.ageClassification,
+      ageSignalSource: user.ageSignalSource,
+      canShareScreen: user.ageClassification === AgeClassificationEnum.ADULT,
+      canStreamGames: user.ageClassification === AgeClassificationEnum.ADULT || user.ageClassification === AgeClassificationEnum.TEEN,
+      canAccess18Plus: user.ageClassification === AgeClassificationEnum.ADULT,
+      canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD,
     };
   }
 

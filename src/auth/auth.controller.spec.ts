@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -25,6 +26,7 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
+        { provide: JwtService, useValue: { verifyAsync: vi.fn() } },
       ],
     }).compile();
 

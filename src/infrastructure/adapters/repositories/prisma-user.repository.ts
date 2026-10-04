@@ -4,6 +4,7 @@ import { IUserRepository } from '../../../core/ports/repositories/user.repositor
 import { User } from '../../../modules/identity/domain/entities/user.entity.js';
 import { Email } from '../../../modules/identity/domain/value-objects/email.vo.js';
 import { Username } from '../../../modules/identity/domain/value-objects/username.vo.js';
+import { BirthDate } from '../../../modules/identity/domain/value-objects/birth-date.vo.js';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
@@ -13,12 +14,19 @@ export class PrismaUserRepository implements IUserRepository {
     if (!raw) return null;
     const email = Email.create(raw.email).getValue();
     const username = Username.create(raw.username).getValue();
+    const birthDate = raw.birthDate ? BirthDate.create(raw.birthDate).getValue() : null;
 
     return User.create(
       {
         email,
         username,
         password: raw.password,
+        birthDate,
+        isEmailVerified: raw.isEmailVerified,
+        emailVerifiedAt: raw.emailVerifiedAt,
+        ageClassification: raw.ageClassification,
+        ageSignalSource: raw.ageSignalSource,
+        ageSignalCheckedAt: raw.ageSignalCheckedAt,
         avatarUrl: raw.avatarUrl,
         avatarKey: raw.avatarKey,
         displayName: raw.displayName,
@@ -40,6 +48,12 @@ export class PrismaUserRepository implements IUserRepository {
         username: user.username.value,
         email: user.email.value,
         password: user.password,
+        birthDate: user.birthDate?.value || null,
+        isEmailVerified: user.isEmailVerified,
+        emailVerifiedAt: user.emailVerifiedAt || null,
+        ageClassification: user.ageClassification,
+        ageSignalSource: user.ageSignalSource,
+        ageSignalCheckedAt: user.ageSignalCheckedAt || null,
         avatarUrl: user.avatarUrl,
         avatarKey: user.avatarKey,
         displayName: user.displayName,
@@ -62,6 +76,12 @@ export class PrismaUserRepository implements IUserRepository {
         username: user.username.value,
         email: user.email.value,
         password: user.password,
+        birthDate: user.birthDate?.value || null,
+        isEmailVerified: user.isEmailVerified,
+        emailVerifiedAt: user.emailVerifiedAt || null,
+        ageClassification: user.ageClassification,
+        ageSignalSource: user.ageSignalSource,
+        ageSignalCheckedAt: user.ageSignalCheckedAt || null,
         avatarUrl: user.avatarUrl,
         avatarKey: user.avatarKey,
         displayName: user.displayName,

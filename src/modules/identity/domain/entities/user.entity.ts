@@ -2,11 +2,22 @@ import { AggregateRoot } from '../../../../core/domain/aggregate-root.base.js';
 import { Result } from '../../../../core/logic/result.js';
 import { Email } from '../value-objects/email.vo.js';
 import { Username } from '../value-objects/username.vo.js';
+import { BirthDate } from '../value-objects/birth-date.vo.js';
+import { AgeClassificationEnum, AgeSignalSourceEnum } from '../../../../core/enums/index.js';
+
+export type AgeClassificationType = AgeClassificationEnum;
+export type AgeSignalSourceType = AgeSignalSourceEnum;
 
 export interface UserProps {
   username: Username;
   email: Email;
   password: string; // Hashed password
+  birthDate?: BirthDate | null;
+  isEmailVerified?: boolean;
+  emailVerifiedAt?: Date | null;
+  ageClassification?: AgeClassificationEnum;
+  ageSignalSource?: AgeSignalSourceEnum;
+  ageSignalCheckedAt?: Date | null;
   avatarUrl?: string | null;
   avatarKey?: string | null;
   displayName?: string | null;
@@ -57,6 +68,59 @@ export class User extends AggregateRoot<UserProps> {
 
   get bannerColor(): string | null | undefined {
     return this.props.bannerColor;
+  }
+
+  get birthDate(): BirthDate | null | undefined {
+    return this.props.birthDate;
+  }
+
+  get isEmailVerified(): boolean {
+    return this.props.isEmailVerified ?? false;
+  }
+
+  get emailVerifiedAt(): Date | null | undefined {
+    return this.props.emailVerifiedAt;
+  }
+
+  get ageClassification(): AgeClassificationEnum {
+    return this.props.ageClassification || AgeClassificationEnum.UNKNOWN;
+  }
+
+  get ageSignalSource(): AgeSignalSourceEnum {
+    return this.props.ageSignalSource || AgeSignalSourceEnum.NONE;
+  }
+
+  get ageSignalCheckedAt(): Date | null | undefined {
+    return this.props.ageSignalCheckedAt;
+  }
+
+  public verifyEmail(): void {
+    this.props.isEmailVerified = true;
+    this.props.emailVerifiedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  public updateAgeClassification(classification: AgeClassificationEnum, source: AgeSignalSourceEnum): void {
+    this.props.ageClassification = classification;
+    this.props.ageSignalSource = source;
+    this.props.ageSignalCheckedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  public canUseApp(): boolean {
+    return this.ageClassification !== AgeClassificationEnum.CHILD;
+  }
+
+  public canShareScreen(): boolean {
+    return this.ageClassification === AgeClassificationEnum.ADULT;
+  }
+
+  public canStreamGames(): boolean {
+    return this.ageClassification === AgeClassificationEnum.ADULT || this.ageClassification === AgeClassificationEnum.TEEN;
+  }
+
+  public canAccess18Plus(): boolean {
+    return this.ageClassification === AgeClassificationEnum.ADULT;
   }
 
   get createdAt(): Date {

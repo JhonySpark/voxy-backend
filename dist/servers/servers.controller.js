@@ -18,11 +18,8 @@ let ServersController = class ServersController {
     constructor(serversService) {
         this.serversService = serversService;
     }
-    async createServer(req, name, iconUrl, iconKey) {
-        if (iconUrl !== undefined || iconKey !== undefined) {
-            return this.serversService.createServer(req.user.sub, name, iconUrl, iconKey);
-        }
-        return this.serversService.createServer(req.user.sub, name);
+    async createServer(req, name, is18Plus, iconUrl, iconKey) {
+        return this.serversService.createServer(req.user.sub, name, is18Plus, iconUrl, iconKey);
     }
     async updateServer(req, serverId, body) {
         return this.serversService.updateServer(req.user.sub, serverId, body);
@@ -74,10 +71,11 @@ __decorate([
     Post(),
     __param(0, Request()),
     __param(1, Body('name')),
-    __param(2, Body('iconUrl')),
-    __param(3, Body('iconKey')),
+    __param(2, Body('is18Plus')),
+    __param(3, Body('iconUrl')),
+    __param(4, Body('iconKey')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:paramtypes", [Object, String, Boolean, String, String]),
     __metadata("design:returntype", Promise)
 ], ServersController.prototype, "createServer", null);
 __decorate([

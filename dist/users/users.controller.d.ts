@@ -12,6 +12,14 @@ export declare class UsersController {
         bannerColor: string | null;
         createdAt: Date;
         email: string | undefined;
+        birthDate: Date | null | undefined;
+        isEmailVerified: boolean;
+        ageClassification: import("@prisma/client").$Enums.AgeClassification;
+        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+        canShareScreen: boolean;
+        canStreamGames: boolean;
+        canAccess18Plus: boolean;
+        canUseApp: boolean;
     }>;
     getUserProfile(req: any, id: string): Promise<{
         id: string;
@@ -23,6 +31,14 @@ export declare class UsersController {
         bannerColor: string | null;
         createdAt: Date;
         email: string | undefined;
+        birthDate: Date | null | undefined;
+        isEmailVerified: boolean;
+        ageClassification: import("@prisma/client").$Enums.AgeClassification;
+        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+        canShareScreen: boolean;
+        canStreamGames: boolean;
+        canAccess18Plus: boolean;
+        canUseApp: boolean;
     }>;
     updateProfile(req: any, body: {
         displayName?: string;
