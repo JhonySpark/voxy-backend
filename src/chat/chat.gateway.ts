@@ -127,7 +127,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async handleMessage(
-    @MessageBody() data: { receiverId: string; content: string; attachmentId?: string },
+    @MessageBody() data: { receiverId: string; content: string; attachmentId?: string; replyToId?: string },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.user.sub;
@@ -136,6 +136,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.receiverId,
       data.content,
       data.attachmentId,
+      data.replyToId,
     );
 
     // Send to receiver if online
@@ -159,7 +160,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendChannelMessage')
   async handleChannelMessage(
-    @MessageBody() data: { channelId: string; content: string; attachmentId?: string },
+    @MessageBody() data: { channelId: string; content: string; attachmentId?: string; replyToId?: string },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.user.sub;
@@ -169,6 +170,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         senderId,
         data.content,
         data.attachmentId,
+        data.replyToId,
       );
       // Confirma diretamente ao remetente e entrega imediatamente aos demais membros.
       // Isso evita depender da entrada prévia do remetente na sala para atualizar a própria tela.

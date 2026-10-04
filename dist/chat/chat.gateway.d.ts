@@ -20,6 +20,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         receiverId: string;
         content: string;
         attachmentId?: string;
+        replyToId?: string;
     }, client: Socket): Promise<any>;
     handleJoinChannel(data: {
         channelId: string;
@@ -31,6 +32,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         channelId: string;
         content: string;
         attachmentId?: string;
+        replyToId?: string;
     }, client: Socket): Promise<any>;
     handleDeleteChannelMessage(data: {
         channelId: string;

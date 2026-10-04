@@ -20,7 +20,7 @@ export declare class ChannelsService {
         type: import("../modules/servers/domain/value-objects/channel-type.vo.js").ChannelTypeValue;
         serverId: string;
     }>;
-    saveChannelMessage(channelId: string, senderId: string, content: string, attachmentId?: string): Promise<any>;
+    saveChannelMessage(channelId: string, senderId: string, content: string, attachmentId?: string, replyToId?: string): Promise<any>;
     deleteChannelMessage(channelId: string, messageId: string, userId: string): Promise<{
         success: boolean;
     }>;

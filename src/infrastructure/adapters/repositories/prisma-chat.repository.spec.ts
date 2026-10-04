@@ -20,6 +20,24 @@ describe('PrismaChatRepository', () => {
     repo = new PrismaChatRepository(prismaMock as any);
   });
 
+  const expectedInclude = {
+    sender: true,
+    attachments: true,
+    replyTo: {
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        attachments: true,
+      },
+    },
+  };
+
   it('should save direct message', async () => {
     const savedMsg = { id: 'm1', senderId: 'u1', receiverId: 'u2', content: 'hello' };
     prismaMock.message.create.mockResolvedValue(savedMsg);
@@ -30,11 +48,9 @@ describe('PrismaChatRepository', () => {
         senderId: 'u1',
         receiverId: 'u2',
         content: 'hello',
+        replyToId: undefined,
       },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: expectedInclude,
     });
     expect(result).toEqual(savedMsg);
   });
@@ -54,10 +70,7 @@ describe('PrismaChatRepository', () => {
       orderBy: {
         createdAt: 'asc',
       },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: expectedInclude,
     });
     expect(result).toEqual(messages);
   });

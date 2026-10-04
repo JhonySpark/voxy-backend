@@ -104,7 +104,7 @@ describe('ChatGateway', () => {
 
       const result = await gateway.handleMessage({ receiverId: 'u2', content: 'hi' }, mockSocket);
 
-      expect(chatService.saveMessage).toHaveBeenCalledWith('u1', 'u2', 'hi', undefined);
+      expect(chatService.saveMessage).toHaveBeenCalledWith('u1', 'u2', 'hi', undefined, undefined);
       expect(mockServer.to).toHaveBeenCalledWith('u2');
       expect(mockServer.emit).toHaveBeenCalledWith('newMessage', mockSaved);
       expect(mockSocket.emit).toHaveBeenCalledWith('messageSent', mockSaved);
@@ -138,7 +138,7 @@ describe('ChatGateway', () => {
 
       const result = await gateway.handleChannelMessage({ channelId: 'c1', content: 'hello channel' }, mockSocket);
 
-      expect(channelsService.saveChannelMessage).toHaveBeenCalledWith('c1', 'u1', 'hello channel', undefined);
+      expect(channelsService.saveChannelMessage).toHaveBeenCalledWith('c1', 'u1', 'hello channel', undefined, undefined);
       expect(mockSocket.emit).toHaveBeenCalledWith('channelMessageSent', mockSaved);
       expect(mockSocket.to).toHaveBeenCalledWith('c1');
       expect(mockSocket.emit).toHaveBeenCalledWith('newChannelMessage', mockSaved);

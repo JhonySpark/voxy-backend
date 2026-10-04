@@ -2,6 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IChatRepository } from '../../../core/ports/repositories/chat.repository.port.js';
 
+const MESSAGE_INCLUDE = {
+  sender: true,
+  attachments: true,
+  replyTo: {
+    include: {
+      sender: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+      attachments: true,
+    },
+  },
+};
+
 @Injectable()
 export class PrismaChatRepository implements IChatRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -11,17 +29,16 @@ export class PrismaChatRepository implements IChatRepository {
     receiverId: string,
     content: string,
     attachmentId?: string,
+    replyToId?: string,
   ): Promise<any> {
     const msg = await this.prisma.message.create({
       data: {
         senderId,
         receiverId,
         content,
+        replyToId: replyToId || undefined,
       },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: MESSAGE_INCLUDE,
     });
 
     if (attachmentId) {
@@ -31,10 +48,7 @@ export class PrismaChatRepository implements IChatRepository {
       });
       return this.prisma.message.findUnique({
         where: { id: msg.id },
-        include: {
-          sender: true,
-          attachments: true,
-        },
+        include: MESSAGE_INCLUDE,
       });
     }
 
@@ -52,10 +66,8 @@ export class PrismaChatRepository implements IChatRepository {
       orderBy: {
         createdAt: 'asc',
       },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: MESSAGE_INCLUDE,
     });
   }
 }
+

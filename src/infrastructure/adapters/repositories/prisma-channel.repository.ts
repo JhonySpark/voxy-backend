@@ -4,6 +4,24 @@ import { IChannelRepository } from '../../../core/ports/repositories/channel.rep
 import { Channel } from '../../../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../../../modules/servers/domain/value-objects/channel-type.vo.js';
 
+const CHANNEL_MESSAGE_INCLUDE = {
+  sender: true,
+  attachments: true,
+  replyTo: {
+    include: {
+      sender: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+      attachments: true,
+    },
+  },
+};
+
 @Injectable()
 export class PrismaChannelRepository implements IChannelRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -66,17 +84,16 @@ export class PrismaChannelRepository implements IChannelRepository {
     senderId: string,
     content: string,
     attachmentId?: string,
+    replyToId?: string,
   ): Promise<any> {
     const msg = await this.prisma.channelMessage.create({
       data: {
         channelId,
         senderId,
         content,
+        replyToId: replyToId || undefined,
       },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: CHANNEL_MESSAGE_INCLUDE,
     });
 
     if (attachmentId) {
@@ -86,10 +103,7 @@ export class PrismaChannelRepository implements IChannelRepository {
       });
       return this.prisma.channelMessage.findUnique({
         where: { id: msg.id },
-        include: {
-          sender: true,
-          attachments: true,
-        },
+        include: CHANNEL_MESSAGE_INCLUDE,
       });
     }
 
@@ -100,10 +114,7 @@ export class PrismaChannelRepository implements IChannelRepository {
     return this.prisma.channelMessage.findMany({
       where: { channelId },
       orderBy: { createdAt: 'asc' },
-      include: {
-        sender: true,
-        attachments: true,
-      },
+      include: CHANNEL_MESSAGE_INCLUDE,
     });
   }
 

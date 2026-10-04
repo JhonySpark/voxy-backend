@@ -105,6 +105,7 @@ export class ChannelsService {
     senderId: string,
     content: string,
     attachmentId?: string,
+    replyToId?: string,
   ) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
@@ -114,7 +115,7 @@ export class ChannelsService {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId);
+    return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId, replyToId);
   }
 
   async deleteChannelMessage(channelId: string, messageId: string, userId: string) {

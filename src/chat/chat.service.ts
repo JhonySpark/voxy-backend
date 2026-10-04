@@ -11,14 +11,14 @@ export class ChatService {
     @Optional() @Inject(FRIENDSHIP_REPOSITORY) private readonly friendshipRepo?: IFriendshipRepository,
   ) {}
 
-  async saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string) {
+  async saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string, replyToId?: string) {
     if (this.friendshipRepo) {
       const blocked = await this.friendshipRepo.isBlocked(senderId, receiverId);
       if (blocked) {
         throw new BadRequestException('Não é possível enviar mensagens para este usuário.');
       }
     }
-    return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId);
+    return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId, replyToId);
   }
 
   async getMessagesBetweenUsers(userId1: string, userId2: string) {

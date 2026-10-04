@@ -74,9 +74,15 @@ model Message {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  replyToId  String?
+  replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[] @relation("MessageReplies")
+
   sender      User         @relation("SentMessages", fields: [senderId], references: [id])
   receiver    User         @relation("ReceivedMessages", fields: [receiverId], references: [id])
   attachments Attachment[]
+
+  @@index([replyToId])
 }
 
 model Server {
@@ -162,9 +168,15 @@ model ChannelMessage {
   channelId  String
   createdAt  DateTime @default(now())
 
+  replyToId  String?
+  replyTo    ChannelMessage?  @relation("ChannelMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    ChannelMessage[] @relation("ChannelMessageReplies")
+
   sender      User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
   attachments Attachment[]
+
+  @@index([replyToId])
 }
 
 model Attachment {

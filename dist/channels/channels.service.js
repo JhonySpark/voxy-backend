@@ -87,7 +87,7 @@ let ChannelsService = class ChannelsService {
             serverId: updated.serverId,
         };
     }
-    async saveChannelMessage(channelId, senderId, content, attachmentId) {
+    async saveChannelMessage(channelId, senderId, content, attachmentId, replyToId) {
         const channel = await this.channelRepo.findById(channelId);
         if (!channel)
             throw new NotFoundException('Channel not found');
@@ -95,7 +95,7 @@ let ChannelsService = class ChannelsService {
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
-        return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId);
+        return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId, replyToId);
     }
     async deleteChannelMessage(channelId, messageId, userId) {
         const channel = await this.channelRepo.findById(channelId);

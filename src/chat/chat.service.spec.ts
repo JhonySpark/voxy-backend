@@ -37,7 +37,7 @@ describe('ChatService', () => {
 
       const result = await service.saveMessage('u1', 'u2', 'hello');
 
-      expect(chatRepo.saveDirectMessage).toHaveBeenCalledWith('u1', 'u2', 'hello', undefined);
+      expect(chatRepo.saveDirectMessage).toHaveBeenCalledWith('u1', 'u2', 'hello', undefined, undefined);
       expect(result).toEqual(mockMessage);
     });
   });

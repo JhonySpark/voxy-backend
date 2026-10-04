@@ -1,5 +1,5 @@
 export interface IChatRepository {
-  saveDirectMessage(senderId: string, receiverId: string, content: string, attachmentId?: string): Promise<any>;
+  saveDirectMessage(senderId: string, receiverId: string, content: string, attachmentId?: string, replyToId?: string): Promise<any>;
   getDirectMessages(userId1: string, userId2: string): Promise<any[]>;
 }
 

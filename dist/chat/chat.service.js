@@ -20,14 +20,14 @@ let ChatService = class ChatService {
         this.chatRepo = chatRepo;
         this.friendshipRepo = friendshipRepo;
     }
-    async saveMessage(senderId, receiverId, content, attachmentId) {
+    async saveMessage(senderId, receiverId, content, attachmentId, replyToId) {
         if (this.friendshipRepo) {
             const blocked = await this.friendshipRepo.isBlocked(senderId, receiverId);
             if (blocked) {
                 throw new BadRequestException('Não é possível enviar mensagens para este usuário.');
             }
         }
-        return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId);
+        return this.chatRepo.saveDirectMessage(senderId, receiverId, content, attachmentId, replyToId);
     }
     async getMessagesBetweenUsers(userId1, userId2) {
         return this.chatRepo.getDirectMessages(userId1, userId2);

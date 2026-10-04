@@ -4,6 +4,6 @@ export declare class ChatService {
     private readonly chatRepo;
     private readonly friendshipRepo?;
     constructor(chatRepo: IChatRepository, friendshipRepo?: IFriendshipRepository | undefined);
-    saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string): Promise<any>;
+    saveMessage(senderId: string, receiverId: string, content: string, attachmentId?: string, replyToId?: string): Promise<any>;
     getMessagesBetweenUsers(userId1: string, userId2: string): Promise<any[]>;
 }
