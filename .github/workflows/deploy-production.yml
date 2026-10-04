@@ -89,6 +89,11 @@ jobs:
             R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}
             R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}
             CHAT_RETENTION_DAYS=${{ secrets.CHAT_RETENTION_DAYS }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+            RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+            RESEND_API_URL=${{ secrets.RESEND_API_URL }}
+            VOXY_AGE_SIGNAL_SECRET=${{ secrets.VOXY_AGE_SIGNAL_SECRET }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
             EOF
             
             docker compose -f docker-compose.prod.yml config --quiet
@@ -145,6 +150,11 @@ jobs:
             R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}
             R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}
             CHAT_RETENTION_DAYS=${{ secrets.CHAT_RETENTION_DAYS }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+            RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+            RESEND_API_URL=${{ secrets.RESEND_API_URL }}
+            VOXY_AGE_SIGNAL_SECRET=${{ secrets.VOXY_AGE_SIGNAL_SECRET }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
             EOF
             
             docker compose -f docker-compose.prod.yml config --quiet

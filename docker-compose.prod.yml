@@ -3,7 +3,6 @@ services:
     image: ghcr.io/jhonyspark/voxy-backend:latest
     container_name: voxy_api
     restart: unless-stopped
-    # Removemos o "ports" público para forçar o acesso apenas via Nginx
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://voxy_redis:6379
@@ -12,6 +11,15 @@ services:
       # A URL agora será a pública HTTPS, e não o container interno
       - LIVEKIT_URL=https://livekit.d4rkside.com.br
       - NODE_ENV=production
+      # Resend Email Service
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-Voxy <onboarding@resend.dev>}
+      - RESEND_API_URL=${RESEND_API_URL:-https://api.resend.com/emails}
+      # Age Signal Protocol
+      - VOXY_AGE_SIGNAL_SECRET=${VOXY_AGE_SIGNAL_SECRET}
+      # JWT Secrets
+      - JWT_SECRET=${JWT_SECRET:-secretKey}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
       # Cloudflare R2 Storage (S3 API)
       - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
       - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
