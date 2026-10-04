@@ -1,6 +1,20 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { PrismaService } from '../../prisma/prisma.service.js';
+
+let appVersion = process.env.npm_package_version || '';
+if (!appVersion) {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8'),
+    );
+    appVersion = pkg.version || '0.0.0';
+  } catch {
+    appVersion = '0.0.0';
+  }
+}
 
 @ApiTags('Health')
 @Controller('health')
@@ -20,7 +34,7 @@ export class HealthController {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         database: 'connected',
-        version: '0.5.5',
+        version: appVersion,
       };
     } catch (err: any) {
       throw new ServiceUnavailableException({
