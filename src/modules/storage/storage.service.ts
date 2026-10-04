@@ -32,7 +32,7 @@ export class StorageService {
 
   private getCachedUrl(cacheKey: string): string | null {
     const cached = this.presignedUrlCache.get(cacheKey);
-    // Presigned URLs são geradas para 14400s (4h). Reutilizamos enquanto faltar mais de 30min para expirar.
+    // Presigned URLs são geradas para 86400s (24h). Reutilizamos enquanto faltar mais de 30min para expirar.
     if (cached && Date.now() < cached.expiresAt - 1800000) {
       return cached.url;
     }
@@ -40,7 +40,7 @@ export class StorageService {
     return null;
   }
 
-  private setCachedUrl(cacheKey: string, url: string, ttlSeconds: number = 14400) {
+  private setCachedUrl(cacheKey: string, url: string, ttlSeconds: number = 86400) {
     this.presignedUrlCache.set(cacheKey, {
       url,
       expiresAt: Date.now() + ttlSeconds * 1000,
@@ -277,7 +277,7 @@ export class StorageService {
     });
 
     // 5. Gerar URL temporária pré-assinada para visualização imediata
-    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(finalKey, 14400);
+    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(finalKey, 86400);
 
     return {
       attachmentId: attachment.id,
@@ -336,9 +336,9 @@ export class StorageService {
       }
     }
 
-    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(attachment.fileKey, 14400);
+    const downloadUrl = await this.storagePort.getPresignedDownloadUrl(attachment.fileKey, 86400);
     const thumbnailUrl = attachment.thumbnailKey
-      ? await this.storagePort.getPresignedDownloadUrl(attachment.thumbnailKey, 14400)
+      ? await this.storagePort.getPresignedDownloadUrl(attachment.thumbnailKey, 86400)
       : undefined;
 
     return { downloadUrl, thumbnailUrl };
@@ -545,8 +545,8 @@ export class StorageService {
       throw new NotFoundException('Banner não encontrado para este usuário.');
     }
 
-    const url = await this.storagePort.getPresignedDownloadUrl(user.bannerKey, 14400);
-    this.setCachedUrl(cacheKey, url, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(user.bannerKey, 86400);
+    this.setCachedUrl(cacheKey, url, 86400);
     return url;
   }
 
@@ -567,8 +567,8 @@ export class StorageService {
       throw new NotFoundException('Avatar não encontrado para este usuário.');
     }
 
-    const url = await this.storagePort.getPresignedDownloadUrl(user.avatarKey, 14400);
-    this.setCachedUrl(cacheKey, url, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(user.avatarKey, 86400);
+    this.setCachedUrl(cacheKey, url, 86400);
     return url;
   }
 
@@ -589,8 +589,8 @@ export class StorageService {
       throw new NotFoundException('Ícone não encontrado para este servidor.');
     }
 
-    const url = await this.storagePort.getPresignedDownloadUrl(server.iconKey, 14400);
-    this.setCachedUrl(cacheKey, url, 14400);
+    const url = await this.storagePort.getPresignedDownloadUrl(server.iconKey, 86400);
+    this.setCachedUrl(cacheKey, url, 86400);
     return url;
   }
 }

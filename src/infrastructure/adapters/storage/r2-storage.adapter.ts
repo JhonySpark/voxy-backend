@@ -84,11 +84,11 @@ export class R2StorageAdapter implements IStoragePort {
     return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
   }
 
-  async getPresignedDownloadUrl(key: string, expiresInSeconds = 14400): Promise<string> {
+  async getPresignedDownloadUrl(key: string, expiresInSeconds = 86400): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
-      ResponseCacheControl: 'private, max-age=14400',
+      ResponseCacheControl: 'private, max-age=86400',
     });
 
     return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });

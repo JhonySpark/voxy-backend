@@ -60,7 +60,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
       const url = await this.storageService.getUserAvatarDownloadUrl(userId);
       return res.redirect(url);
     } catch {
@@ -104,7 +104,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
       const url = await this.storageService.getUserBannerDownloadUrl(userId);
       return res.redirect(url);
     } catch {
@@ -149,7 +149,7 @@ export class StorageController {
     @Res() res: any,
   ) {
     try {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
       const url = await this.storageService.getServerIconDownloadUrl(serverId);
       return res.redirect(url);
     } catch {
