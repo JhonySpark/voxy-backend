@@ -40,8 +40,11 @@ export class AuthService {
     @Inject(EMAIL_SERVICE_PORT) private emailService: IEmailServicePort,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+  async validateUser(emailOrUsername: string, pass: string): Promise<any> {
+    const cleanIdentifier = (emailOrUsername || '').trim();
+    const user =
+      (await this.usersService.findByEmail(cleanIdentifier)) ||
+      (await this.usersService.findByUsername(cleanIdentifier));
     if (user && (await this.passwordHasher.compare(pass, user.password))) {
       const { password, ...result } = user;
       return result;

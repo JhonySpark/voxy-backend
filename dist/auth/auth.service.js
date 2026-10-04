@@ -50,8 +50,10 @@ let AuthService = class AuthService {
         this.passwordHasher = passwordHasher;
         this.emailService = emailService;
     }
-    async validateUser(email, pass) {
-        const user = await this.usersService.findByEmail(email);
+    async validateUser(emailOrUsername, pass) {
+        const cleanIdentifier = (emailOrUsername || '').trim();
+        const user = (await this.usersService.findByEmail(cleanIdentifier)) ||
+            (await this.usersService.findByUsername(cleanIdentifier));
         if (user && (await this.passwordHasher.compare(pass, user.password))) {
             const { password, ...result } = user;
             return result;

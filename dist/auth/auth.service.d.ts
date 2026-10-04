@@ -25,7 +25,7 @@ export declare class AuthService {
     private passwordHasher;
     private emailService;
     constructor(usersService: UsersService, prisma: PrismaService, tokenService: ITokenServicePort, passwordHasher: IPasswordHasherPort, emailService: IEmailServicePort);
-    validateUser(email: string, pass: string): Promise<any>;
+    validateUser(emailOrUsername: string, pass: string): Promise<any>;
     login(user: any): Promise<{
         requireEmailVerification: boolean;
         email: any;

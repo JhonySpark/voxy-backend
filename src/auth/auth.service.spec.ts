@@ -111,6 +111,20 @@ describe('AuthService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should authenticate user by username if email is not found', async () => {
+      const mockUser = { id: 'u1', email: 'test@example.com', password: 'hashedpassword', username: 'tester' };
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByUsername.mockResolvedValue(mockUser);
+      passwordHasher.compare.mockResolvedValue(true);
+
+      const result = await service.validateUser('tester', 'password123');
+
+      expect(usersService.findByEmail).toHaveBeenCalledWith('tester');
+      expect(usersService.findByUsername).toHaveBeenCalledWith('tester');
+      expect(passwordHasher.compare).toHaveBeenCalledWith('password123', 'hashedpassword');
+      expect(result).toEqual({ id: 'u1', email: 'test@example.com', username: 'tester' });
+    });
   });
 
   describe('login', () => {
@@ -133,6 +147,27 @@ describe('AuthService', () => {
 
       expect(tokenService.sign).toHaveBeenCalledWith({ username: 'tester', sub: 'u1' });
       expect(result).toMatchObject({ access_token: 'mock_jwt_token' });
+    });
+
+    it('should require email verification and resend code when isEmailVerified is false on login', async () => {
+      const user = {
+        id: 'u2',
+        username: 'unverified_user',
+        email: 'unverified@example.com',
+        isEmailVerified: false,
+        ageClassification: 'ADULT',
+      };
+      prisma.emailVerification.create.mockResolvedValue({});
+      emailService.sendVerificationEmail.mockResolvedValue({ success: true });
+
+      const result = await service.login(user);
+
+      expect(result).toEqual({
+        requireEmailVerification: true,
+        email: 'unverified@example.com',
+        message: 'Por favor, confirme seu endereço de e-mail para continuar.',
+      });
+      expect(emailService.sendVerificationEmail).toHaveBeenCalled();
     });
   });
 
