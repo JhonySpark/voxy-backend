@@ -38,16 +38,18 @@ export class ResendEmailAdapter implements IEmailServicePort {
         from: fromEmail,
         to: [input.to],
         subject: `${input.code} é o seu código de verificação Voxy`,
-        template_id: templateAlias,
-        variables: {
-          USERNAME: input.username,
-          CODE: input.code,
-          D1: digits[0] || '0',
-          D2: digits[1] || '0',
-          D3: digits[2] || '0',
-          D4: digits[3] || '0',
-          D5: digits[4] || '0',
-          D6: digits[5] || '0',
+        template: {
+          id: templateAlias,
+          variables: {
+            USERNAME: input.username,
+            CODE: input.code,
+            D1: digits[0] || '0',
+            D2: digits[1] || '0',
+            D3: digits[2] || '0',
+            D4: digits[3] || '0',
+            D5: digits[4] || '0',
+            D6: digits[5] || '0',
+          },
         },
       };
 
