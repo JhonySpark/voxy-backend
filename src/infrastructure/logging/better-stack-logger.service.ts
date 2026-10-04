@@ -13,9 +13,26 @@ export class BetterStackLoggerService implements LoggerService {
       ''
     ).trim();
 
+    let endpoint = (
+      process.env.BETTER_STACK_ENDPOINT ||
+      process.env.BETTER_STACK_INGESTING_HOST ||
+      ''
+    ).trim();
+
+    if (endpoint && !endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+      endpoint = `https://${endpoint}`;
+    }
+
     if (token) {
-      this.logtail = new Logtail(token);
+      this.logtail = new Logtail(token, endpoint ? { endpoint } : undefined);
       this.isEnabled = true;
+      console.log(
+        `[BetterStack] Telemetria ATIVADA no Backend. Destino: ${endpoint || 'https://in.logs.betterstack.com (Padrão US)'}`,
+      );
+    } else {
+      console.warn(
+        '[BetterStack] Telemetria DESATIVADA no Backend: BETTER_STACK_SOURCE_TOKEN não configurado no backend/.env (logs apenas no console local).',
+      );
     }
   }
 
