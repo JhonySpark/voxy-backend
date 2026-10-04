@@ -38,4 +38,18 @@ export class ChatService {
 
     return this.chatRepo.updateDirectMessage(messageId, trimmed);
   }
+
+  async toggleReaction(messageId: string, userId: string, emoji: string) {
+    const trimmedEmoji = (emoji || '').trim();
+    if (!trimmedEmoji) throw new BadRequestException('Emoji cannot be empty');
+
+    const message = await this.chatRepo.findMessageById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId !== userId && message.receiverId !== userId) {
+      throw new ForbiddenException('You can only react to messages in your conversations');
+    }
+
+    return this.chatRepo.toggleReaction(messageId, userId, trimmedEmoji);
+  }
 }

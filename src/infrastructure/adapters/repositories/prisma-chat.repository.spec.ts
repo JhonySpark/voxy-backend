@@ -36,6 +36,21 @@ describe('PrismaChatRepository', () => {
         attachments: true,
       },
     },
+    reactions: {
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    },
   };
 
   it('should save direct message', async () => {

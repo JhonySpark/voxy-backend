@@ -20,4 +20,13 @@ export class ChatController {
   ) {
     return this.chatService.editDirectMessage(messageId, req.user.sub, content);
   }
+
+  @Patch('messages/:messageId/reaction')
+  async toggleReaction(
+    @Request() req: any,
+    @Param('messageId') messageId: string,
+    @Body('emoji') emoji: string,
+  ) {
+    return this.chatService.toggleReaction(messageId, req.user.sub, emoji);
+  }
 }

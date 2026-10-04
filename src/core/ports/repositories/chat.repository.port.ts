@@ -3,6 +3,7 @@ export interface IChatRepository {
   getDirectMessages(userId1: string, userId2: string): Promise<any[]>;
   findMessageById(messageId: string): Promise<any | null>;
   updateDirectMessage(messageId: string, content: string): Promise<any>;
+  toggleReaction(messageId: string, userId: string, emoji: string): Promise<any>;
 }
 
 export const CHAT_REPOSITORY = Symbol('CHAT_REPOSITORY');

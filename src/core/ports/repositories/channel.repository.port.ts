@@ -11,6 +11,7 @@ export interface IChannelRepository {
   deleteMessage(messageId: string): Promise<void>;
   findMessageById(messageId: string): Promise<any | null>;
   updateMessage(messageId: string, content: string): Promise<any>;
+  toggleReaction(messageId: string, userId: string, emoji: string): Promise<any>;
 }
 
 export const CHANNEL_REPOSITORY = Symbol('CHANNEL_REPOSITORY');

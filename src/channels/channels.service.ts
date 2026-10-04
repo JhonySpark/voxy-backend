@@ -168,6 +168,24 @@ export class ChannelsService {
     return this.channelRepo.updateMessage(messageId, trimmed);
   }
 
+  async toggleChannelMessageReaction(channelId: string, messageId: string, userId: string, emoji: string) {
+    const trimmedEmoji = (emoji || '').trim();
+    if (!trimmedEmoji) throw new BadRequestException('Emoji cannot be empty');
+
+    const channel = await this.channelRepo.findById(channelId);
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const isMember = await this.serverRepo.isMember(channel.serverId, userId);
+    if (!isMember) {
+      throw new ForbiddenException('You are not a member of this server');
+    }
+
+    const message = await this.channelRepo.findMessageById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    return this.channelRepo.toggleReaction(messageId, userId, trimmedEmoji);
+  }
+
   async getVoiceToken(channelId: string, user: { sub: string; username: string }, isScreen: boolean = false) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');

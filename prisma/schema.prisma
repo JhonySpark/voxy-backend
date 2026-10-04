@@ -37,6 +37,8 @@ model User {
   serverMemberships ServerMember[]
   serverBans        ServerBan[]    @relation("BannedFromServers")
   channelMessages   ChannelMessage[]
+  messageReactions        MessageReaction[]        @relation("UserMessageReactions")
+  channelMessageReactions ChannelMessageReaction[] @relation("UserChannelMessageReactions")
 }
 
 model Friendship {
@@ -82,6 +84,7 @@ model Message {
   sender      User         @relation("SentMessages", fields: [senderId], references: [id])
   receiver    User         @relation("ReceivedMessages", fields: [receiverId], references: [id])
   attachments Attachment[]
+  reactions   MessageReaction[]
 
   @@index([replyToId])
 }
@@ -178,6 +181,7 @@ model ChannelMessage {
   sender      User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
   attachments Attachment[]
+  reactions   ChannelMessageReaction[]
 
   @@index([replyToId])
 }
@@ -205,5 +209,35 @@ model Attachment {
   @@index([messageId])
   @@index([channelMessageId])
   @@index([createdAt])
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model ChannelMessageReaction {
+  id               String         @id @default(uuid())
+  emoji            String
+  userId           String
+  channelMessageId String
+  createdAt        DateTime       @default(now())
+
+  user             User           @relation("UserChannelMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  channelMessage   ChannelMessage @relation(fields: [channelMessageId], references: [id], onDelete: Cascade)
+
+  @@unique([channelMessageId, userId])
+  @@index([channelMessageId])
+  @@index([userId])
 }
 

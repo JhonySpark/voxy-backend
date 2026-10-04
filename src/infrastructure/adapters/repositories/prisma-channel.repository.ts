@@ -20,6 +20,21 @@ const CHANNEL_MESSAGE_INCLUDE = {
       attachments: true,
     },
   },
+  reactions: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
 };
 
 @Injectable()
@@ -140,6 +155,43 @@ export class PrismaChannelRepository implements IChannelRepository {
         content,
         isEdited: true,
       },
+      include: CHANNEL_MESSAGE_INCLUDE,
+    });
+  }
+
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<any> {
+    const existing = await this.prisma.channelMessageReaction.findUnique({
+      where: {
+        channelMessageId_userId: {
+          channelMessageId: messageId,
+          userId,
+        },
+      },
+    });
+
+    if (existing) {
+      if (existing.emoji === emoji) {
+        await this.prisma.channelMessageReaction.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        await this.prisma.channelMessageReaction.update({
+          where: { id: existing.id },
+          data: { emoji },
+        });
+      }
+    } else {
+      await this.prisma.channelMessageReaction.create({
+        data: {
+          channelMessageId: messageId,
+          userId,
+          emoji,
+        },
+      });
+    }
+
+    return this.prisma.channelMessage.findUnique({
+      where: { id: messageId },
       include: CHANNEL_MESSAGE_INCLUDE,
     });
   }

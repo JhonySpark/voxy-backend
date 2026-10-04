@@ -244,6 +244,45 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('toggleMessageReaction')
+  async handleToggleMessageReaction(
+    @MessageBody() data: { messageId: string; emoji: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.user.sub;
+    try {
+      const updated = await this.chatService.toggleReaction(data.messageId, userId, data.emoji);
+      // Emit to receiver and sender
+      this.server.to(updated.receiverId).emit('messageReactionUpdated', updated);
+      this.server.to(updated.senderId).emit('messageReactionUpdated', updated);
+      client.emit('messageReactionUpdated', updated);
+      return updated;
+    } catch (e: any) {
+      return { error: e.message || 'Error' };
+    }
+  }
+
+  @SubscribeMessage('toggleChannelMessageReaction')
+  async handleToggleChannelMessageReaction(
+    @MessageBody() data: { channelId: string; messageId: string; emoji: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.user.sub;
+    try {
+      const updated = await this.channelsService.toggleChannelMessageReaction(
+        data.channelId,
+        data.messageId,
+        userId,
+        data.emoji,
+      );
+      this.server.to(data.channelId).emit('channelMessageReactionUpdated', updated);
+      client.emit('channelMessageReactionUpdated', updated);
+      return updated;
+    } catch (e: any) {
+      return { error: e.message || 'Error' };
+    }
+  }
+
   @SubscribeMessage('serverDeleted')
   handleServerDeleted(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
     this.server.to(`server-${data.serverId}`).emit('serverDeleted', { serverId: data.serverId });

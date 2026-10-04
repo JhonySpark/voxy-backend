@@ -18,6 +18,21 @@ const MESSAGE_INCLUDE = {
       attachments: true,
     },
   },
+  reactions: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
 };
 
 @Injectable()
@@ -84,6 +99,43 @@ export class PrismaChatRepository implements IChatRepository {
         content,
         isEdited: true,
       },
+      include: MESSAGE_INCLUDE,
+    });
+  }
+
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<any> {
+    const existing = await this.prisma.messageReaction.findUnique({
+      where: {
+        messageId_userId: {
+          messageId,
+          userId,
+        },
+      },
+    });
+
+    if (existing) {
+      if (existing.emoji === emoji) {
+        await this.prisma.messageReaction.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        await this.prisma.messageReaction.update({
+          where: { id: existing.id },
+          data: { emoji },
+        });
+      }
+    } else {
+      await this.prisma.messageReaction.create({
+        data: {
+          messageId,
+          userId,
+          emoji,
+        },
+      });
+    }
+
+    return this.prisma.message.findUnique({
+      where: { id: messageId },
       include: MESSAGE_INCLUDE,
     });
   }
