@@ -21,6 +21,7 @@ import { Password } from '../modules/identity/domain/value-objects/password.vo.j
 import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource } from '@prisma/client';
+import crypto from 'node:crypto';
 export const AuthErrorCodes = {
     INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
     INVALID_USERNAME: 'AUTH_INVALID_USERNAME',
@@ -296,19 +297,67 @@ let AuthService = class AuthService {
         await this.generateAndSendCode(user.email, user.username);
         return { success: true, message: 'Código reenviado com sucesso.' };
     }
+    processedNonces = new Map();
+    validateAndConsumeNonce(nonce) {
+        const now = Date.now();
+        for (const [n, ts] of this.processedNonces.entries()) {
+            if (now - ts > 10 * 60 * 1000) {
+                this.processedNonces.delete(n);
+            }
+        }
+        if (this.processedNonces.has(nonce)) {
+            return false;
+        }
+        this.processedNonces.set(nonce, now);
+        return true;
+    }
     async syncAgeSignal(userId, signal) {
         let classification = AgeClassification.UNKNOWN;
         let source = AgeSignalSource.NONE;
         if (signal.available && typeof signal.lower === 'number') {
-            source = AgeSignalSource.WINDOWS_OS;
-            if (signal.lower >= 18) {
-                classification = AgeClassification.ADULT;
-            }
-            else if (signal.lower >= 13 || (signal.upper !== undefined && signal.upper <= 17)) {
-                classification = AgeClassification.TEEN;
+            const secret = process.env.VOXY_AGE_SIGNAL_SECRET || 'v0xy_4g3_s1gn4l_s3cur1ty_pr0t0c0l_2026_k3y';
+            let isCryptographicallyVerified = false;
+            if (signal.signature && signal.nonce && signal.timestamp) {
+                const now = Date.now();
+                const ageDiff = Math.abs(now - signal.timestamp);
+                if (ageDiff <= 5 * 60 * 1000) {
+                    if (this.validateAndConsumeNonce(signal.nonce)) {
+                        const canonicalData = `${signal.available ? 'true' : 'false'}:${signal.lower}:${signal.upper}:${signal.status}:${signal.timestamp}:${signal.nonce}`;
+                        const expectedSig = crypto.createHmac('sha256', secret).update(canonicalData).digest('hex');
+                        if (expectedSig.length === signal.signature.length &&
+                            crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(signal.signature))) {
+                            isCryptographicallyVerified = true;
+                        }
+                        else {
+                            console.warn(`[Security Alert] Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`);
+                        }
+                    }
+                    else {
+                        console.warn(`[Security Alert] Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`);
+                    }
+                }
+                else {
+                    console.warn(`[Security Alert] Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`);
+                }
             }
             else {
-                classification = AgeClassification.CHILD;
+                console.warn(`[Security Alert] Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`);
+            }
+            if (isCryptographicallyVerified) {
+                source = AgeSignalSource.WINDOWS_OS;
+                if (signal.lower >= 18) {
+                    classification = AgeClassification.ADULT;
+                }
+                else if (signal.lower >= 13 || (signal.upper !== undefined && signal.upper <= 17)) {
+                    classification = AgeClassification.TEEN;
+                }
+                else {
+                    classification = AgeClassification.CHILD;
+                }
+            }
+            else {
+                classification = AgeClassification.UNKNOWN;
+                source = AgeSignalSource.NONE;
             }
         }
         else {

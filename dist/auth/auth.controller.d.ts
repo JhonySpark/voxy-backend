@@ -68,6 +68,9 @@ export declare class AuthController {
         lower?: number;
         upper?: number;
         status?: string;
+        nonce?: string;
+        timestamp?: number;
+        signature?: string;
     }): Promise<{
         success: boolean;
         user: {

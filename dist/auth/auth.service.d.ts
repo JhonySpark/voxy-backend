@@ -88,11 +88,16 @@ export declare class AuthService {
         success: boolean;
         message: string;
     }>;
+    private readonly processedNonces;
+    private validateAndConsumeNonce;
     syncAgeSignal(userId: string, signal: {
         available: boolean;
         lower?: number;
         upper?: number;
         status?: string;
+        nonce?: string;
+        timestamp?: number;
+        signature?: string;
     }): Promise<{
         success: boolean;
         user: {

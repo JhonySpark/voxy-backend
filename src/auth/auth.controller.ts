@@ -37,7 +37,15 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async syncAgeSignal(
     @Request() req: any,
-    @Body() body: { available: boolean; lower?: number; upper?: number; status?: string }
+    @Body() body: {
+      available: boolean;
+      lower?: number;
+      upper?: number;
+      status?: string;
+      nonce?: string;
+      timestamp?: number;
+      signature?: string;
+    }
   ) {
     return this.authService.syncAgeSignal(req.user.sub, body);
   }
