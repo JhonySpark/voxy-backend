@@ -7,12 +7,19 @@ export class ResendEmailAdapter implements IEmailServicePort {
   private readonly logger = new Logger(ResendEmailAdapter.name);
 
   async sendVerificationEmail(input: SendVerificationEmailInput): Promise<{ success: boolean; messageId?: string }> {
-    const { apiKey, fromEmail, apiUrl } = AppEnvironmentConfig.resend;
+    const apiKey = (process.env.RESEND_API_KEY || AppEnvironmentConfig.resend.apiKey || '')
+      .trim()
+      .replace(/^["']|["']$/g, '');
+    const fromEmail = (process.env.RESEND_FROM_EMAIL || AppEnvironmentConfig.resend.fromEmail || 'Voxy <onboarding@resend.dev>')
+      .trim()
+      .replace(/^["']|["']$/g, '');
+    const apiUrl = (process.env.RESEND_API_URL || AppEnvironmentConfig.resend.apiUrl || 'https://api.resend.com/emails')
+      .trim();
 
     if (!apiKey) {
       this.logger.warn(
         `\n=================================================================\n` +
-        ` [VOXY EMAIL] RESEND_API_KEY não configurada no .env\n` +
+        ` [VOXY EMAIL] RESEND_API_KEY não configurada ou vazia no .env\n` +
         ` Destinatário: ${input.to} (${input.username})\n` +
         ` CÓDIGO DE VERIFICAÇÃO: >>> ${input.code} <<<\n` +
         `=================================================================\n`
