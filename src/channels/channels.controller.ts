@@ -46,6 +46,16 @@ export class ChannelsController {
     return this.channelsService.deleteChannelMessage(channelId, messageId, req.user.sub);
   }
 
+  @Patch(':channelId/messages/:messageId')
+  async editMessage(
+    @Request() req: any,
+    @Param('channelId') channelId: string,
+    @Param('messageId') messageId: string,
+    @Body('content') content: string,
+  ) {
+    return this.channelsService.editChannelMessage(channelId, messageId, req.user.sub, content);
+  }
+
   @Post(':channelId/voice-token')
   async getVoiceToken(@Request() req: any, @Param('channelId') channelId: string, @Query('screen') screen?: string) {
     return this.channelsService.getVoiceToken(channelId, req.user, screen === 'true');

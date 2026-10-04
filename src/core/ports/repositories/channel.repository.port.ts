@@ -10,6 +10,7 @@ export interface IChannelRepository {
   getMessages(channelId: string): Promise<any[]>;
   deleteMessage(messageId: string): Promise<void>;
   findMessageById(messageId: string): Promise<any | null>;
+  updateMessage(messageId: string, content: string): Promise<any>;
 }
 
 export const CHANNEL_REPOSITORY = Symbol('CHANNEL_REPOSITORY');

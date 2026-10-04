@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "ChannelMessage" ADD COLUMN     "isEdited" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "Message" ADD COLUMN     "isEdited" BOOLEAN NOT NULL DEFAULT false;

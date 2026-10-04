@@ -69,5 +69,23 @@ export class PrismaChatRepository implements IChatRepository {
       include: MESSAGE_INCLUDE,
     });
   }
+
+  async findMessageById(messageId: string): Promise<any | null> {
+    return this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: MESSAGE_INCLUDE,
+    });
+  }
+
+  async updateDirectMessage(messageId: string, content: string): Promise<any> {
+    return this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content,
+        isEdited: true,
+      },
+      include: MESSAGE_INCLUDE,
+    });
+  }
 }
 

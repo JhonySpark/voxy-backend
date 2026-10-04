@@ -73,6 +73,7 @@ model Message {
   receiverId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  isEdited   Boolean  @default(false)
 
   replyToId  String?
   replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
@@ -167,6 +168,8 @@ model ChannelMessage {
   senderId   String
   channelId  String
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  isEdited   Boolean  @default(false)
 
   replyToId  String?
   replyTo    ChannelMessage?  @relation("ChannelMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)

@@ -205,6 +205,45 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('editMessage')
+  async handleEditMessage(
+    @MessageBody() data: { messageId: string; content: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const senderId = client.data.user.sub;
+    try {
+      const updated = await this.chatService.editDirectMessage(data.messageId, senderId, data.content);
+      // Emit to receiver
+      this.server.to(updated.receiverId).emit('messageUpdated', updated);
+      // Emit back to sender
+      client.emit('messageUpdated', updated);
+      return updated;
+    } catch (e: any) {
+      return { error: e.message || 'Unauthorized' };
+    }
+  }
+
+  @SubscribeMessage('editChannelMessage')
+  async handleEditChannelMessage(
+    @MessageBody() data: { channelId: string; messageId: string; content: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const senderId = client.data.user.sub;
+    try {
+      const updated = await this.channelsService.editChannelMessage(
+        data.channelId,
+        data.messageId,
+        senderId,
+        data.content,
+      );
+      this.server.to(data.channelId).emit('channelMessageUpdated', updated);
+      client.emit('channelMessageUpdated', updated);
+      return updated;
+    } catch (e: any) {
+      return { error: e.message || 'Unauthorized' };
+    }
+  }
+
   @SubscribeMessage('serverDeleted')
   handleServerDeleted(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
     this.server.to(`server-${data.serverId}`).emit('serverDeleted', { serverId: data.serverId });

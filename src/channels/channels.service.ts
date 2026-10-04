@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
   Inject,
 } from '@nestjs/common';
 import { CHANNEL_REPOSITORY } from '../core/ports/repositories/channel.repository.port.js';
@@ -148,6 +149,23 @@ export class ChannelsService {
 
     await this.channelRepo.deleteMessage(messageId);
     return { success: true };
+  }
+
+  async editChannelMessage(channelId: string, messageId: string, userId: string, newContent: string) {
+    const trimmed = (newContent || '').trim();
+    if (!trimmed) throw new BadRequestException('Message content cannot be empty');
+
+    const channel = await this.channelRepo.findById(channelId);
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const message = await this.channelRepo.findMessageById(messageId);
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+
+    return this.channelRepo.updateMessage(messageId, trimmed);
   }
 
   async getVoiceToken(channelId: string, user: { sub: string; username: string }, isScreen: boolean = false) {

@@ -132,4 +132,15 @@ export class PrismaChannelRepository implements IChannelRepository {
       where: { id: messageId },
     });
   }
+
+  async updateMessage(messageId: string, content: string): Promise<any> {
+    return this.prisma.channelMessage.update({
+      where: { id: messageId },
+      data: {
+        content,
+        isEdited: true,
+      },
+      include: CHANNEL_MESSAGE_INCLUDE,
+    });
+  }
 }
