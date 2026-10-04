@@ -5,6 +5,7 @@ export const AppEnvironmentConfig = {
       apiUrl: (process.env.RESEND_API_URL || 'https://api.resend.com/emails').trim(),
       apiKey: (process.env.RESEND_API_KEY || '').trim().replace(/^["']|["']$/g, ''),
       fromEmail: (process.env.RESEND_FROM_EMAIL || 'Voxy <onboarding@resend.dev>').trim(),
+      templateId: (process.env.RESEND_TEMPLATE_ID || '').trim().replace(/^["']|["']$/g, ''),
     };
   },
 
