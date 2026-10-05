@@ -17,6 +17,8 @@ import { ChannelType } from '../modules/servers/domain/value-objects/channel-typ
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassificationEnum } from '../core/enums/index.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
+import { AuditLogActionEnum } from '../core/enums/moderation.enums.js';
 
 @Injectable()
 export class ChannelsService {
@@ -26,6 +28,7 @@ export class ChannelsService {
     @Inject(VOICE_ENGINE_PORT) private readonly voiceEngine: IVoiceEnginePort,
     private readonly prisma: PrismaService,
     @Optional() private readonly logger?: BetterStackLoggerService,
+    @Optional() private readonly auditService?: SecurityAuditService,
   ) {}
 
   async createChannel(
@@ -247,6 +250,22 @@ export class ChannelsService {
       serverId: channel.serverId,
       isScreen: Boolean(isScreen),
     });
+
+    if (isScreen && this.auditService) {
+      await this.auditService.record({
+        action: AuditLogActionEnum.STREAM_STARTED,
+        actorId: user.sub,
+        targetType: 'STREAM',
+        targetId: channelId,
+        serverId: channel.serverId,
+        reason: 'Início de transmissão de tela/jogo',
+        metadata: {
+          channelId,
+          channelName: channel.name,
+          username: user.username,
+        },
+      });
+    }
 
     return { token };
   }

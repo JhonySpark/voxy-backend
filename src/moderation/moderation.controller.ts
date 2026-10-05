@@ -9,12 +9,36 @@ import {
   Request,
 } from '@nestjs/common';
 import { ModerationService, CreateReportDto, ResolveReportDto } from './moderation.service.js';
+import { SecurityAuditService } from './security-audit.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 
 @UseGuards(AuthGuard)
 @Controller('moderation')
 export class ModerationController {
-  constructor(private readonly moderationService: ModerationService) {}
+  constructor(
+    private readonly moderationService: ModerationService,
+    private readonly securityAuditService: SecurityAuditService,
+  ) {}
+
+  @Get('audit-logs')
+  async getAuditLogs(
+    @Request() req: any,
+    @Query('action') action?: string,
+    @Query('actorId') actorId?: string,
+    @Query('serverId') serverId?: string,
+    @Query('targetId') targetId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.securityAuditService.getGlobalAuditLogs(req.user.sub, {
+      action: action as any,
+      actorId,
+      serverId,
+      targetId,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
+  }
 
   @Post('reports')
   async createReport(@Request() req: any, @Body() dto: CreateReportDto) {

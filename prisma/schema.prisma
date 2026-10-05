@@ -51,6 +51,7 @@ model User {
   channelMessageReactions ChannelMessageReaction[] @relation("UserChannelMessageReactions")
   reportsSent             ModerationReport[]       @relation("UserReportsSent")
   reportsReceived         ModerationReport[]       @relation("UserReportsReceived")
+  securityAuditLogs       SecurityAuditLog[]       @relation("AuditLogsActed")
 }
 
 enum ReportTargetType {
@@ -75,6 +76,22 @@ enum ReportStatus {
   INVESTIGATING
   RESOLVED
   DISMISSED
+}
+
+enum AuditLogAction {
+  SERVER_CREATED
+  STREAM_STARTED
+  MEMBER_MUTED
+  MEMBER_UNMUTED
+  MEMBER_KICKED
+  MEMBER_BANNED
+  MEMBER_UNBANNED
+  REPORT_CREATED
+  REPORT_RESOLVED
+  SERVER_SUSPENDED
+  SERVER_UNSUSPENDED
+  USER_SUSPENDED
+  USER_UNSUSPENDED
 }
 
 enum AgeClassification {
@@ -171,6 +188,7 @@ model Server {
   bans            ServerBan[]
   rolePermissions ServerRolePermission[]
   reports         ModerationReport[]     @relation("ServerReports")
+  securityAuditLogs SecurityAuditLog[]   @relation("ServerAuditLogs")
 }
 
 model ServerMember {
@@ -336,5 +354,28 @@ model ModerationReport {
   @@index([targetServerId])
   @@index([targetType])
   @@index([status])
+}
+
+model SecurityAuditLog {
+  id         String         @id @default(uuid())
+  action     AuditLogAction
+  actorId    String
+  targetType String         // SERVER, USER, STREAM, REPORT, CHANNEL
+  targetId   String?
+  serverId   String?
+  reason     String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime       @default(now())
+
+  actor      User           @relation("AuditLogsActed", fields: [actorId], references: [id], onDelete: Cascade)
+  server     Server?        @relation("ServerAuditLogs", fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([action])
+  @@index([actorId])
+  @@index([targetId])
+  @@index([serverId])
+  @@index([createdAt])
 }
 

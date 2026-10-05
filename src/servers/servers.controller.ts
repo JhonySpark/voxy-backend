@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ServersService } from './servers.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 
@@ -142,5 +142,20 @@ export class ServersController {
   @Get(':id/my-permissions')
   async getMyPermissions(@Request() req: any, @Param('id') serverId: string) {
     return this.serversService.getUserPermissions(serverId, req.user.sub);
+  }
+
+  @Get(':id/audit-logs')
+  async getServerAuditLogs(
+    @Request() req: any,
+    @Param('id') serverId: string,
+    @Query('action') action?: any,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.serversService.getServerAuditLogs(serverId, req.user.sub, {
+      action,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
   }
 }

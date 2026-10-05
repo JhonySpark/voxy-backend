@@ -4,9 +4,10 @@ import { ServersController } from './servers.controller.js';
 import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
 import { PrismaServerRepository } from '../infrastructure/adapters/repositories/prisma-server.repository.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { ModerationModule } from '../moderation/moderation.module.js';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ModerationModule],
   providers: [
     ServersService,
     {

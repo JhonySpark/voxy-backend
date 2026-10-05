@@ -5,6 +5,7 @@ import { SERVER_REPOSITORY, IServerRepository } from '../core/ports/repositories
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
 
 describe('ServersService', () => {
   let service: ServersService;
@@ -41,11 +42,18 @@ describe('ServersService', () => {
       upsertRolePermissions: vi.fn().mockResolvedValue({}),
     };
 
+    const auditServiceMock = {
+      record: vi.fn().mockResolvedValue(undefined),
+      getServerAuditLogs: vi.fn().mockResolvedValue({ logs: [], total: 0 }),
+      getGlobalAuditLogs: vi.fn().mockResolvedValue({ logs: [], total: 0 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServersService,
         { provide: SERVER_REPOSITORY, useValue: serverRepo },
         { provide: PrismaService, useValue: { server: { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn().mockResolvedValue([]) } } },
+        { provide: SecurityAuditService, useValue: auditServiceMock },
       ],
     }).compile();
 

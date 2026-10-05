@@ -45,8 +45,13 @@ describe('ModerationService', () => {
         update: vi.fn(),
       },
     };
+    const auditService = {
+      record: vi.fn().mockResolvedValue(undefined),
+      getServerAuditLogs: vi.fn(),
+      getGlobalAuditLogs: vi.fn(),
+    };
 
-    service = new ModerationService(moderationRepo as any, prisma as any);
+    service = new ModerationService(moderationRepo as any, prisma as any, auditService as any);
   });
 
   describe('createReport', () => {

@@ -8,9 +8,10 @@ import { PrismaServerRepository } from '../infrastructure/adapters/repositories/
 import { VOICE_ENGINE_PORT } from '../core/ports/voice-engine.port.js';
 import { LivekitVoiceAdapter } from '../infrastructure/adapters/voice/livekit-voice.adapter.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { ModerationModule } from '../moderation/moderation.module.js';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ModerationModule],
   controllers: [ChannelsController],
   providers: [
     ChannelsService,

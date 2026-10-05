@@ -3,13 +3,15 @@ import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.
 import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { AgeClassificationEnum } from '../core/enums/index.js';
+import { AgeClassificationEnum, AuditLogActionEnum } from '../core/enums/index.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
 
 @Injectable()
 export class ServersService {
   constructor(
     @Inject(SERVER_REPOSITORY) private readonly serverRepo: IServerRepository,
     private readonly prisma: PrismaService,
+    private readonly auditService: SecurityAuditService,
   ) {}
 
   private async generateInviteCode(): Promise<string> {
@@ -56,6 +58,16 @@ export class ServersService {
         iconUrl: iconUrl || null,
         iconKey: iconKey || null,
       },
+    });
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.SERVER_CREATED,
+      actorId: ownerId,
+      targetType: 'SERVER',
+      targetId: created.id,
+      serverId: created.id,
+      reason: 'Criação de servidor',
+      metadata: { serverName: name, is18Plus: is18Plus === true },
     });
 
     return {
@@ -422,6 +434,16 @@ export class ServersService {
     }
 
     await this.serverRepo.removeMember(serverId, targetUserId);
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.MEMBER_KICKED,
+      actorId: requesterUserId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      serverId,
+      reason: 'Expulso do servidor',
+    });
+
     return { success: true };
   }
 
@@ -452,6 +474,16 @@ export class ServersService {
     }
 
     await this.serverRepo.banMember(serverId, targetUserId, reason);
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.MEMBER_BANNED,
+      actorId: requesterUserId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      serverId,
+      reason: reason || 'Banido do servidor',
+    });
+
     return { success: true };
   }
 
@@ -462,6 +494,16 @@ export class ServersService {
     }
 
     await this.serverRepo.unbanMember(serverId, targetUserId);
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.MEMBER_UNBANNED,
+      actorId: requesterUserId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      serverId,
+      reason: 'Banimento revogado',
+    });
+
     return { success: true };
   }
 
@@ -533,6 +575,17 @@ export class ServersService {
     }
 
     await this.serverRepo.muteMember(serverId, targetUserId, reason, until);
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.MEMBER_MUTED,
+      actorId: requesterUserId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      serverId,
+      reason: reason || 'Silenciado no servidor',
+      metadata: { durationMinutes, mutedUntil: until?.toISOString() },
+    });
+
     return { success: true, isMuted: true, mutedUntil: until };
   }
 
@@ -543,6 +596,20 @@ export class ServersService {
     }
 
     await this.serverRepo.unmuteMember(serverId, targetUserId);
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.MEMBER_UNMUTED,
+      actorId: requesterUserId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      serverId,
+      reason: 'Silenciamento revogado',
+    });
+
     return { success: true, isMuted: false };
+  }
+
+  async getServerAuditLogs(serverId: string, requesterUserId: string, filter: any) {
+    return this.auditService.getServerAuditLogs(serverId, requesterUserId, filter);
   }
 }

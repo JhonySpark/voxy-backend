@@ -18,9 +18,11 @@ import {
   ReportTargetTypeEnum,
   ReportReasonEnum,
   ReportStatusEnum,
+  AuditLogActionEnum,
 } from '../core/enums/index.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SecurityAuditService } from './security-audit.service.js';
 
 export class CreateReportDto {
   targetType!: ReportTargetTypeEnum;
@@ -42,6 +44,7 @@ export class ModerationService {
     @Inject(MODERATION_REPOSITORY)
     private readonly moderationRepo: IModerationRepository,
     private readonly prisma: PrismaService,
+    private readonly auditService: SecurityAuditService,
     @Optional() private readonly logger?: BetterStackLoggerService,
   ) {}
 
@@ -113,6 +116,16 @@ export class ModerationService {
       isChildSafety: created.isChildSafety(),
     });
 
+    await this.auditService.record({
+      action: AuditLogActionEnum.REPORT_CREATED,
+      actorId: reporterId,
+      targetType: dto.targetType,
+      targetId: dto.targetUserId || dto.targetServerId || dto.targetChannelId || null,
+      serverId: dto.targetServerId || null,
+      reason: dto.reason,
+      metadata: { description: dto.description, reportId: created.id },
+    });
+
     return {
       id: created.id,
       reporterId: created.reporterId,
@@ -162,6 +175,16 @@ export class ModerationService {
       status: updated.status,
     });
 
+    await this.auditService.record({
+      action: AuditLogActionEnum.REPORT_RESOLVED,
+      actorId: moderatorId,
+      targetType: 'REPORT',
+      targetId: updated.id,
+      serverId: updated.targetServerId || null,
+      reason: dto.resolutionNotes || 'Denúncia concluída',
+      metadata: { status: updated.status },
+    });
+
     return {
       id: updated.id,
       status: updated.status,
@@ -201,6 +224,16 @@ export class ModerationService {
       reason,
     });
 
+    await this.auditService.record({
+      action: AuditLogActionEnum.SERVER_SUSPENDED,
+      actorId: moderatorId,
+      targetType: 'SERVER',
+      targetId: serverId,
+      serverId,
+      reason,
+      metadata: { serverName: server.name },
+    });
+
     return { success: true, message: `Servidor '${server.name}' suspenso com sucesso.` };
   }
 
@@ -226,6 +259,16 @@ export class ModerationService {
     this.logger?.logBusinessEvent('SERVER_UNSUSPENDED', {
       serverId,
       moderatorId,
+    });
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.SERVER_UNSUSPENDED,
+      actorId: moderatorId,
+      targetType: 'SERVER',
+      targetId: serverId,
+      serverId,
+      reason: 'Revogação de suspensão de servidor',
+      metadata: { serverName: server.name },
     });
 
     return { success: true, message: `Suspensão do servidor '${server.name}' revogada.` };
@@ -261,6 +304,15 @@ export class ModerationService {
       reason,
     });
 
+    await this.auditService.record({
+      action: AuditLogActionEnum.USER_SUSPENDED,
+      actorId: moderatorId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      reason,
+      metadata: { targetUsername: user.username },
+    });
+
     return { success: true, message: `Conta de @${user.username} suspensa globalmente.` };
   }
 
@@ -286,6 +338,15 @@ export class ModerationService {
     this.logger?.logBusinessEvent('ACCOUNT_UNSUSPENDED', {
       targetUserId,
       moderatorId,
+    });
+
+    await this.auditService.record({
+      action: AuditLogActionEnum.USER_UNSUSPENDED,
+      actorId: moderatorId,
+      targetType: 'USER',
+      targetId: targetUserId,
+      reason: 'Revogação de suspensão de conta',
+      metadata: { targetUsername: user.username },
     });
 
     return { success: true, message: `Suspensão global de @${user.username} revogada.` };
