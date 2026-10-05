@@ -18,6 +18,9 @@ export interface UserProps {
   ageClassification?: AgeClassificationEnum;
   ageSignalSource?: AgeSignalSourceEnum;
   ageSignalCheckedAt?: Date | null;
+  isSuspended?: boolean;
+  suspendedReason?: string | null;
+  suspendedAt?: Date | null;
   avatarUrl?: string | null;
   avatarKey?: string | null;
   displayName?: string | null;
@@ -36,6 +39,37 @@ export class User extends AggregateRoot<UserProps> {
 
   get email(): Email {
     return this.props.email;
+  }
+
+  get isSuspended(): boolean {
+    return this.props.isSuspended ?? false;
+  }
+
+  get suspendedReason(): string | null | undefined {
+    return this.props.suspendedReason;
+  }
+
+  get suspendedAt(): Date | null | undefined {
+    return this.props.suspendedAt;
+  }
+
+  public suspend(reason: string): Result<void> {
+    if (!reason || reason.trim().length === 0) {
+      return Result.fail<void>('O motivo da suspensão é obrigatório.');
+    }
+    this.props.isSuspended = true;
+    this.props.suspendedReason = reason.trim();
+    this.props.suspendedAt = new Date();
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
+  public unsuspend(): Result<void> {
+    this.props.isSuspended = false;
+    this.props.suspendedReason = null;
+    this.props.suspendedAt = null;
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
   }
 
   get password(): string {
@@ -108,7 +142,7 @@ export class User extends AggregateRoot<UserProps> {
   }
 
   public canUseApp(): boolean {
-    return this.ageClassification !== AgeClassificationEnum.CHILD;
+    return !this.isSuspended && this.ageClassification !== AgeClassificationEnum.CHILD;
   }
 
   public canShareScreen(): boolean {

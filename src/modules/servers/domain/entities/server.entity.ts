@@ -12,6 +12,9 @@ export interface ServerProps {
   iconKey?: string | null;
   inviteCode?: string;
   deletedAt?: Date | null;
+  isSuspended?: boolean;
+  suspendedReason?: string | null;
+  suspendedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
   members: ServerMember[];
@@ -57,6 +60,37 @@ export class Server extends AggregateRoot<ServerProps> {
 
   public isDeleted(): boolean {
     return !!this.props.deletedAt;
+  }
+
+  get isSuspended(): boolean {
+    return this.props.isSuspended ?? false;
+  }
+
+  get suspendedReason(): string | null | undefined {
+    return this.props.suspendedReason;
+  }
+
+  get suspendedAt(): Date | null | undefined {
+    return this.props.suspendedAt;
+  }
+
+  public suspend(reason: string): Result<void> {
+    if (!reason || reason.trim().length === 0) {
+      return Result.fail<void>('O motivo da suspensão é obrigatório.');
+    }
+    this.props.isSuspended = true;
+    this.props.suspendedReason = reason.trim();
+    this.props.suspendedAt = new Date();
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
+  }
+
+  public unsuspend(): Result<void> {
+    this.props.isSuspended = false;
+    this.props.suspendedReason = null;
+    this.props.suspendedAt = null;
+    this.props.updatedAt = new Date();
+    return Result.ok<void>();
   }
 
   get createdAt(): Date {

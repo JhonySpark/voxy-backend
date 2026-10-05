@@ -18,6 +18,12 @@ export interface IServerRepository {
   getServerMembers(serverId: string): Promise<any[]>;
   getRolePermissions(serverId: string): Promise<any[]>;
   upsertRolePermissions(serverId: string, role: string, permissions: any): Promise<any>;
+  muteMember(serverId: string, userId: string, reason?: string, until?: Date): Promise<void>;
+  unmuteMember(serverId: string, userId: string): Promise<void>;
+  isMemberMuted(serverId: string, userId: string): Promise<boolean>;
+  suspendServer(serverId: string, reason: string): Promise<void>;
+  unsuspendServer(serverId: string): Promise<void>;
+  isServerSuspended(serverId: string): Promise<boolean>;
 }
 
 export const SERVER_REPOSITORY = Symbol('SERVER_REPOSITORY');

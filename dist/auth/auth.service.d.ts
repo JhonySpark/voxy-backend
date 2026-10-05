@@ -18,6 +18,7 @@ export declare const AuthErrorCodes: {
     readonly INVALID_VERIFICATION_CODE: "AUTH_INVALID_VERIFICATION_CODE";
     readonly VERIFICATION_CODE_EXPIRED: "AUTH_VERIFICATION_CODE_EXPIRED";
     readonly ACCOUNT_CHILD_RESTRICTED: "AUTH_ACCOUNT_CHILD_RESTRICTED";
+    readonly ACCOUNT_SUSPENDED: "AUTH_ACCOUNT_SUSPENDED";
 };
 export declare class AuthService {
     private usersService;

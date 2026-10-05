@@ -65,6 +65,8 @@ let UsersService = class UsersService {
             isEmailVerified: user.isEmailVerified,
             ageClassification: user.ageClassification,
             ageSignalSource: user.ageSignalSource,
+            isSuspended: user.isSuspended,
+            suspendedReason: user.suspendedReason,
         };
     }
     async findByEmail(email) {
@@ -80,6 +82,8 @@ let UsersService = class UsersService {
             isEmailVerified: user.isEmailVerified,
             ageClassification: user.ageClassification,
             ageSignalSource: user.ageSignalSource,
+            isSuspended: user.isSuspended,
+            suspendedReason: user.suspendedReason,
         };
     }
     async findById(id) {
@@ -95,6 +99,8 @@ let UsersService = class UsersService {
             isEmailVerified: user.isEmailVerified,
             ageClassification: user.ageClassification,
             ageSignalSource: user.ageSignalSource,
+            isSuspended: user.isSuspended,
+            suspendedReason: user.suspendedReason,
         };
     }
     async getProfile(userId, requestingUserId) {

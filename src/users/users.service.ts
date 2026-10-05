@@ -56,6 +56,8 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: user.ageClassification,
       ageSignalSource: user.ageSignalSource,
+      isSuspended: user.isSuspended,
+      suspendedReason: user.suspendedReason,
     };
   }
 
@@ -71,6 +73,8 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: user.ageClassification,
       ageSignalSource: user.ageSignalSource,
+      isSuspended: user.isSuspended,
+      suspendedReason: user.suspendedReason,
     };
   }
 
@@ -86,6 +90,8 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: user.ageClassification,
       ageSignalSource: user.ageSignalSource,
+      isSuspended: user.isSuspended,
+      suspendedReason: user.suspendedReason,
     };
   }
 

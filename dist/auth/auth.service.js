@@ -37,6 +37,7 @@ export const AuthErrorCodes = {
     INVALID_VERIFICATION_CODE: 'AUTH_INVALID_VERIFICATION_CODE',
     VERIFICATION_CODE_EXPIRED: 'AUTH_VERIFICATION_CODE_EXPIRED',
     ACCOUNT_CHILD_RESTRICTED: 'AUTH_ACCOUNT_CHILD_RESTRICTED',
+    ACCOUNT_SUSPENDED: 'AUTH_ACCOUNT_SUSPENDED',
 };
 let AuthService = class AuthService {
     usersService;
@@ -64,6 +65,17 @@ let AuthService = class AuthService {
         return null;
     }
     async login(user) {
+        if (user.isSuspended) {
+            this.logger?.warn(`Acesso negado: Conta suspensa tentou logar: ${user.id}`, 'AuthService', {
+                userId: user.id,
+                username: user.username,
+                reason: user.suspendedReason,
+            });
+            throw new ForbiddenException({
+                code: AuthErrorCodes.ACCOUNT_SUSPENDED,
+                message: user.suspendedReason || 'Esta conta foi suspensa por violação das Diretrizes da Comunidade e Proteção à Criança e ao Adolescente.',
+            });
+        }
         if (user.ageClassification === AgeClassification.CHILD) {
             this.logger?.warn(`Acesso negado: Conta restrita (CHILD) tentou logar: ${user.id}`, 'AuthService', {
                 userId: user.id,

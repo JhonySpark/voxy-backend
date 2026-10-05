@@ -60,6 +60,7 @@ export declare class ServersService {
         name: string;
         ownerId: string;
         is18Plus: boolean;
+        isSuspended: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
@@ -126,6 +127,7 @@ export declare class ServersService {
         canDeleteMessages: any;
         canKickMembers: any;
         canBanMembers: any;
+        canMuteMembers: any;
         canManageChannels: any;
         canManageServer: any;
     }>;
@@ -153,4 +155,13 @@ export declare class ServersService {
     getServerBans(serverId: string, requesterUserId: string): Promise<any[]>;
     getRolePermissions(serverId: string, requesterUserId: string): Promise<any[]>;
     updateRolePermissions(serverId: string, requesterUserId: string, role: string, permissions: any): Promise<any>;
+    muteMember(serverId: string, requesterUserId: string, targetUserId: string, reason?: string, durationMinutes?: number): Promise<{
+        success: boolean;
+        isMuted: boolean;
+        mutedUntil: Date | undefined;
+    }>;
+    unmuteMember(serverId: string, requesterUserId: string, targetUserId: string): Promise<{
+        success: boolean;
+        isMuted: boolean;
+    }>;
 }

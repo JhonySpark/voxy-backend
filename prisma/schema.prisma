@@ -32,6 +32,9 @@ model User {
   ageClassification  AgeClassification @default(UNKNOWN)
   ageSignalSource    AgeSignalSource   @default(NONE)
   ageSignalCheckedAt DateTime?
+  isSuspended        Boolean           @default(false)
+  suspendedReason    String?
+  suspendedAt        DateTime?
 
   // Relacionamentos
   friends           Friendship[] @relation("UserFriends")
@@ -46,6 +49,32 @@ model User {
   channelMessages   ChannelMessage[]
   messageReactions        MessageReaction[]        @relation("UserMessageReactions")
   channelMessageReactions ChannelMessageReaction[] @relation("UserChannelMessageReactions")
+  reportsSent             ModerationReport[]       @relation("UserReportsSent")
+  reportsReceived         ModerationReport[]       @relation("UserReportsReceived")
+}
+
+enum ReportTargetType {
+  USER
+  SERVER
+  STREAM
+}
+
+enum ReportReason {
+  CHILD_SAFETY_EXPLOITATION
+  HARASSMENT_BULLYING
+  HATE_SPEECH
+  SEXUAL_CONTENT
+  VIOLENCE_THREATS
+  SELF_HARM
+  SPAM_SCAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
 }
 
 enum AgeClassification {
@@ -122,33 +151,40 @@ model Message {
 }
 
 model Server {
-  id         String    @id @default(uuid())
-  name       String
-  inviteCode String    @unique
-  iconUrl    String?
-  iconKey    String?
-  ownerId    String
-  deletedAt  DateTime?
-  is18Plus   Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id              String                 @id @default(uuid())
+  name            String
+  inviteCode      String                 @unique
+  iconUrl         String?
+  iconKey         String?
+  ownerId         String
+  deletedAt       DateTime?
+  is18Plus        Boolean                @default(false)
+  isSuspended     Boolean                @default(false)
+  suspendedReason String?
+  suspendedAt     DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   owner           User                   @relation("ServerOwner", fields: [ownerId], references: [id])
   members         ServerMember[]
   channels        Channel[]
   bans            ServerBan[]
   rolePermissions ServerRolePermission[]
+  reports         ModerationReport[]     @relation("ServerReports")
 }
 
 model ServerMember {
-  id        String   @id @default(uuid())
-  serverId  String
-  userId    String
-  role      String   @default("MEMBER") // OWNER, ADMIN, MODERATOR, MEMBER
-  createdAt DateTime @default(now())
+  id          String    @id @default(uuid())
+  serverId    String
+  userId      String
+  role        String    @default("MEMBER") // OWNER, ADMIN, MODERATOR, MEMBER
+  isMuted     Boolean   @default(false)
+  mutedReason String?
+  mutedUntil  DateTime?
+  createdAt   DateTime  @default(now())
 
-  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server      Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, userId])
 }
@@ -176,6 +212,7 @@ model ServerRolePermission {
   canDeleteMessages Boolean  @default(false)
   canKickMembers    Boolean  @default(false)
   canBanMembers     Boolean  @default(false)
+  canMuteMembers    Boolean  @default(false)
   canManageChannels Boolean  @default(false)
   canManageServer   Boolean  @default(false)
   createdAt         DateTime @default(now())
@@ -272,5 +309,32 @@ model ChannelMessageReaction {
   @@unique([channelMessageId, userId])
   @@index([channelMessageId])
   @@index([userId])
+}
+
+model ModerationReport {
+  id              String           @id @default(uuid())
+  reporterId      String
+  targetType      ReportTargetType
+  targetUserId    String?
+  targetServerId  String?
+  targetChannelId String?
+  reason          ReportReason
+  description     String
+  status          ReportStatus     @default(PENDING)
+  resolutionNotes String?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  reporter        User             @relation("UserReportsSent", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser      User?            @relation("UserReportsReceived", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetServer    Server?          @relation("ServerReports", fields: [targetServerId], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([targetUserId])
+  @@index([targetServerId])
+  @@index([targetType])
+  @@index([status])
 }
 

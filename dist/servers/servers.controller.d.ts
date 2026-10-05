@@ -57,6 +57,7 @@ export declare class ServersController {
         name: string;
         ownerId: string;
         is18Plus: boolean;
+        isSuspended: boolean;
         iconUrl: string | null;
         iconKey: string | null | undefined;
         inviteCode: string | undefined;
@@ -132,6 +133,15 @@ export declare class ServersController {
     kickMember(req: any, serverId: string, targetUserId: string): Promise<{
         success: boolean;
     }>;
+    muteMember(req: any, serverId: string, targetUserId: string, reason?: string, durationMinutes?: number): Promise<{
+        success: boolean;
+        isMuted: boolean;
+        mutedUntil: Date | undefined;
+    }>;
+    unmuteMember(req: any, serverId: string, targetUserId: string): Promise<{
+        success: boolean;
+        isMuted: boolean;
+    }>;
     getServerBans(req: any, serverId: string): Promise<any[]>;
     banMember(req: any, serverId: string, targetUserId: string, reason?: string): Promise<{
         success: boolean;
@@ -147,6 +157,7 @@ export declare class ServersController {
         canDeleteMessages: any;
         canKickMembers: any;
         canBanMembers: any;
+        canMuteMembers: any;
         canManageChannels: any;
         canManageServer: any;
     }>;

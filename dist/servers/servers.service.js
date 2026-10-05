@@ -111,17 +111,19 @@ let ServersService = class ServersService {
         const serverIds = servers.map(s => s.id);
         const prismaServers = await this.prisma.server.findMany({
             where: { id: { in: serverIds } },
-            select: { id: true, is18Plus: true },
+            select: { id: true, is18Plus: true, isSuspended: true },
         });
-        const is18PlusMap = new Map(prismaServers.map(ps => [ps.id, ps.is18Plus]));
+        const serverMetaMap = new Map(prismaServers.map(ps => [ps.id, ps]));
         return servers.map(s => {
             const version = s.updatedAt ? `?v=${new Date(s.updatedAt).getTime()}` : '';
             const baseIconUrl = s.iconUrl ? s.iconUrl.split('?')[0] : null;
+            const meta = serverMetaMap.get(s.id);
             return {
                 id: s.id,
                 name: s.name,
                 ownerId: s.ownerId,
-                is18Plus: is18PlusMap.get(s.id) ?? false,
+                is18Plus: meta?.is18Plus ?? false,
+                isSuspended: meta?.isSuspended ?? false,
                 iconUrl: baseIconUrl ? `${baseIconUrl}${version}` : null,
                 iconKey: s.iconKey,
                 inviteCode: s.inviteCode,
@@ -145,8 +147,11 @@ let ServersService = class ServersService {
         }
         const serverMeta = await this.prisma.server.findUnique({
             where: { id: server.id },
-            select: { is18Plus: true },
+            select: { is18Plus: true, isSuspended: true, suspendedReason: true },
         });
+        if (serverMeta?.isSuspended) {
+            throw new ForbiddenException(serverMeta.suspendedReason || 'Este servidor foi suspenso por violação das Diretrizes da Comunidade e Proteção à Criança e ao Adolescente.');
+        }
         if (serverMeta?.is18Plus) {
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
@@ -196,8 +201,11 @@ let ServersService = class ServersService {
             throw new NotFoundException('Server not found');
         const serverMeta = await this.prisma.server.findUnique({
             where: { id: serverId },
-            select: { is18Plus: true },
+            select: { is18Plus: true, isSuspended: true },
         });
+        if (serverMeta?.isSuspended) {
+            throw new ForbiddenException('Este servidor está suspenso.');
+        }
         if (serverMeta?.is18Plus) {
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
@@ -228,6 +236,7 @@ let ServersService = class ServersService {
                 canDeleteMessages: true,
                 canKickMembers: true,
                 canBanMembers: true,
+                canMuteMembers: true,
                 canManageChannels: true,
                 canManageServer: true,
             };
@@ -241,6 +250,7 @@ let ServersService = class ServersService {
                 canDeleteMessages: true,
                 canKickMembers: true,
                 canBanMembers: true,
+                canMuteMembers: true,
                 canManageChannels: true,
                 canManageServer: false,
             },
@@ -249,6 +259,7 @@ let ServersService = class ServersService {
                 canDeleteMessages: true,
                 canKickMembers: true,
                 canBanMembers: false,
+                canMuteMembers: true,
                 canManageChannels: false,
                 canManageServer: false,
             },
@@ -257,6 +268,7 @@ let ServersService = class ServersService {
                 canDeleteMessages: false,
                 canKickMembers: false,
                 canBanMembers: false,
+                canMuteMembers: false,
                 canManageChannels: false,
                 canManageServer: false,
             },
@@ -270,6 +282,7 @@ let ServersService = class ServersService {
             canDeleteMessages: custom?.canDeleteMessages ?? base.canDeleteMessages,
             canKickMembers: custom?.canKickMembers ?? base.canKickMembers,
             canBanMembers: custom?.canBanMembers ?? base.canBanMembers,
+            canMuteMembers: custom?.canMuteMembers ?? base.canMuteMembers,
             canManageChannels: custom?.canManageChannels ?? base.canManageChannels,
             canManageServer: custom?.canManageServer ?? base.canManageServer,
         };
@@ -399,6 +412,39 @@ let ServersService = class ServersService {
             throw new ForbiddenException('Cargo inválido.');
         }
         return this.serverRepo.upsertRolePermissions(serverId, role, permissions);
+    }
+    async muteMember(serverId, requesterUserId, targetUserId, reason, durationMinutes) {
+        const permissions = await this.getUserPermissions(serverId, requesterUserId);
+        if (!permissions.canMuteMembers && permissions.role !== 'OWNER') {
+            throw new ForbiddenException('Você não tem permissão para silenciar membros deste servidor.');
+        }
+        const server = await this.serverRepo.findById(serverId);
+        if (!server)
+            throw new NotFoundException('Servidor não encontrado.');
+        if (server.ownerId === targetUserId) {
+            throw new ForbiddenException('Não é possível silenciar o dono do servidor.');
+        }
+        const targetRole = await this.serverRepo.getMemberRole(serverId, targetUserId);
+        if (targetRole === 'OWNER') {
+            throw new ForbiddenException('Não é possível silenciar o dono do servidor.');
+        }
+        if (targetRole === 'ADMIN' && permissions.role !== 'OWNER') {
+            throw new ForbiddenException('Apenas o dono pode silenciar um administrador.');
+        }
+        let until;
+        if (durationMinutes && durationMinutes > 0) {
+            until = new Date(Date.now() + durationMinutes * 60 * 1000);
+        }
+        await this.serverRepo.muteMember(serverId, targetUserId, reason, until);
+        return { success: true, isMuted: true, mutedUntil: until };
+    }
+    async unmuteMember(serverId, requesterUserId, targetUserId) {
+        const permissions = await this.getUserPermissions(serverId, requesterUserId);
+        if (!permissions.canMuteMembers && permissions.role !== 'OWNER') {
+            throw new ForbiddenException('Você não tem permissão para desmutar membros deste servidor.');
+        }
+        await this.serverRepo.unmuteMember(serverId, targetUserId);
+        return { success: true, isMuted: false };
     }
 };
 ServersService = __decorate([

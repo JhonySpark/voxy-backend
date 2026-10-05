@@ -353,6 +353,49 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`server-${data.serverId}`).emit('serverUpdated');
   }
 
+  @SubscribeMessage('memberKicked')
+  handleMemberKicked(
+    @MessageBody() data: { serverId: string; targetUserId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+    this.server.to(data.targetUserId).emit('memberKicked', { serverId: data.serverId });
+  }
+
+  @SubscribeMessage('memberBanned')
+  handleMemberBanned(
+    @MessageBody() data: { serverId: string; targetUserId: string; reason?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+    this.server.to(data.targetUserId).emit('memberBanned', { serverId: data.serverId, reason: data.reason });
+  }
+
+  @SubscribeMessage('memberMuted')
+  handleMemberMuted(
+    @MessageBody() data: { serverId: string; targetUserId: string; isMuted: boolean; mutedReason?: string; mutedUntil?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.server.to(`server-${data.serverId}`).emit('serverMemberMuted', data);
+    this.server.to(data.targetUserId).emit('serverMemberMuted', data);
+  }
+
+  @SubscribeMessage('serverSuspended')
+  handleServerSuspended(
+    @MessageBody() data: { serverId: string; reason: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.server.to(`server-${data.serverId}`).emit('serverSuspended', data);
+  }
+
+  @SubscribeMessage('accountSuspended')
+  handleAccountSuspended(
+    @MessageBody() data: { targetUserId: string; reason: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.server.to(data.targetUserId).emit('accountSuspended', data);
+  }
+
   @SubscribeMessage('userProfileUpdated')
   handleUserProfileUpdated(
     @MessageBody()

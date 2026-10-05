@@ -102,6 +102,14 @@ let ChannelsService = class ChannelsService {
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
+        const isSuspended = await this.serverRepo.isServerSuspended(channel.serverId);
+        if (isSuspended) {
+            throw new ForbiddenException('Este servidor está suspenso por violação das diretrizes de segurança.');
+        }
+        const isMuted = await this.serverRepo.isMemberMuted(channel.serverId, senderId);
+        if (isMuted) {
+            throw new ForbiddenException('Você está silenciado neste servidor e não pode enviar mensagens.');
+        }
         return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId, replyToId);
     }
     async deleteChannelMessage(channelId, messageId, userId) {
@@ -183,6 +191,10 @@ let ChannelsService = class ChannelsService {
         const isMember = await this.serverRepo.isMember(channel.serverId, user.sub);
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
+        }
+        const isSuspended = await this.serverRepo.isServerSuspended(channel.serverId);
+        if (isSuspended) {
+            throw new ForbiddenException('Este servidor está suspenso por violação de segurança.');
         }
         const token = await this.voiceEngine.generateAccessToken({
             roomName: channelId,

@@ -91,6 +91,8 @@ describe('UsersService', () => {
         isEmailVerified: false,
         ageClassification: 'UNKNOWN',
         ageSignalSource: 'NONE',
+        isSuspended: false,
+        suspendedReason: undefined,
       });
     });
 
@@ -119,6 +121,8 @@ describe('UsersService', () => {
         isEmailVerified: false,
         ageClassification: 'UNKNOWN',
         ageSignalSource: 'NONE',
+        isSuspended: false,
+        suspendedReason: undefined,
       });
     });
 
@@ -147,6 +151,8 @@ describe('UsersService', () => {
         isEmailVerified: false,
         ageClassification: 'UNKNOWN',
         ageSignalSource: 'NONE',
+        isSuspended: false,
+        suspendedReason: undefined,
       });
     });
 

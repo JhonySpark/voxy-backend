@@ -48,6 +48,12 @@ let ServersController = class ServersController {
     async kickMember(req, serverId, targetUserId) {
         return this.serversService.kickMember(serverId, req.user.sub, targetUserId);
     }
+    async muteMember(req, serverId, targetUserId, reason, durationMinutes) {
+        return this.serversService.muteMember(serverId, req.user.sub, targetUserId, reason, durationMinutes);
+    }
+    async unmuteMember(req, serverId, targetUserId) {
+        return this.serversService.unmuteMember(serverId, req.user.sub, targetUserId);
+    }
     async getServerBans(req, serverId) {
         return this.serversService.getServerBans(serverId, req.user.sub);
     }
@@ -154,6 +160,26 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], ServersController.prototype, "kickMember", null);
+__decorate([
+    Post(':id/members/:userId/mute'),
+    __param(0, Request()),
+    __param(1, Param('id')),
+    __param(2, Param('userId')),
+    __param(3, Body('reason')),
+    __param(4, Body('durationMinutes')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String, Number]),
+    __metadata("design:returntype", Promise)
+], ServersController.prototype, "muteMember", null);
+__decorate([
+    Post(':id/members/:userId/unmute'),
+    __param(0, Request()),
+    __param(1, Param('id')),
+    __param(2, Param('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ServersController.prototype, "unmuteMember", null);
 __decorate([
     Get(':id/bans'),
     __param(0, Request()),

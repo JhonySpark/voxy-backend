@@ -9,6 +9,7 @@ import { ChatModule } from './chat/chat.module.js';
 import { ServersModule } from './servers/servers.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
+import { ModerationModule } from './moderation/moderation.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -43,6 +44,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     ServersModule, 
     ChannelsModule,
     StorageModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -88,6 +88,30 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleServerUpdated(data: {
         serverId: string;
     }, client: Socket): void;
+    handleMemberKicked(data: {
+        serverId: string;
+        targetUserId: string;
+    }, client: Socket): void;
+    handleMemberBanned(data: {
+        serverId: string;
+        targetUserId: string;
+        reason?: string;
+    }, client: Socket): void;
+    handleMemberMuted(data: {
+        serverId: string;
+        targetUserId: string;
+        isMuted: boolean;
+        mutedReason?: string;
+        mutedUntil?: string;
+    }, client: Socket): void;
+    handleServerSuspended(data: {
+        serverId: string;
+        reason: string;
+    }, client: Socket): void;
+    handleAccountSuspended(data: {
+        targetUserId: string;
+        reason: string;
+    }, client: Socket): void;
     handleUserProfileUpdated(data: {
         userId: string;
         displayName?: string | null;

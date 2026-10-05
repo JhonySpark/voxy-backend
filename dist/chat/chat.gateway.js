@@ -245,6 +245,24 @@ let ChatGateway = class ChatGateway {
     handleServerUpdated(data, client) {
         this.server.to(`server-${data.serverId}`).emit('serverUpdated');
     }
+    handleMemberKicked(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+        this.server.to(data.targetUserId).emit('memberKicked', { serverId: data.serverId });
+    }
+    handleMemberBanned(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+        this.server.to(data.targetUserId).emit('memberBanned', { serverId: data.serverId, reason: data.reason });
+    }
+    handleMemberMuted(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverMemberMuted', data);
+        this.server.to(data.targetUserId).emit('serverMemberMuted', data);
+    }
+    handleServerSuspended(data, client) {
+        this.server.to(`server-${data.serverId}`).emit('serverSuspended', data);
+    }
+    handleAccountSuspended(data, client) {
+        this.server.to(data.targetUserId).emit('accountSuspended', data);
+    }
     handleUserProfileUpdated(data, client) {
         const userId = client.data?.user?.sub || data.userId;
         this.server.emit('userProfileUpdated', { ...data, userId });
@@ -519,6 +537,46 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleServerUpdated", null);
+__decorate([
+    SubscribeMessage('memberKicked'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleMemberKicked", null);
+__decorate([
+    SubscribeMessage('memberBanned'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleMemberBanned", null);
+__decorate([
+    SubscribeMessage('memberMuted'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleMemberMuted", null);
+__decorate([
+    SubscribeMessage('serverSuspended'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleServerSuspended", null);
+__decorate([
+    SubscribeMessage('accountSuspended'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleAccountSuspended", null);
 __decorate([
     SubscribeMessage('userProfileUpdated'),
     __param(0, MessageBody()),

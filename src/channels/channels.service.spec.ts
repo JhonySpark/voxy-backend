@@ -48,6 +48,8 @@ describe('ChannelsService', () => {
     serverRepo = {
       getMemberRole: vi.fn(),
       isMember: vi.fn(),
+      isServerSuspended: vi.fn().mockResolvedValue(false),
+      isMemberMuted: vi.fn().mockResolvedValue(false),
     };
     voiceEngine = {
       generateAccessToken: vi.fn(),

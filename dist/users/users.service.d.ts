@@ -31,6 +31,8 @@ export declare class UsersService {
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;
         ageSignalSource: AgeSignalSourceEnum;
+        isSuspended: boolean;
+        suspendedReason: string | null | undefined;
     } | null>;
     findByEmail(email: string): Promise<{
         id: string;
@@ -41,6 +43,8 @@ export declare class UsersService {
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;
         ageSignalSource: AgeSignalSourceEnum;
+        isSuspended: boolean;
+        suspendedReason: string | null | undefined;
     } | null>;
     findById(id: string): Promise<{
         id: string;
@@ -51,6 +55,8 @@ export declare class UsersService {
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;
         ageSignalSource: AgeSignalSourceEnum;
+        isSuspended: boolean;
+        suspendedReason: string | null | undefined;
     } | null>;
     getProfile(userId: string, requestingUserId?: string): Promise<{
         id: string;

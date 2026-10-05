@@ -80,6 +80,26 @@ export class ServersController {
     return this.serversService.kickMember(serverId, req.user.sub, targetUserId);
   }
 
+  @Post(':id/members/:userId/mute')
+  async muteMember(
+    @Request() req: any,
+    @Param('id') serverId: string,
+    @Param('userId') targetUserId: string,
+    @Body('reason') reason?: string,
+    @Body('durationMinutes') durationMinutes?: number,
+  ) {
+    return this.serversService.muteMember(serverId, req.user.sub, targetUserId, reason, durationMinutes);
+  }
+
+  @Post(':id/members/:userId/unmute')
+  async unmuteMember(
+    @Request() req: any,
+    @Param('id') serverId: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.serversService.unmuteMember(serverId, req.user.sub, targetUserId);
+  }
+
   @Get(':id/bans')
   async getServerBans(@Request() req: any, @Param('id') serverId: string) {
     return this.serversService.getServerBans(serverId, req.user.sub);

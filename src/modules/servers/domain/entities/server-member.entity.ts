@@ -6,6 +6,9 @@ export interface ServerMemberProps {
   serverId: string;
   userId: string;
   role: ServerRole;
+  isMuted?: boolean;
+  mutedReason?: string | null;
+  mutedUntil?: Date | null;
   createdAt?: Date;
   username?: string;
 }
@@ -21,6 +24,22 @@ export class ServerMember extends Entity<ServerMemberProps> {
 
   get role(): ServerRole {
     return this.props.role;
+  }
+
+  get isMuted(): boolean {
+    if (!this.props.isMuted) return false;
+    if (this.props.mutedUntil && new Date() > this.props.mutedUntil) {
+      return false;
+    }
+    return true;
+  }
+
+  get mutedReason(): string | null | undefined {
+    return this.props.mutedReason;
+  }
+
+  get mutedUntil(): Date | null | undefined {
+    return this.props.mutedUntil;
   }
 
   get createdAt(): Date {
@@ -47,6 +66,18 @@ export class ServerMember extends Entity<ServerMemberProps> {
     this.props.role = role;
   }
 
+  public mute(reason?: string, until?: Date): void {
+    this.props.isMuted = true;
+    this.props.mutedReason = reason?.trim() || null;
+    this.props.mutedUntil = until || null;
+  }
+
+  public unmute(): void {
+    this.props.isMuted = false;
+    this.props.mutedReason = null;
+    this.props.mutedUntil = null;
+  }
+
   private constructor(props: ServerMemberProps, id?: string) {
     super(props, id);
   }
@@ -58,6 +89,9 @@ export class ServerMember extends Entity<ServerMemberProps> {
 
     const member = new ServerMember({
       ...props,
+      isMuted: props.isMuted ?? false,
+      mutedReason: props.mutedReason ?? null,
+      mutedUntil: props.mutedUntil ?? null,
       createdAt: props.createdAt || new Date(),
     }, id);
 

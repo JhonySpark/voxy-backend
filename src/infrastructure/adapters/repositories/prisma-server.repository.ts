@@ -20,6 +20,9 @@ export class PrismaServerRepository implements IServerRepository {
           serverId: m.serverId || raw.id,
           userId: m.userId,
           role: ServerRole.create(m.role).getValue(),
+          isMuted: m.isMuted,
+          mutedReason: m.mutedReason,
+          mutedUntil: m.mutedUntil,
           createdAt: m.createdAt,
           username: m.user?.username,
         },
@@ -297,6 +300,7 @@ export class PrismaServerRepository implements IServerRepository {
         canDeleteMessages: permissions.canDeleteMessages ?? false,
         canKickMembers: permissions.canKickMembers ?? false,
         canBanMembers: permissions.canBanMembers ?? false,
+        canMuteMembers: permissions.canMuteMembers ?? (role === 'ADMIN' || role === 'MODERATOR'),
         canManageChannels: permissions.canManageChannels ?? false,
         canManageServer: permissions.canManageServer ?? false,
       },
@@ -305,9 +309,74 @@ export class PrismaServerRepository implements IServerRepository {
         ...(permissions.canDeleteMessages !== undefined ? { canDeleteMessages: permissions.canDeleteMessages } : {}),
         ...(permissions.canKickMembers !== undefined ? { canKickMembers: permissions.canKickMembers } : {}),
         ...(permissions.canBanMembers !== undefined ? { canBanMembers: permissions.canBanMembers } : {}),
+        ...(permissions.canMuteMembers !== undefined ? { canMuteMembers: permissions.canMuteMembers } : {}),
         ...(permissions.canManageChannels !== undefined ? { canManageChannels: permissions.canManageChannels } : {}),
         ...(permissions.canManageServer !== undefined ? { canManageServer: permissions.canManageServer } : {}),
       },
     });
+  }
+
+  async muteMember(serverId: string, userId: string, reason?: string, until?: Date): Promise<void> {
+    await this.prisma.serverMember.updateMany({
+      where: { serverId, userId },
+      data: {
+        isMuted: true,
+        mutedReason: reason || null,
+        mutedUntil: until || null,
+      },
+    });
+  }
+
+  async unmuteMember(serverId: string, userId: string): Promise<void> {
+    await this.prisma.serverMember.updateMany({
+      where: { serverId, userId },
+      data: {
+        isMuted: false,
+        mutedReason: null,
+        mutedUntil: null,
+      },
+    });
+  }
+
+  async isMemberMuted(serverId: string, userId: string): Promise<boolean> {
+    const member = await this.prisma.serverMember.findUnique({
+      where: { serverId_userId: { serverId, userId } },
+      select: { isMuted: true, mutedUntil: true },
+    });
+    if (!member || !member.isMuted) return false;
+    if (member.mutedUntil && new Date() > member.mutedUntil) {
+      return false;
+    }
+    return true;
+  }
+
+  async suspendServer(serverId: string, reason: string): Promise<void> {
+    await this.prisma.server.update({
+      where: { id: serverId },
+      data: {
+        isSuspended: true,
+        suspendedReason: reason,
+        suspendedAt: new Date(),
+      },
+    });
+  }
+
+  async unsuspendServer(serverId: string): Promise<void> {
+    await this.prisma.server.update({
+      where: { id: serverId },
+      data: {
+        isSuspended: false,
+        suspendedReason: null,
+        suspendedAt: null,
+      },
+    });
+  }
+
+  async isServerSuspended(serverId: string): Promise<boolean> {
+    const server = await this.prisma.server.findUnique({
+      where: { id: serverId },
+      select: { isSuspended: true },
+    });
+    return server?.isSuspended ?? false;
   }
 }
