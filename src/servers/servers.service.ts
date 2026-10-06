@@ -271,7 +271,12 @@ export class ServersService {
   }
 
   async getUserPermissions(serverId: string, userId: string) {
-    const server = await this.serverRepo.findById(serverId);
+    // Consultas independentes em paralelo: 1 round-trip ao banco em vez de 3 sequenciais
+    const [server, role, rolePerms] = await Promise.all([
+      this.serverRepo.findById(serverId),
+      this.serverRepo.getMemberRole(serverId, userId),
+      this.serverRepo.getRolePermissions(serverId),
+    ]);
     if (!server) throw new NotFoundException('Servidor não encontrado.');
 
     if (server.ownerId === userId) {
@@ -287,7 +292,6 @@ export class ServersService {
       };
     }
 
-    const role = await this.serverRepo.getMemberRole(serverId, userId);
     if (!role) throw new ForbiddenException('Você não é membro deste servidor.');
 
     const defaultPermissions: Record<string, {
@@ -328,7 +332,6 @@ export class ServersService {
       },
     };
 
-    const rolePerms = await this.serverRepo.getRolePermissions(serverId);
     const custom = rolePerms.find((p: any) => p.role === role);
 
     const base = defaultPermissions[role] || defaultPermissions.MEMBER;
@@ -379,10 +382,14 @@ export class ServersService {
   }
 
   async getServerMembers(serverId: string, requesterUserId: string) {
-    const isMember = await this.serverRepo.isMember(serverId, requesterUserId);
+    // Autorização e leitura em paralelo; o resultado só é devolvido se for membro
+    const [isMember, members] = await Promise.all([
+      this.serverRepo.isMember(serverId, requesterUserId),
+      this.serverRepo.getServerMembers(serverId),
+    ]);
     if (!isMember) throw new ForbiddenException('Você não é membro deste servidor.');
 
-    return this.serverRepo.getServerMembers(serverId);
+    return members;
   }
 
   async updateMemberRole(

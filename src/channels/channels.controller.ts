@@ -33,8 +33,14 @@ export class ChannelsController {
   }
 
   @Get(':channelId/messages')
-  async getMessages(@Request() req: any, @Param('channelId') channelId: string) {
-    return this.channelsService.getChannelMessages(channelId, req.user.sub);
+  async getMessages(
+    @Request() req: any,
+    @Param('channelId') channelId: string,
+    @Query('before') before?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    return this.channelsService.getChannelMessages(channelId, req.user.sub, before, parsedLimit);
   }
 
   @Delete(':channelId/messages/:messageId')

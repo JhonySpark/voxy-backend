@@ -56,7 +56,7 @@ describe('ChannelsController', () => {
 
     const result = await controller.getMessages(req, 'c1');
 
-    expect(channelsService.getChannelMessages).toHaveBeenCalledWith('c1', 'u1');
+    expect(channelsService.getChannelMessages).toHaveBeenCalledWith('c1', 'u1', undefined, undefined);
     expect(result).toEqual([{ id: 'm1' }]);
   });
 

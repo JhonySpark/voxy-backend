@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { IChannelRepository } from '../../../core/ports/repositories/channel.repository.port.js';
+import { IChannelRepository, MessagePageOptions } from '../../../core/ports/repositories/channel.repository.port.js';
 import { Channel } from '../../../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../../../modules/servers/domain/value-objects/channel-type.vo.js';
 
@@ -126,12 +126,20 @@ export class PrismaChannelRepository implements IChannelRepository {
     return msg;
   }
 
-  async getMessages(channelId: string): Promise<any[]> {
-    return this.prisma.channelMessage.findMany({
+  async getMessages(channelId: string, options: MessagePageOptions = {}): Promise<any[]> {
+    const { before, limit = 50 } = options;
+
+    // Busca as mais recentes primeiro (usa o índice channelId+createdAt) e
+    // devolve em ordem cronológica, como o cliente espera
+    const messages = await this.prisma.channelMessage.findMany({
       where: { channelId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit,
+      ...(before ? { cursor: { id: before }, skip: 1 } : {}),
       include: CHANNEL_MESSAGE_INCLUDE,
     });
+
+    return messages.reverse();
   }
 
   async findMessageById(messageId: string): Promise<any | null> {

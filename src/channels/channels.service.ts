@@ -63,8 +63,17 @@ export class ChannelsService {
     };
   }
 
-  async getChannelMessages(channelId: string, userId: string) {
-    const channel = await this.channelRepo.findById(channelId);
+  async getChannelMessages(channelId: string, userId: string, before?: string, limit?: number) {
+    const pageOptions = {
+      before,
+      limit: limit ? Math.min(Math.max(limit, 1), 100) : 50,
+    };
+
+    // Busca do canal e das mensagens em paralelo; nada é retornado antes da checagem de membro
+    const [channel, messages] = await Promise.all([
+      this.channelRepo.findById(channelId),
+      this.channelRepo.getMessages(channelId, pageOptions),
+    ]);
     if (!channel) throw new NotFoundException('Channel not found');
 
     const isMember = await this.serverRepo.isMember(channel.serverId, userId);
@@ -72,7 +81,7 @@ export class ChannelsService {
       throw new ForbiddenException('You are not a member of this server');
     }
 
-    return this.channelRepo.getMessages(channelId);
+    return messages;
   }
 
   async deleteChannel(channelId: string, userId: string): Promise<void> {

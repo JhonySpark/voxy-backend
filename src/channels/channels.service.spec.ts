@@ -140,7 +140,7 @@ describe('ChannelsService', () => {
 
       const result = await service.getChannelMessages('c1', 'u1');
 
-      expect(channelRepo.getMessages).toHaveBeenCalledWith('c1');
+      expect(channelRepo.getMessages).toHaveBeenCalledWith('c1', expect.objectContaining({ limit: 50 }));
       expect(result).toEqual(mockMessages);
     });
   });
