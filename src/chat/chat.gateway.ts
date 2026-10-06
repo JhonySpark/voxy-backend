@@ -73,6 +73,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         customStatus,
       });
 
+      // Cancel any pending disconnect timeouts for this userId
+      for (const [timeoutKey, timeout] of this.voiceDisconnectTimeouts.entries()) {
+        const [, timeoutUserId] = timeoutKey.split(':');
+        if (timeoutUserId === userId) {
+          clearTimeout(timeout);
+          this.voiceDisconnectTimeouts.delete(timeoutKey);
+        }
+      }
+
+      // Update socketId for active voice states
+      for (const [, participants] of this.voiceStates.entries()) {
+        const user = participants.get(userId);
+        if (user) {
+          user.socketId = client.id;
+        }
+      }
+
       // Send all current statuses to newly connected client
       const allStatuses: Record<string, { status: string; customStatus?: string }> = {};
       for (const [uid, s] of this.userStatuses.entries()) {
@@ -102,26 +119,49 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else {
         this.connectedUsers.delete(userId);
       }
+
+      const remainingSockets = this.userSockets.get(userId);
+      const isCompletelyDisconnected = !remainingSockets || remainingSockets.size === 0;
       
       // Cleanup voice states on sudden disconnect
       for (const [channelId, participants] of this.voiceStates.entries()) {
-        if (participants.has(client.id)) {
-          const user = participants.get(client.id);
-          const serverId = user?.serverId;
-          participants.delete(client.id);
-          
-          if (participants.size === 0) {
-            this.voiceStates.delete(channelId);
-            this.channelStartTimes.delete(channelId);
+        if (participants.has(userId)) {
+          const user = participants.get(userId)!;
+          const serverId = user.serverId || this.channelServerMap.get(channelId);
+
+          if (!isCompletelyDisconnected) {
+            // User still has another socket connected
+            user.socketId = Array.from(remainingSockets!)[0];
+            continue;
           }
-          
-          if (serverId) {
-            this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
-              channelId,
-              participants: Array.from(participants.values()),
-              startedAt: this.channelStartTimes.get(channelId)
-            });
+
+          // Grace period for sudden disconnect (e.g. temporary network drop / reconnect)
+          const timeoutKey = `${channelId}:${userId}`;
+          const existingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
           }
+
+          const timeout = setTimeout(() => {
+            this.voiceDisconnectTimeouts.delete(timeoutKey);
+            const currentParticipants = this.voiceStates.get(channelId);
+            if (currentParticipants && currentParticipants.has(userId)) {
+              currentParticipants.delete(userId);
+              if (currentParticipants.size === 0) {
+                this.voiceStates.delete(channelId);
+                this.channelStartTimes.delete(channelId);
+              }
+              if (serverId) {
+                this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
+                  channelId,
+                  participants: Array.from(currentParticipants.values()),
+                  startedAt: this.channelStartTimes.get(channelId),
+                });
+              }
+            }
+          }, 15000);
+
+          this.voiceDisconnectTimeouts.set(timeoutKey, timeout);
         }
       }
     }
@@ -314,19 +354,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isMuted: boolean;
       }
     >
-  >(); // channelId -> map of socketId -> user
+  >(); // channelId -> map of userId -> user
   private channelStartTimes = new Map<string, number>(); // channelId -> timestamp
+  private channelServerMap = new Map<string, string>(); // channelId -> serverId
+  private voiceDisconnectTimeouts = new Map<string, NodeJS.Timeout>(); // `${channelId}:${userId}` -> timeout
 
   @SubscribeMessage('joinServer')
   handleJoinServer(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
     client.join(`server-${data.serverId}`);
     
     for (const [channelId, participantsMap] of this.voiceStates.entries()) {
-      const participants = Array.from(participantsMap.values());
-      if (participants.length > 0 && participants[0].serverId === data.serverId) {
+      const serverId = this.channelServerMap.get(channelId) || participantsMap.values().next().value?.serverId;
+      if (serverId === data.serverId) {
         client.emit('serverVoiceUpdate', {
           channelId,
-          participants,
+          participants: Array.from(participantsMap.values()),
           startedAt: this.channelStartTimes.get(channelId)
         });
       }
@@ -440,27 +482,50 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { serverId: string; channelId: string; avatarUrl?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    const userId = client.data.user.sub;
     client.join(`voice-${data.channelId}`);
     
+    // Clear any pending disconnect timeout for this user in this channel
+    const timeoutKey = `${data.channelId}:${userId}`;
+    const pendingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+    if (pendingTimeout) {
+      clearTimeout(pendingTimeout);
+      this.voiceDisconnectTimeouts.delete(timeoutKey);
+    }
+
+    // Clean up if user was previously in another channel
+    for (const [chId, pMap] of this.voiceStates.entries()) {
+      if (chId !== data.channelId && pMap.has(userId)) {
+        const oldUser = pMap.get(userId)!;
+        pMap.delete(userId);
+        const oldServerId = oldUser.serverId || this.channelServerMap.get(chId);
+        if (pMap.size === 0) {
+          this.voiceStates.delete(chId);
+          this.channelStartTimes.delete(chId);
+        }
+        if (oldServerId) {
+          this.server.to(`server-${oldServerId}`).emit('serverVoiceUpdate', {
+            channelId: chId,
+            participants: Array.from(pMap.values()),
+            startedAt: this.channelStartTimes.get(chId),
+          });
+        }
+      }
+    }
+
     if (!this.voiceStates.has(data.channelId)) {
       this.voiceStates.set(data.channelId, new Map());
       this.channelStartTimes.set(data.channelId, Date.now());
     }
+    this.channelServerMap.set(data.channelId, data.serverId);
     const participants = this.voiceStates.get(data.channelId)!;
-    
-    // Prevent duplicate instances of the same user
-    for (const [socketId, user] of participants.entries()) {
-      if (user.userId === client.data.user.sub && socketId !== client.id) {
-        participants.delete(socketId);
-      }
-    }
 
     let avatarUrl = data.avatarUrl;
     let displayName = client.data.user.username;
     if (this.prisma) {
       try {
         const userRecord = await this.prisma.user.findUnique({
-          where: { id: client.data.user.sub },
+          where: { id: userId },
           select: { avatarUrl: true, displayName: true },
         });
         if (userRecord) {
@@ -470,19 +535,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } catch (_) {}
     }
 
-    participants.set(client.id, { 
-      userId: client.data.user.sub, 
+    const isMuted = participants.get(userId)?.isMuted ?? false;
+
+    participants.set(userId, { 
+      userId, 
       username: client.data.user.username,
       displayName,
       avatarUrl,
       socketId: client.id,
       serverId: data.serverId,
-      isMuted: false
+      isMuted
     });
 
     // Notify users in the voice room (for WebRTC)
     client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { 
-      userId: client.data.user.sub, 
+      userId, 
       username: client.data.user.username, 
       displayName,
       avatarUrl,
@@ -497,7 +564,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     this.logger?.logBusinessEvent('VOICE_USER_JOINED', {
-      userId: client.data.user.sub,
+      userId,
       channelId: data.channelId,
       serverId: data.serverId,
     });
@@ -505,17 +572,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('leaveVoice')
   handleLeaveVoice(@MessageBody() data: { serverId: string, channelId: string }, @ConnectedSocket() client: Socket) {
+    const userId = client.data.user.sub;
     client.leave(`voice-${data.channelId}`);
     
+    const timeoutKey = `${data.channelId}:${userId}`;
+    const pendingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+    if (pendingTimeout) {
+      clearTimeout(pendingTimeout);
+      this.voiceDisconnectTimeouts.delete(timeoutKey);
+    }
+
     if (this.voiceStates.has(data.channelId)) {
-      this.voiceStates.get(data.channelId)!.delete(client.id);
-      if (this.voiceStates.get(data.channelId)!.size === 0) {
+      const channelMap = this.voiceStates.get(data.channelId)!;
+      channelMap.delete(userId);
+      if (channelMap.size === 0) {
         this.voiceStates.delete(data.channelId);
         this.channelStartTimes.delete(data.channelId);
       }
     }
 
-    client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+    client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId, username: client.data.user.username, socketId: client.id });
     
     this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
       channelId: data.channelId,
@@ -524,7 +600,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     this.logger?.logBusinessEvent('VOICE_USER_LEFT', {
-      userId: client.data.user.sub,
+      userId,
       channelId: data.channelId,
       serverId: data.serverId,
     });
@@ -533,8 +609,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('updateVoiceMute')
   handleUpdateVoiceMute(@MessageBody() data: { serverId: string, channelId: string, isMuted: boolean }, @ConnectedSocket() client: Socket) {
     const channelState = this.voiceStates.get(data.channelId);
-    if (channelState && channelState.has(client.id)) {
-      const user = channelState.get(client.id)!;
+    const userId = client.data?.user?.sub;
+    if (channelState && userId && channelState.has(userId)) {
+      const user = channelState.get(userId)!;
       user.isMuted = data.isMuted;
       
       this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
