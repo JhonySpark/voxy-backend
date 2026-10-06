@@ -361,11 +361,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinServer')
   handleJoinServer(@MessageBody() data: { serverId: string }, @ConnectedSocket() client: Socket) {
+    if (!data?.serverId) return;
     client.join(`server-${data.serverId}`);
     
     for (const [channelId, participantsMap] of this.voiceStates.entries()) {
-      const serverId = this.channelServerMap.get(channelId) || participantsMap.values().next().value?.serverId;
-      if (serverId === data.serverId) {
+      const firstParticipant = participantsMap.values().next().value;
+      const serverId = this.channelServerMap.get(channelId) || firstParticipant?.serverId;
+      if (serverId && String(serverId) === String(data.serverId)) {
         client.emit('serverVoiceUpdate', {
           channelId,
           participants: Array.from(participantsMap.values()),
