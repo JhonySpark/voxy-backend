@@ -332,11 +332,44 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('serverMemberAction')
-  handleServerMemberAction(@MessageBody() data: { serverId: string; targetUserId?: string }, @ConnectedSocket() client: Socket) {
+  handleServerMemberAction(
+    @MessageBody() data: { serverId: string; targetUserId?: string; targetUserIds?: string[]; serverName?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!data?.serverId) return;
     this.server.to(`server-${data.serverId}`).emit('serverUpdated');
     this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
     if (data.targetUserId) {
-      this.server.to(data.targetUserId).emit('serverMembershipChanged', { serverId: data.serverId });
+      this.server.to(data.targetUserId).emit('serverMembershipChanged', {
+        serverId: data.serverId,
+        serverName: data.serverName,
+      });
+    }
+    if (Array.isArray(data.targetUserIds)) {
+      for (const uid of data.targetUserIds) {
+        this.server.to(uid).emit('serverMembershipChanged', {
+          serverId: data.serverId,
+          serverName: data.serverName,
+        });
+      }
+    }
+  }
+
+  @SubscribeMessage('serverMembersAdded')
+  handleServerMembersAdded(
+    @MessageBody() data: { serverId: string; userIds: string[]; serverName?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!data?.serverId) return;
+    this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+    this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+    if (Array.isArray(data.userIds)) {
+      for (const userId of data.userIds) {
+        this.server.to(userId).emit('serverMembershipChanged', {
+          serverId: data.serverId,
+          serverName: data.serverName,
+        });
+      }
     }
   }
 
@@ -399,20 +432,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('memberKicked')
   handleMemberKicked(
-    @MessageBody() data: { serverId: string; targetUserId: string },
+    @MessageBody() data: { serverId: string; targetUserId: string; serverName?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    if (!data?.serverId) return;
     this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
-    this.server.to(data.targetUserId).emit('memberKicked', { serverId: data.serverId });
+    this.server.to(data.targetUserId).emit('memberKicked', {
+      serverId: data.serverId,
+      userId: data.targetUserId,
+      serverName: data.serverName,
+    });
   }
 
   @SubscribeMessage('memberBanned')
   handleMemberBanned(
-    @MessageBody() data: { serverId: string; targetUserId: string; reason?: string },
+    @MessageBody() data: { serverId: string; targetUserId: string; reason?: string; serverName?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    if (!data?.serverId) return;
     this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
-    this.server.to(data.targetUserId).emit('memberBanned', { serverId: data.serverId, reason: data.reason });
+    this.server.to(data.targetUserId).emit('memberBanned', {
+      serverId: data.serverId,
+      userId: data.targetUserId,
+      reason: data.reason,
+      serverName: data.serverName,
+    });
   }
 
   @SubscribeMessage('memberMuted')

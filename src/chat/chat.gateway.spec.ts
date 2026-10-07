@@ -180,6 +180,44 @@ describe('ChatGateway', () => {
       expect(mockServer.to).toHaveBeenCalledWith('server-s1');
       expect(mockServer.emit).toHaveBeenCalledWith('serverUpdated');
     });
+
+    it('should handle serverMembersAdded and notify target users', () => {
+      const mockSocket: any = {};
+      gateway.handleServerMembersAdded(
+        { serverId: 's1', serverName: 'Test Server', userIds: ['u2', 'u3'] },
+        mockSocket,
+      );
+      expect(mockServer.to).toHaveBeenCalledWith('server-s1');
+      expect(mockServer.to).toHaveBeenCalledWith('u2');
+      expect(mockServer.to).toHaveBeenCalledWith('u3');
+      expect(mockServer.emit).toHaveBeenCalledWith('serverMembershipChanged', {
+        serverId: 's1',
+        serverName: 'Test Server',
+      });
+    });
+
+    it('should handle serverMemberAction with targetUserId and targetUserIds', () => {
+      const mockSocket: any = {};
+      gateway.handleServerMemberAction(
+        { serverId: 's1', serverName: 'Test Server', targetUserId: 'u2', targetUserIds: ['u3'] },
+        mockSocket,
+      );
+      expect(mockServer.to).toHaveBeenCalledWith('server-s1');
+      expect(mockServer.to).toHaveBeenCalledWith('u2');
+      expect(mockServer.to).toHaveBeenCalledWith('u3');
+    });
+
+    it('should handle memberKicked and notify target user', () => {
+      const mockSocket: any = {};
+      gateway.handleMemberKicked({ serverId: 's1', targetUserId: 'u2' }, mockSocket);
+      expect(mockServer.to).toHaveBeenCalledWith('server-s1');
+      expect(mockServer.to).toHaveBeenCalledWith('u2');
+      expect(mockServer.emit).toHaveBeenCalledWith('memberKicked', {
+        serverId: 's1',
+        userId: 'u2',
+        serverName: undefined,
+      });
+    });
   });
 
   describe('voice signaling and state', () => {
