@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource } from '@prisma/client';
 import crypto from 'node:crypto';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 
 export const AuthErrorCodes = {
   INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
@@ -43,6 +44,7 @@ export class AuthService {
     @Inject(PASSWORD_HASHER_PORT) private passwordHasher: IPasswordHasherPort,
     @Inject(EMAIL_SERVICE_PORT) private emailService: IEmailServicePort,
     @Optional() private logger?: BetterStackLoggerService,
+    @Optional() private systemConfigService?: SystemConfigService,
   ) {}
 
   async validateUser(emailOrUsername: string, pass: string): Promise<any> {
@@ -177,6 +179,16 @@ export class AuthService {
     maxUsers: number;
     remainingSlots: number;
   }> {
+    if (this.systemConfigService) {
+      const appStatus = await this.systemConfigService.getAppStatus();
+      return {
+        isOpen: appStatus.isBetaOpen,
+        currentUsers: appStatus.currentUsers,
+        maxUsers: appStatus.maxBetaUsers,
+        remainingSlots: appStatus.remainingSlots,
+      };
+    }
+
     const rawLimit = process.env.MAX_BETA_USERS;
     const maxUsers = rawLimit !== undefined && rawLimit !== '' ? parseInt(rawLimit, 10) : 50;
     const currentUsers = await this.prisma.user.count();

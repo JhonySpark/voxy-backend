@@ -12,6 +12,7 @@ import { StorageModule } from './modules/storage/storage.module.js';
 import { ModerationModule } from './moderation/moderation.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { SystemConfigModule } from './modules/system-config/system-config.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -36,6 +37,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     ScheduleModule.forRoot(),
     LoggingModule,
     HealthModule,
+    SystemConfigModule,
     PrismaModule, 
     UsersModule, 
     AuthModule, 

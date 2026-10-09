@@ -379,3 +379,15 @@ model SecurityAuditLog {
   @@index([createdAt])
 }
 
+model SystemConfig {
+  id                          String   @id @default("default")
+  allowRegistrations          Boolean  @default(true)
+  maxBetaUsers                Int      @default(50)
+  allowScreenShare            Boolean  @default(true)
+  maxVoiceParticipantsPerRoom Int      @default(8)
+  maxScreenShareBitrateKbps   Int      @default(2500)
+  maintenanceNotice           String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+

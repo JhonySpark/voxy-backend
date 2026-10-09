@@ -10,11 +10,13 @@ import { TOKEN_SERVICE_PORT } from '../core/ports/security/token-service.port.js
 import { JwtTokenServiceAdapter } from '../infrastructure/adapters/security/jwt-token.adapter.js';
 import { EMAIL_SERVICE_PORT } from '../core/ports/communication/email-service.port.js';
 import { ResendEmailAdapter } from '../infrastructure/adapters/communication/resend-email.adapter.js';
+import { SystemConfigModule } from '../modules/system-config/system-config.module.js';
 
 @Module({
   imports: [
     UsersModule,
     PrismaModule,
+    SystemConfigModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'secretKey',
