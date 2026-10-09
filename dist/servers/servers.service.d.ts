@@ -145,6 +145,9 @@ export declare class ServersService {
         success: boolean;
         role: string;
     }>;
+    leaveServer(serverId: string, userId: string): Promise<{
+        success: boolean;
+    }>;
     kickMember(serverId: string, requesterUserId: string, targetUserId: string): Promise<{
         success: boolean;
     }>;

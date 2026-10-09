@@ -160,4 +160,38 @@ describe('ServersService', () => {
       expect(result.id).toBe('s1');
     });
   });
+
+  describe('leaveServer', () => {
+    it('should throw NotFoundException if server does not exist', async () => {
+      serverRepo.findById.mockResolvedValue(null);
+      await expect(service.leaveServer('s1', 'u1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if user is the server owner', async () => {
+      const server = createDomainServer('s1', 'Voxy', 'u_owner');
+      serverRepo.findById.mockResolvedValue(server);
+
+      await expect(service.leaveServer('s1', 'u_owner')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException if user is not a member of the server', async () => {
+      const server = createDomainServer('s1', 'Voxy', 'u_owner');
+      serverRepo.findById.mockResolvedValue(server);
+      serverRepo.getMemberRole.mockResolvedValue(null);
+
+      await expect(service.leaveServer('s1', 'u_stranger')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should remove member if non-owner member requests to leave', async () => {
+      const server = createDomainServer('s1', 'Voxy', 'u_owner');
+      serverRepo.findById.mockResolvedValue(server);
+      serverRepo.getMemberRole.mockResolvedValue('MEMBER');
+      serverRepo.removeMember.mockResolvedValue(undefined);
+
+      const result = await service.leaveServer('s1', 'u_member');
+
+      expect(serverRepo.removeMember).toHaveBeenCalledWith('s1', 'u_member');
+      expect(result).toEqual({ success: true });
+    });
+  });
 });

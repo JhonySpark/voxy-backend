@@ -36,6 +36,9 @@ let ServersController = class ServersController {
     async deleteServer(req, serverId) {
         return this.serversService.deleteServer(serverId, req.user.sub);
     }
+    async leaveServer(req, serverId) {
+        return this.serversService.leaveServer(serverId, req.user.sub);
+    }
     async getServerMembers(req, serverId) {
         return this.serversService.getServerMembers(serverId, req.user.sub);
     }
@@ -131,6 +134,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ServersController.prototype, "deleteServer", null);
+__decorate([
+    Post(':id/leave'),
+    __param(0, Request()),
+    __param(1, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ServersController.prototype, "leaveServer", null);
 __decorate([
     Get(':id/members'),
     __param(0, Request()),

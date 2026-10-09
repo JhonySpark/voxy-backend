@@ -47,6 +47,11 @@ export class ServersController {
     return this.serversService.deleteServer(serverId, req.user.sub);
   }
 
+  @Post(':id/leave')
+  async leaveServer(@Request() req: any, @Param('id') serverId: string) {
+    return this.serversService.leaveServer(serverId, req.user.sub);
+  }
+
   @Get(':id/members')
   async getServerMembers(@Request() req: any, @Param('id') serverId: string) {
     return this.serversService.getServerMembers(serverId, req.user.sub);

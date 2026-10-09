@@ -356,6 +356,20 @@ let ServersService = class ServersService {
         await this.serverRepo.updateMemberRole(serverId, targetUserId, newRole);
         return { success: true, role: newRole };
     }
+    async leaveServer(serverId, userId) {
+        const server = await this.serverRepo.findById(serverId);
+        if (!server)
+            throw new NotFoundException('Servidor não encontrado.');
+        if (server.ownerId === userId) {
+            throw new ForbiddenException('O proprietário não pode sair do servidor. Transfira a posse ou exclua o servidor.');
+        }
+        const memberRole = await this.serverRepo.getMemberRole(serverId, userId);
+        if (!memberRole) {
+            throw new NotFoundException('Você não é membro deste servidor.');
+        }
+        await this.serverRepo.removeMember(serverId, userId);
+        return { success: true };
+    }
     async kickMember(serverId, requesterUserId, targetUserId) {
         const permissions = await this.getUserPermissions(serverId, requesterUserId);
         if (!permissions.canKickMembers && permissions.role !== 'OWNER') {

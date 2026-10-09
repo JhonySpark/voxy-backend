@@ -121,6 +121,9 @@ export declare class ServersController {
     deleteServer(req: any, serverId: string): Promise<{
         success: boolean;
     }>;
+    leaveServer(req: any, serverId: string): Promise<{
+        success: boolean;
+    }>;
     getServerMembers(req: any, serverId: string): Promise<any[]>;
     addMembers(req: any, serverId: string, userIds: string[]): Promise<{
         added: string[];
