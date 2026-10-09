@@ -20,6 +20,7 @@ describe('AuthController', () => {
       login: vi.fn(),
       register: vi.fn(),
       checkUsername: vi.fn(),
+      getBetaStatus: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -80,6 +81,18 @@ describe('AuthController', () => {
 
       expect(authService.checkUsername).toHaveBeenCalledWith('testuser');
       expect(result).toEqual({ available: true, message: 'Disponível' });
+    });
+  });
+
+  describe('getBetaStatus', () => {
+    it('should return beta status from authService', async () => {
+      const mockStatus = { isOpen: true, currentUsers: 10, maxUsers: 50, remainingSlots: 40 };
+      authService.getBetaStatus.mockResolvedValue(mockStatus);
+
+      const result = await controller.getBetaStatus();
+
+      expect(authService.getBetaStatus).toHaveBeenCalled();
+      expect(result).toEqual(mockStatus);
     });
   });
 });

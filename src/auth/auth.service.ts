@@ -30,6 +30,8 @@ export const AuthErrorCodes = {
   VERIFICATION_CODE_EXPIRED: 'AUTH_VERIFICATION_CODE_EXPIRED',
   ACCOUNT_CHILD_RESTRICTED: 'AUTH_ACCOUNT_CHILD_RESTRICTED',
   ACCOUNT_SUSPENDED: 'AUTH_ACCOUNT_SUSPENDED',
+  BETA_LIMIT_REACHED: 'AUTH_BETA_LIMIT_REACHED',
+  TERMS_NOT_ACCEPTED: 'AUTH_TERMS_NOT_ACCEPTED',
 } as const;
 
 @Injectable()
@@ -169,7 +171,52 @@ export class AuthService {
     return code;
   }
 
-  async register(data: { email: string; username: string; password?: string; birthDate: string }) {
+  async getBetaStatus(): Promise<{
+    isOpen: boolean;
+    currentUsers: number;
+    maxUsers: number;
+    remainingSlots: number;
+  }> {
+    const rawLimit = process.env.MAX_BETA_USERS;
+    const maxUsers = rawLimit !== undefined && rawLimit !== '' ? parseInt(rawLimit, 10) : 50;
+    const currentUsers = await this.prisma.user.count();
+
+    const isUnlimited = maxUsers <= 0;
+    const remainingSlots = isUnlimited ? 9999 : Math.max(0, maxUsers - currentUsers);
+    const isOpen = isUnlimited || remainingSlots > 0;
+
+    return {
+      isOpen,
+      currentUsers,
+      maxUsers: isUnlimited ? 0 : maxUsers,
+      remainingSlots,
+    };
+  }
+
+  async register(data: {
+    email: string;
+    username: string;
+    password?: string;
+    birthDate: string;
+    acceptTerms?: boolean;
+  }) {
+    // 0. Checar limite de vagas da fase Beta
+    const betaStatus = await this.getBetaStatus();
+    if (!betaStatus.isOpen) {
+      throw new BadRequestException({
+        code: AuthErrorCodes.BETA_LIMIT_REACHED,
+        message: `O limite de vagas para a fase beta (${betaStatus.maxUsers} usuários) foi atingido. Novas vagas serão abertas em breve!`,
+      });
+    }
+
+    // 0.1 Validar consentimento de termos e privacidade
+    if (data.acceptTerms !== undefined && !data.acceptTerms) {
+      throw new BadRequestException({
+        code: AuthErrorCodes.TERMS_NOT_ACCEPTED,
+        message: 'Você precisa aceitar os Termos de Uso, Política de Privacidade e Diretrizes da ANPD para continuar.',
+      });
+    }
+
     // 1. Validar formato de e-mail via Value Object
     const emailOrError = Email.create(data.email || '');
     if (emailOrError.isFailure) {
@@ -248,6 +295,8 @@ export class AuthService {
       email: user.email,
       username: user.username,
       ageClassification: user.ageClassification,
+      termsAccepted: true,
+      termsAcceptedAt: new Date().toISOString(),
     });
 
     return {

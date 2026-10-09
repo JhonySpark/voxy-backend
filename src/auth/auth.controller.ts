@@ -18,8 +18,22 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Get('beta-status')
+  async getBetaStatus() {
+    return this.authService.getBetaStatus();
+  }
+
   @Post('register')
-  async register(@Body() body: { email: string; username: string; password?: string; birthDate: string }) {
+  async register(
+    @Body()
+    body: {
+      email: string;
+      username: string;
+      password?: string;
+      birthDate: string;
+      acceptTerms?: boolean;
+    }
+  ) {
     return this.authService.register(body);
   }
 

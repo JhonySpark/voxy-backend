@@ -58,6 +58,7 @@ describe('AuthService', () => {
       user: {
         update: vi.fn().mockResolvedValue({ id: 'u1' }),
         findUnique: vi.fn().mockResolvedValue({ id: 'u1', isEmailVerified: true }),
+        count: vi.fn().mockResolvedValue(0),
       },
     };
 
@@ -268,6 +269,51 @@ describe('AuthService', () => {
         message: expect.any(String),
       });
       expect((result as any).password).toBeUndefined();
+    });
+
+    it('should throw BadRequestException if beta user capacity is reached', async () => {
+      prisma.user.count.mockResolvedValue(50);
+
+      await expect(
+        service.register({
+          email: 'beta51@example.com',
+          username: 'beta51',
+          password: 'ValidPass@123',
+          birthDate: '2000-01-01',
+        })
+      ).rejects.toThrow('O limite de vagas para a fase beta');
+    });
+
+    it('should throw BadRequestException if acceptTerms is explicitly false', async () => {
+      await expect(
+        service.register({
+          email: 'valid@example.com',
+          username: 'valid_user',
+          password: 'ValidPass@123',
+          birthDate: '2000-01-01',
+          acceptTerms: false,
+        })
+      ).rejects.toThrow('Você precisa aceitar os Termos de Uso');
+    });
+  });
+
+  describe('getBetaStatus', () => {
+    it('should return correct slots and isOpen status when under capacity', async () => {
+      prisma.user.count.mockResolvedValue(10);
+      const status = await service.getBetaStatus();
+
+      expect(status.isOpen).toBe(true);
+      expect(status.currentUsers).toBe(10);
+      expect(status.maxUsers).toBe(50);
+      expect(status.remainingSlots).toBe(40);
+    });
+
+    it('should return isOpen false when capacity is reached', async () => {
+      prisma.user.count.mockResolvedValue(50);
+      const status = await service.getBetaStatus();
+
+      expect(status.isOpen).toBe(false);
+      expect(status.remainingSlots).toBe(0);
     });
   });
 });
