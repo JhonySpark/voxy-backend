@@ -19,18 +19,22 @@ import { ChannelType } from '../modules/servers/domain/value-objects/channel-typ
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassificationEnum } from '../core/enums/index.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
+import { AuditLogActionEnum } from '../core/enums/moderation.enums.js';
 let ChannelsService = class ChannelsService {
     channelRepo;
     serverRepo;
     voiceEngine;
     prisma;
     logger;
-    constructor(channelRepo, serverRepo, voiceEngine, prisma, logger) {
+    auditService;
+    constructor(channelRepo, serverRepo, voiceEngine, prisma, logger, auditService) {
         this.channelRepo = channelRepo;
         this.serverRepo = serverRepo;
         this.voiceEngine = voiceEngine;
         this.prisma = prisma;
         this.logger = logger;
+        this.auditService = auditService;
     }
     async createChannel(serverId, userId, name, type = 'TEXT') {
         const role = await this.serverRepo.getMemberRole(serverId, userId);
@@ -54,15 +58,22 @@ let ChannelsService = class ChannelsService {
             serverId: created.serverId,
         };
     }
-    async getChannelMessages(channelId, userId) {
-        const channel = await this.channelRepo.findById(channelId);
+    async getChannelMessages(channelId, userId, before, limit) {
+        const pageOptions = {
+            before,
+            limit: limit ? Math.min(Math.max(limit, 1), 100) : 50,
+        };
+        const [channel, messages] = await Promise.all([
+            this.channelRepo.findById(channelId),
+            this.channelRepo.getMessages(channelId, pageOptions),
+        ]);
         if (!channel)
             throw new NotFoundException('Channel not found');
         const isMember = await this.serverRepo.isMember(channel.serverId, userId);
         if (!isMember) {
             throw new ForbiddenException('You are not a member of this server');
         }
-        return this.channelRepo.getMessages(channelId);
+        return messages;
     }
     async deleteChannel(channelId, userId) {
         const channel = await this.channelRepo.findById(channelId);
@@ -208,6 +219,21 @@ let ChannelsService = class ChannelsService {
             serverId: channel.serverId,
             isScreen: Boolean(isScreen),
         });
+        if (isScreen && this.auditService) {
+            await this.auditService.record({
+                action: AuditLogActionEnum.STREAM_STARTED,
+                actorId: user.sub,
+                targetType: 'STREAM',
+                targetId: channelId,
+                serverId: channel.serverId,
+                reason: 'Início de transmissão de tela/jogo',
+                metadata: {
+                    channelId,
+                    channelName: channel.name,
+                    username: user.username,
+                },
+            });
+        }
         return { token };
     }
 };
@@ -217,8 +243,10 @@ ChannelsService = __decorate([
     __param(1, Inject(SERVER_REPOSITORY)),
     __param(2, Inject(VOICE_ENGINE_PORT)),
     __param(4, Optional()),
+    __param(5, Optional()),
     __metadata("design:paramtypes", [Object, Object, Object, PrismaService,
-        BetterStackLoggerService])
+        BetterStackLoggerService,
+        SecurityAuditService])
 ], ChannelsService);
 export { ChannelsService };
 //# sourceMappingURL=channels.service.js.map

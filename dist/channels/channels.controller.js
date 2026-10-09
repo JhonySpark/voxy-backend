@@ -28,8 +28,9 @@ let ChannelsController = class ChannelsController {
     async renameChannel(req, channelId, name) {
         return this.channelsService.renameChannel(channelId, req.user.sub, name);
     }
-    async getMessages(req, channelId) {
-        return this.channelsService.getChannelMessages(channelId, req.user.sub);
+    async getMessages(req, channelId, before, limit) {
+        const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+        return this.channelsService.getChannelMessages(channelId, req.user.sub, before, parsedLimit);
     }
     async deleteMessage(req, channelId, messageId) {
         return this.channelsService.deleteChannelMessage(channelId, messageId, req.user.sub);
@@ -78,8 +79,10 @@ __decorate([
     Get(':channelId/messages'),
     __param(0, Request()),
     __param(1, Param('channelId')),
+    __param(2, Query('before')),
+    __param(3, Query('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], ChannelsController.prototype, "getMessages", null);
 __decorate([

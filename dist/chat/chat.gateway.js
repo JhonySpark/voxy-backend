@@ -66,6 +66,19 @@ let ChatGateway = class ChatGateway {
                 status: userStatus,
                 customStatus,
             });
+            for (const [timeoutKey, timeout] of this.voiceDisconnectTimeouts.entries()) {
+                const [, timeoutUserId] = timeoutKey.split(':');
+                if (timeoutUserId === userId) {
+                    clearTimeout(timeout);
+                    this.voiceDisconnectTimeouts.delete(timeoutKey);
+                }
+            }
+            for (const [, participants] of this.voiceStates.entries()) {
+                const user = participants.get(userId);
+                if (user) {
+                    user.socketId = client.id;
+                }
+            }
             const allStatuses = {};
             for (const [uid, s] of this.userStatuses.entries()) {
                 allStatuses[uid] = s;
@@ -95,22 +108,40 @@ let ChatGateway = class ChatGateway {
             else {
                 this.connectedUsers.delete(userId);
             }
+            const remainingSockets = this.userSockets.get(userId);
+            const isCompletelyDisconnected = !remainingSockets || remainingSockets.size === 0;
             for (const [channelId, participants] of this.voiceStates.entries()) {
-                if (participants.has(client.id)) {
-                    const user = participants.get(client.id);
-                    const serverId = user?.serverId;
-                    participants.delete(client.id);
-                    if (participants.size === 0) {
-                        this.voiceStates.delete(channelId);
-                        this.channelStartTimes.delete(channelId);
+                if (participants.has(userId)) {
+                    const user = participants.get(userId);
+                    const serverId = user.serverId || this.channelServerMap.get(channelId);
+                    if (!isCompletelyDisconnected) {
+                        user.socketId = Array.from(remainingSockets)[0];
+                        continue;
                     }
-                    if (serverId) {
-                        this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
-                            channelId,
-                            participants: Array.from(participants.values()),
-                            startedAt: this.channelStartTimes.get(channelId)
-                        });
+                    const timeoutKey = `${channelId}:${userId}`;
+                    const existingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+                    if (existingTimeout) {
+                        clearTimeout(existingTimeout);
                     }
+                    const timeout = setTimeout(() => {
+                        this.voiceDisconnectTimeouts.delete(timeoutKey);
+                        const currentParticipants = this.voiceStates.get(channelId);
+                        if (currentParticipants && currentParticipants.has(userId)) {
+                            currentParticipants.delete(userId);
+                            if (currentParticipants.size === 0) {
+                                this.voiceStates.delete(channelId);
+                                this.channelStartTimes.delete(channelId);
+                            }
+                            if (serverId) {
+                                this.server.to(`server-${serverId}`).emit('serverVoiceUpdate', {
+                                    channelId,
+                                    participants: Array.from(currentParticipants.values()),
+                                    startedAt: this.channelStartTimes.get(channelId),
+                                });
+                            }
+                        }
+                    }, 15000);
+                    this.voiceDisconnectTimeouts.set(timeoutKey, timeout);
                 }
             }
         }
@@ -212,22 +243,54 @@ let ChatGateway = class ChatGateway {
         this.server.emit('serverDeleted', { serverId: data.serverId });
     }
     handleServerMemberAction(data, client) {
+        if (!data?.serverId)
+            return;
         this.server.to(`server-${data.serverId}`).emit('serverUpdated');
         this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
         if (data.targetUserId) {
-            this.server.to(data.targetUserId).emit('serverMembershipChanged', { serverId: data.serverId });
+            this.server.to(data.targetUserId).emit('serverMembershipChanged', {
+                serverId: data.serverId,
+                serverName: data.serverName,
+            });
+        }
+        if (Array.isArray(data.targetUserIds)) {
+            for (const uid of data.targetUserIds) {
+                this.server.to(uid).emit('serverMembershipChanged', {
+                    serverId: data.serverId,
+                    serverName: data.serverName,
+                });
+            }
+        }
+    }
+    handleServerMembersAdded(data, client) {
+        if (!data?.serverId)
+            return;
+        this.server.to(`server-${data.serverId}`).emit('serverUpdated');
+        this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
+        if (Array.isArray(data.userIds)) {
+            for (const userId of data.userIds) {
+                this.server.to(userId).emit('serverMembershipChanged', {
+                    serverId: data.serverId,
+                    serverName: data.serverName,
+                });
+            }
         }
     }
     voiceStates = new Map();
     channelStartTimes = new Map();
+    channelServerMap = new Map();
+    voiceDisconnectTimeouts = new Map();
     handleJoinServer(data, client) {
+        if (!data?.serverId)
+            return;
         client.join(`server-${data.serverId}`);
         for (const [channelId, participantsMap] of this.voiceStates.entries()) {
-            const participants = Array.from(participantsMap.values());
-            if (participants.length > 0 && participants[0].serverId === data.serverId) {
+            const firstParticipant = participantsMap.values().next().value;
+            const serverId = this.channelServerMap.get(channelId) || firstParticipant?.serverId;
+            if (serverId && String(serverId) === String(data.serverId)) {
                 client.emit('serverVoiceUpdate', {
                     channelId,
-                    participants,
+                    participants: Array.from(participantsMap.values()),
                     startedAt: this.channelStartTimes.get(channelId)
                 });
             }
@@ -237,7 +300,15 @@ let ChatGateway = class ChatGateway {
         client.leave(`server-${data.serverId}`);
     }
     handleFriendAction(data, client) {
-        this.server.to(data.targetId).emit('friendActionUpdate');
+        if (data.actionType) {
+            this.server.to(data.targetId).emit('friendActionUpdate', {
+                actionType: data.actionType,
+                sender: data.sender || client.data?.user || null,
+            });
+        }
+        else {
+            this.server.to(data.targetId).emit('friendActionUpdate');
+        }
     }
     handleChannelCreated(data, client) {
         this.server.to(`server-${data.serverId}`).emit('serverUpdated');
@@ -246,12 +317,25 @@ let ChatGateway = class ChatGateway {
         this.server.to(`server-${data.serverId}`).emit('serverUpdated');
     }
     handleMemberKicked(data, client) {
+        if (!data?.serverId)
+            return;
         this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
-        this.server.to(data.targetUserId).emit('memberKicked', { serverId: data.serverId });
+        this.server.to(data.targetUserId).emit('memberKicked', {
+            serverId: data.serverId,
+            userId: data.targetUserId,
+            serverName: data.serverName,
+        });
     }
     handleMemberBanned(data, client) {
+        if (!data?.serverId)
+            return;
         this.server.to(`server-${data.serverId}`).emit('serverMembersUpdated', { serverId: data.serverId });
-        this.server.to(data.targetUserId).emit('memberBanned', { serverId: data.serverId, reason: data.reason });
+        this.server.to(data.targetUserId).emit('memberBanned', {
+            serverId: data.serverId,
+            userId: data.targetUserId,
+            reason: data.reason,
+            serverName: data.serverName,
+        });
     }
     handleMemberMuted(data, client) {
         this.server.to(`server-${data.serverId}`).emit('serverMemberMuted', data);
@@ -289,23 +373,44 @@ let ChatGateway = class ChatGateway {
         }
     }
     async handleJoinVoice(data, client) {
+        const userId = client.data.user.sub;
         client.join(`voice-${data.channelId}`);
+        const timeoutKey = `${data.channelId}:${userId}`;
+        const pendingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+        if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+            this.voiceDisconnectTimeouts.delete(timeoutKey);
+        }
+        for (const [chId, pMap] of this.voiceStates.entries()) {
+            if (chId !== data.channelId && pMap.has(userId)) {
+                const oldUser = pMap.get(userId);
+                pMap.delete(userId);
+                const oldServerId = oldUser.serverId || this.channelServerMap.get(chId);
+                if (pMap.size === 0) {
+                    this.voiceStates.delete(chId);
+                    this.channelStartTimes.delete(chId);
+                }
+                if (oldServerId) {
+                    this.server.to(`server-${oldServerId}`).emit('serverVoiceUpdate', {
+                        channelId: chId,
+                        participants: Array.from(pMap.values()),
+                        startedAt: this.channelStartTimes.get(chId),
+                    });
+                }
+            }
+        }
         if (!this.voiceStates.has(data.channelId)) {
             this.voiceStates.set(data.channelId, new Map());
             this.channelStartTimes.set(data.channelId, Date.now());
         }
+        this.channelServerMap.set(data.channelId, data.serverId);
         const participants = this.voiceStates.get(data.channelId);
-        for (const [socketId, user] of participants.entries()) {
-            if (user.userId === client.data.user.sub && socketId !== client.id) {
-                participants.delete(socketId);
-            }
-        }
         let avatarUrl = data.avatarUrl;
         let displayName = client.data.user.username;
         if (this.prisma) {
             try {
                 const userRecord = await this.prisma.user.findUnique({
-                    where: { id: client.data.user.sub },
+                    where: { id: userId },
                     select: { avatarUrl: true, displayName: true },
                 });
                 if (userRecord) {
@@ -315,17 +420,18 @@ let ChatGateway = class ChatGateway {
             }
             catch (_) { }
         }
-        participants.set(client.id, {
-            userId: client.data.user.sub,
+        const isMuted = participants.get(userId)?.isMuted ?? false;
+        participants.set(userId, {
+            userId,
             username: client.data.user.username,
             displayName,
             avatarUrl,
             socketId: client.id,
             serverId: data.serverId,
-            isMuted: false
+            isMuted
         });
         client.to(`voice-${data.channelId}`).emit('userJoinedVoice', {
-            userId: client.data.user.sub,
+            userId,
             username: client.data.user.username,
             displayName,
             avatarUrl,
@@ -337,36 +443,45 @@ let ChatGateway = class ChatGateway {
             startedAt: this.channelStartTimes.get(data.channelId)
         });
         this.logger?.logBusinessEvent('VOICE_USER_JOINED', {
-            userId: client.data.user.sub,
+            userId,
             channelId: data.channelId,
             serverId: data.serverId,
         });
     }
     handleLeaveVoice(data, client) {
+        const userId = client.data.user.sub;
         client.leave(`voice-${data.channelId}`);
+        const timeoutKey = `${data.channelId}:${userId}`;
+        const pendingTimeout = this.voiceDisconnectTimeouts.get(timeoutKey);
+        if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+            this.voiceDisconnectTimeouts.delete(timeoutKey);
+        }
         if (this.voiceStates.has(data.channelId)) {
-            this.voiceStates.get(data.channelId).delete(client.id);
-            if (this.voiceStates.get(data.channelId).size === 0) {
+            const channelMap = this.voiceStates.get(data.channelId);
+            channelMap.delete(userId);
+            if (channelMap.size === 0) {
                 this.voiceStates.delete(data.channelId);
                 this.channelStartTimes.delete(data.channelId);
             }
         }
-        client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId: client.data.user.sub, username: client.data.user.username, socketId: client.id });
+        client.to(`voice-${data.channelId}`).emit('userLeftVoice', { userId, username: client.data.user.username, socketId: client.id });
         this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
             channelId: data.channelId,
             participants: Array.from(this.voiceStates.get(data.channelId)?.values() || []),
             startedAt: this.channelStartTimes.get(data.channelId)
         });
         this.logger?.logBusinessEvent('VOICE_USER_LEFT', {
-            userId: client.data.user.sub,
+            userId,
             channelId: data.channelId,
             serverId: data.serverId,
         });
     }
     handleUpdateVoiceMute(data, client) {
         const channelState = this.voiceStates.get(data.channelId);
-        if (channelState && channelState.has(client.id)) {
-            const user = channelState.get(client.id);
+        const userId = client.data?.user?.sub;
+        if (channelState && userId && channelState.has(userId)) {
+            const user = channelState.get(userId);
             user.isMuted = data.isMuted;
             this.server.to(`server-${data.serverId}`).emit('serverVoiceUpdate', {
                 channelId: data.channelId,
@@ -497,6 +612,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Socket]),
     __metadata("design:returntype", void 0)
 ], ChatGateway.prototype, "handleServerMemberAction", null);
+__decorate([
+    SubscribeMessage('serverMembersAdded'),
+    __param(0, MessageBody()),
+    __param(1, ConnectedSocket()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Socket]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleServerMembersAdded", null);
 __decorate([
     SubscribeMessage('joinServer'),
     __param(0, MessageBody()),

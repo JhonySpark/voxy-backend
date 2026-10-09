@@ -70,9 +70,18 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleServerMemberAction(data: {
         serverId: string;
         targetUserId?: string;
+        targetUserIds?: string[];
+        serverName?: string;
+    }, client: Socket): void;
+    handleServerMembersAdded(data: {
+        serverId: string;
+        userIds: string[];
+        serverName?: string;
     }, client: Socket): void;
     private voiceStates;
     private channelStartTimes;
+    private channelServerMap;
+    private voiceDisconnectTimeouts;
     handleJoinServer(data: {
         serverId: string;
     }, client: Socket): void;
@@ -81,6 +90,8 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     }, client: Socket): void;
     handleFriendAction(data: {
         targetId: string;
+        actionType?: string;
+        sender?: any;
     }, client: Socket): void;
     handleChannelCreated(data: {
         serverId: string;
@@ -91,11 +102,13 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     handleMemberKicked(data: {
         serverId: string;
         targetUserId: string;
+        serverName?: string;
     }, client: Socket): void;
     handleMemberBanned(data: {
         serverId: string;
         targetUserId: string;
         reason?: string;
+        serverName?: string;
     }, client: Socket): void;
     handleMemberMuted(data: {
         serverId: string;

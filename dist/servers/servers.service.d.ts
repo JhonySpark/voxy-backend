@@ -1,9 +1,11 @@
 import type { IServerRepository } from '../core/ports/repositories/server.repository.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
 export declare class ServersService {
     private readonly serverRepo;
     private readonly prisma;
-    constructor(serverRepo: IServerRepository, prisma: PrismaService);
+    private readonly auditService;
+    constructor(serverRepo: IServerRepository, prisma: PrismaService, auditService: SecurityAuditService);
     private generateInviteCode;
     createServer(ownerId: string, name: string, is18Plus?: boolean, iconUrl?: string, iconKey?: string): Promise<{
         id: string;
@@ -163,5 +165,9 @@ export declare class ServersService {
     unmuteMember(serverId: string, requesterUserId: string, targetUserId: string): Promise<{
         success: boolean;
         isMuted: boolean;
+    }>;
+    getServerAuditLogs(serverId: string, requesterUserId: string, filter: any): Promise<{
+        logs: import("../core/ports/repositories/security-audit-log.repository.port.js").SecurityAuditLogWithActor[];
+        total: number;
     }>;
 }

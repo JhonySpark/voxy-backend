@@ -3,20 +3,22 @@ import type { IServerRepository } from '../core/ports/repositories/server.reposi
 import type { IVoiceEnginePort } from '../core/ports/voice-engine.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
 export declare class ChannelsService {
     private readonly channelRepo;
     private readonly serverRepo;
     private readonly voiceEngine;
     private readonly prisma;
     private readonly logger?;
-    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService, logger?: BetterStackLoggerService | undefined);
+    private readonly auditService?;
+    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService, logger?: BetterStackLoggerService | undefined, auditService?: SecurityAuditService | undefined);
     createChannel(serverId: string, userId: string, name: string, type?: 'TEXT' | 'VOICE'): Promise<{
         id: string;
         name: string;
         type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
         serverId: string;
     }>;
-    getChannelMessages(channelId: string, userId: string): Promise<any[]>;
+    getChannelMessages(channelId: string, userId: string, before?: string, limit?: number): Promise<any[]>;
     deleteChannel(channelId: string, userId: string): Promise<void>;
     renameChannel(channelId: string, userId: string, name: string): Promise<{
         id: string;

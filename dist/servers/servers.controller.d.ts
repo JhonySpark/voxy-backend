@@ -161,4 +161,8 @@ export declare class ServersController {
         canManageChannels: any;
         canManageServer: any;
     }>;
+    getServerAuditLogs(req: any, serverId: string, action?: any, limit?: string, offset?: string): Promise<{
+        logs: import("../core/ports/repositories/security-audit-log.repository.port.js").SecurityAuditLogWithActor[];
+        total: number;
+    }>;
 }

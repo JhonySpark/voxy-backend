@@ -14,13 +14,16 @@ import { Injectable, ForbiddenException, NotFoundException, Inject } from '@nest
 import { SERVER_REPOSITORY } from '../core/ports/repositories/server.repository.port.js';
 import { Server } from '../modules/servers/domain/entities/server.entity.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { AgeClassificationEnum } from '../core/enums/index.js';
+import { AgeClassificationEnum, AuditLogActionEnum } from '../core/enums/index.js';
+import { SecurityAuditService } from '../moderation/security-audit.service.js';
 let ServersService = class ServersService {
     serverRepo;
     prisma;
-    constructor(serverRepo, prisma) {
+    auditService;
+    constructor(serverRepo, prisma, auditService) {
         this.serverRepo = serverRepo;
         this.prisma = prisma;
+        this.auditService = auditService;
     }
     async generateInviteCode() {
         const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -57,6 +60,15 @@ let ServersService = class ServersService {
                 iconUrl: iconUrl || null,
                 iconKey: iconKey || null,
             },
+        });
+        await this.auditService.record({
+            action: AuditLogActionEnum.SERVER_CREATED,
+            actorId: ownerId,
+            targetType: 'SERVER',
+            targetId: created.id,
+            serverId: created.id,
+            reason: 'Criação de servidor',
+            metadata: { serverName: name, is18Plus: is18Plus === true },
         });
         return {
             id: created.id,
@@ -226,7 +238,11 @@ let ServersService = class ServersService {
         return this.getServerById(serverId, userId);
     }
     async getUserPermissions(serverId, userId) {
-        const server = await this.serverRepo.findById(serverId);
+        const [server, role, rolePerms] = await Promise.all([
+            this.serverRepo.findById(serverId),
+            this.serverRepo.getMemberRole(serverId, userId),
+            this.serverRepo.getRolePermissions(serverId),
+        ]);
         if (!server)
             throw new NotFoundException('Servidor não encontrado.');
         if (server.ownerId === userId) {
@@ -241,7 +257,6 @@ let ServersService = class ServersService {
                 canManageServer: true,
             };
         }
-        const role = await this.serverRepo.getMemberRole(serverId, userId);
         if (!role)
             throw new ForbiddenException('Você não é membro deste servidor.');
         const defaultPermissions = {
@@ -273,7 +288,6 @@ let ServersService = class ServersService {
                 canManageServer: false,
             },
         };
-        const rolePerms = await this.serverRepo.getRolePermissions(serverId);
         const custom = rolePerms.find((p) => p.role === role);
         const base = defaultPermissions[role] || defaultPermissions.MEMBER;
         return {
@@ -316,10 +330,13 @@ let ServersService = class ServersService {
         return { success: true };
     }
     async getServerMembers(serverId, requesterUserId) {
-        const isMember = await this.serverRepo.isMember(serverId, requesterUserId);
+        const [isMember, members] = await Promise.all([
+            this.serverRepo.isMember(serverId, requesterUserId),
+            this.serverRepo.getServerMembers(serverId),
+        ]);
         if (!isMember)
             throw new ForbiddenException('Você não é membro deste servidor.');
-        return this.serverRepo.getServerMembers(serverId);
+        return members;
     }
     async updateMemberRole(serverId, requesterUserId, targetUserId, newRole) {
         const permissions = await this.getUserPermissions(serverId, requesterUserId);
@@ -358,6 +375,14 @@ let ServersService = class ServersService {
             throw new ForbiddenException('Apenas o dono pode expulsar um administrador.');
         }
         await this.serverRepo.removeMember(serverId, targetUserId);
+        await this.auditService.record({
+            action: AuditLogActionEnum.MEMBER_KICKED,
+            actorId: requesterUserId,
+            targetType: 'USER',
+            targetId: targetUserId,
+            serverId,
+            reason: 'Expulso do servidor',
+        });
         return { success: true };
     }
     async banMember(serverId, requesterUserId, targetUserId, reason) {
@@ -379,6 +404,14 @@ let ServersService = class ServersService {
             throw new ForbiddenException('Apenas o dono pode banir um administrador.');
         }
         await this.serverRepo.banMember(serverId, targetUserId, reason);
+        await this.auditService.record({
+            action: AuditLogActionEnum.MEMBER_BANNED,
+            actorId: requesterUserId,
+            targetType: 'USER',
+            targetId: targetUserId,
+            serverId,
+            reason: reason || 'Banido do servidor',
+        });
         return { success: true };
     }
     async unbanMember(serverId, requesterUserId, targetUserId) {
@@ -387,6 +420,14 @@ let ServersService = class ServersService {
             throw new ForbiddenException('Você não tem permissão para desbanir membros deste servidor.');
         }
         await this.serverRepo.unbanMember(serverId, targetUserId);
+        await this.auditService.record({
+            action: AuditLogActionEnum.MEMBER_UNBANNED,
+            actorId: requesterUserId,
+            targetType: 'USER',
+            targetId: targetUserId,
+            serverId,
+            reason: 'Banimento revogado',
+        });
         return { success: true };
     }
     async getServerBans(serverId, requesterUserId) {
@@ -436,6 +477,15 @@ let ServersService = class ServersService {
             until = new Date(Date.now() + durationMinutes * 60 * 1000);
         }
         await this.serverRepo.muteMember(serverId, targetUserId, reason, until);
+        await this.auditService.record({
+            action: AuditLogActionEnum.MEMBER_MUTED,
+            actorId: requesterUserId,
+            targetType: 'USER',
+            targetId: targetUserId,
+            serverId,
+            reason: reason || 'Silenciado no servidor',
+            metadata: { durationMinutes, mutedUntil: until?.toISOString() },
+        });
         return { success: true, isMuted: true, mutedUntil: until };
     }
     async unmuteMember(serverId, requesterUserId, targetUserId) {
@@ -444,13 +494,25 @@ let ServersService = class ServersService {
             throw new ForbiddenException('Você não tem permissão para desmutar membros deste servidor.');
         }
         await this.serverRepo.unmuteMember(serverId, targetUserId);
+        await this.auditService.record({
+            action: AuditLogActionEnum.MEMBER_UNMUTED,
+            actorId: requesterUserId,
+            targetType: 'USER',
+            targetId: targetUserId,
+            serverId,
+            reason: 'Silenciamento revogado',
+        });
         return { success: true, isMuted: false };
+    }
+    async getServerAuditLogs(serverId, requesterUserId, filter) {
+        return this.auditService.getServerAuditLogs(serverId, requesterUserId, filter);
     }
 };
 ServersService = __decorate([
     Injectable(),
     __param(0, Inject(SERVER_REPOSITORY)),
-    __metadata("design:paramtypes", [Object, PrismaService])
+    __metadata("design:paramtypes", [Object, PrismaService,
+        SecurityAuditService])
 ], ServersService);
 export { ServersService };
 //# sourceMappingURL=servers.service.js.map

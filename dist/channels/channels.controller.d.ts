@@ -17,7 +17,7 @@ export declare class ChannelsController {
         type: import("../core/enums/channel-type.enum.js").ChannelTypeEnum;
         serverId: string;
     }>;
-    getMessages(req: any, channelId: string): Promise<any[]>;
+    getMessages(req: any, channelId: string, before?: string, limit?: string): Promise<any[]>;
     deleteMessage(req: any, channelId: string, messageId: string): Promise<{
         success: boolean;
     }>;

@@ -416,8 +416,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('friendAction')
-  handleFriendAction(@MessageBody() data: { targetId: string }, @ConnectedSocket() client: Socket) {
-    this.server.to(data.targetId).emit('friendActionUpdate');
+  handleFriendAction(
+    @MessageBody() data: { targetId: string; actionType?: string; sender?: any },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (data.actionType) {
+      this.server.to(data.targetId).emit('friendActionUpdate', {
+        actionType: data.actionType,
+        sender: data.sender || client.data?.user || null,
+      });
+    } else {
+      this.server.to(data.targetId).emit('friendActionUpdate');
+    }
   }
 
   @SubscribeMessage('channelCreated')
