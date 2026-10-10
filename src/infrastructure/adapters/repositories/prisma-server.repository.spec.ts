@@ -116,18 +116,18 @@ describe('PrismaServerRepository', () => {
       id: 's1',
       name: 'New Server Name',
       ownerId: 'u1',
-      iconUrl: 'https://r2.voxy.app/icon.webp',
+      iconUrl: 'https://r2.voxychat.com.br/icon.webp',
       iconKey: 'servers/icon.webp',
       channels: [],
       members: [],
     });
 
     domainServer.updateName('New Server Name', 'u1');
-    domainServer.updateIcon('https://r2.voxy.app/icon.webp', 'servers/icon.webp', 'u1');
+    domainServer.updateIcon('https://r2.voxychat.com.br/icon.webp', 'servers/icon.webp', 'u1');
 
     const updated = await repo.update(domainServer);
     expect(prismaMock.server.update).toHaveBeenCalled();
     expect(updated.name).toBe('New Server Name');
-    expect(updated.iconUrl).toBe('https://r2.voxy.app/icon.webp');
+    expect(updated.iconUrl).toBe('https://r2.voxychat.com.br/icon.webp');
   });
 });

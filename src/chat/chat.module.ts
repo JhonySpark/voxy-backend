@@ -18,6 +18,6 @@ import { PrismaChatRepository } from '../infrastructure/adapters/repositories/pr
       useClass: PrismaChatRepository,
     },
   ],
-  exports: [ChatService],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

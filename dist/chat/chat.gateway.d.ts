@@ -156,4 +156,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         status: string;
         customStatus?: string;
     }, client: Socket): Promise<void>;
+    getOnlineUsersCount(): number;
+    getOnlineUserIds(): string[];
+    getVoiceUsersCount(): number;
 }

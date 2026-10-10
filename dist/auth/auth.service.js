@@ -23,6 +23,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource } from '@prisma/client';
 import crypto from 'node:crypto';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 export const AuthErrorCodes = {
     INVALID_EMAIL: 'AUTH_INVALID_EMAIL',
     INVALID_USERNAME: 'AUTH_INVALID_USERNAME',
@@ -38,6 +39,8 @@ export const AuthErrorCodes = {
     VERIFICATION_CODE_EXPIRED: 'AUTH_VERIFICATION_CODE_EXPIRED',
     ACCOUNT_CHILD_RESTRICTED: 'AUTH_ACCOUNT_CHILD_RESTRICTED',
     ACCOUNT_SUSPENDED: 'AUTH_ACCOUNT_SUSPENDED',
+    BETA_LIMIT_REACHED: 'AUTH_BETA_LIMIT_REACHED',
+    TERMS_NOT_ACCEPTED: 'AUTH_TERMS_NOT_ACCEPTED',
 };
 let AuthService = class AuthService {
     usersService;
@@ -46,13 +49,15 @@ let AuthService = class AuthService {
     passwordHasher;
     emailService;
     logger;
-    constructor(usersService, prisma, tokenService, passwordHasher, emailService, logger) {
+    systemConfigService;
+    constructor(usersService, prisma, tokenService, passwordHasher, emailService, logger, systemConfigService) {
         this.usersService = usersService;
         this.prisma = prisma;
         this.tokenService = tokenService;
         this.passwordHasher = passwordHasher;
         this.emailService = emailService;
         this.logger = logger;
+        this.systemConfigService = systemConfigService;
     }
     async validateUser(emailOrUsername, pass) {
         const cleanIdentifier = (emailOrUsername || '').trim();
@@ -99,13 +104,20 @@ let AuthService = class AuthService {
                 message: 'Por favor, confirme seu endereço de e-mail para continuar.',
             };
         }
-        const payload = { username: user.username, sub: user.id };
+        const adminEmails = (process.env.ADMIN_EMAILS || '')
+            .split(',')
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean);
+        const isAdminByEmail = adminEmails.includes(user.email.toLowerCase());
+        const effectiveRole = (isAdminByEmail && user.role === 'USER') ? 'ADMIN' : user.role;
+        const payload = { username: user.username, sub: user.id, role: effectiveRole };
         return {
             access_token: this.tokenService.sign(payload),
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
+                role: effectiveRole,
                 isEmailVerified: user.isEmailVerified,
                 ageClassification: user.ageClassification,
                 ageSignalSource: user.ageSignalSource,
@@ -164,7 +176,43 @@ let AuthService = class AuthService {
         });
         return code;
     }
+    async getBetaStatus() {
+        if (this.systemConfigService) {
+            const appStatus = await this.systemConfigService.getAppStatus();
+            return {
+                isOpen: appStatus.isBetaOpen,
+                currentUsers: appStatus.currentUsers,
+                maxUsers: appStatus.maxBetaUsers,
+                remainingSlots: appStatus.remainingSlots,
+            };
+        }
+        const rawLimit = process.env.MAX_BETA_USERS;
+        const maxUsers = rawLimit !== undefined && rawLimit !== '' ? parseInt(rawLimit, 10) : 50;
+        const currentUsers = await this.prisma.user.count();
+        const isUnlimited = maxUsers <= 0;
+        const remainingSlots = isUnlimited ? 9999 : Math.max(0, maxUsers - currentUsers);
+        const isOpen = isUnlimited || remainingSlots > 0;
+        return {
+            isOpen,
+            currentUsers,
+            maxUsers: isUnlimited ? 0 : maxUsers,
+            remainingSlots,
+        };
+    }
     async register(data) {
+        const betaStatus = await this.getBetaStatus();
+        if (!betaStatus.isOpen) {
+            throw new BadRequestException({
+                code: AuthErrorCodes.BETA_LIMIT_REACHED,
+                message: `O limite de vagas para a fase beta (${betaStatus.maxUsers} usuários) foi atingido. Novas vagas serão abertas em breve!`,
+            });
+        }
+        if (data.acceptTerms !== undefined && !data.acceptTerms) {
+            throw new BadRequestException({
+                code: AuthErrorCodes.TERMS_NOT_ACCEPTED,
+                message: 'Você precisa aceitar os Termos de Uso, Política de Privacidade e Diretrizes da ANPD para continuar.',
+            });
+        }
         const emailOrError = Email.create(data.email || '');
         if (emailOrError.isFailure) {
             throw new BadRequestException({
@@ -227,6 +275,8 @@ let AuthService = class AuthService {
             email: user.email,
             username: user.username,
             ageClassification: user.ageClassification,
+            termsAccepted: true,
+            termsAcceptedAt: new Date().toISOString(),
         });
         return {
             id: user.id,
@@ -433,8 +483,10 @@ AuthService = __decorate([
     __param(3, Inject(PASSWORD_HASHER_PORT)),
     __param(4, Inject(EMAIL_SERVICE_PORT)),
     __param(5, Optional()),
+    __param(6, Optional()),
     __metadata("design:paramtypes", [UsersService,
-        PrismaService, Object, Object, Object, BetterStackLoggerService])
+        PrismaService, Object, Object, Object, BetterStackLoggerService,
+        SystemConfigService])
 ], AuthService);
 export { AuthService };
 //# sourceMappingURL=auth.service.js.map

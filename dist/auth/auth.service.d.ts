@@ -4,6 +4,7 @@ import type { ITokenServicePort } from '../core/ports/security/token-service.por
 import type { IEmailServicePort } from '../core/ports/communication/email-service.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 export declare const AuthErrorCodes: {
     readonly INVALID_EMAIL: "AUTH_INVALID_EMAIL";
     readonly INVALID_USERNAME: "AUTH_INVALID_USERNAME";
@@ -19,6 +20,8 @@ export declare const AuthErrorCodes: {
     readonly VERIFICATION_CODE_EXPIRED: "AUTH_VERIFICATION_CODE_EXPIRED";
     readonly ACCOUNT_CHILD_RESTRICTED: "AUTH_ACCOUNT_CHILD_RESTRICTED";
     readonly ACCOUNT_SUSPENDED: "AUTH_ACCOUNT_SUSPENDED";
+    readonly BETA_LIMIT_REACHED: "AUTH_BETA_LIMIT_REACHED";
+    readonly TERMS_NOT_ACCEPTED: "AUTH_TERMS_NOT_ACCEPTED";
 };
 export declare class AuthService {
     private usersService;
@@ -27,7 +30,8 @@ export declare class AuthService {
     private passwordHasher;
     private emailService;
     private logger?;
-    constructor(usersService: UsersService, prisma: PrismaService, tokenService: ITokenServicePort, passwordHasher: IPasswordHasherPort, emailService: IEmailServicePort, logger?: BetterStackLoggerService | undefined);
+    private systemConfigService?;
+    constructor(usersService: UsersService, prisma: PrismaService, tokenService: ITokenServicePort, passwordHasher: IPasswordHasherPort, emailService: IEmailServicePort, logger?: BetterStackLoggerService | undefined, systemConfigService?: SystemConfigService | undefined);
     validateUser(emailOrUsername: string, pass: string): Promise<any>;
     login(user: any): Promise<{
         requireEmailVerification: boolean;
@@ -41,6 +45,7 @@ export declare class AuthService {
             id: any;
             username: any;
             email: any;
+            role: any;
             isEmailVerified: any;
             ageClassification: any;
             ageSignalSource: any;
@@ -59,11 +64,18 @@ export declare class AuthService {
         message: string;
     }>;
     private generateAndSendCode;
+    getBetaStatus(): Promise<{
+        isOpen: boolean;
+        currentUsers: number;
+        maxUsers: number;
+        remainingSlots: number;
+    }>;
     register(data: {
         email: string;
         username: string;
         password?: string;
         birthDate: string;
+        acceptTerms?: boolean;
     }): Promise<{
         id: string;
         username: string;

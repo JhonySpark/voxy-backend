@@ -99,13 +99,14 @@ export class AuthService {
       };
     }
 
-    const payload = { username: user.username, sub: user.id };
+    const payload = { username: user.username, sub: user.id, role: user.role };
     return {
       access_token: this.tokenService.sign(payload),
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
+        role: user.role,
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,

@@ -75,18 +75,18 @@ describe('User Entity', () => {
       password: 'initialpassword',
     }).getValue();
 
-    const avatarRes = user.updateAvatar('https://r2.voxy.app/avatar.webp', 'avatars/avatar.webp');
+    const avatarRes = user.updateAvatar('https://r2.voxychat.com.br/avatar.webp', 'avatars/avatar.webp');
     expect(avatarRes.isSuccess).toBe(true);
-    expect(user.avatarUrl).toBe('https://r2.voxy.app/avatar.webp');
+    expect(user.avatarUrl).toBe('https://r2.voxychat.com.br/avatar.webp');
     expect(user.avatarKey).toBe('avatars/avatar.webp');
 
     user.removeAvatar();
     expect(user.avatarUrl).toBeNull();
     expect(user.avatarKey).toBeNull();
 
-    const bannerRes = user.updateBanner('https://r2.voxy.app/banner.webp', 'banners/banner.webp');
+    const bannerRes = user.updateBanner('https://r2.voxychat.com.br/banner.webp', 'banners/banner.webp');
     expect(bannerRes.isSuccess).toBe(true);
-    expect(user.bannerUrl).toBe('https://r2.voxy.app/banner.webp');
+    expect(user.bannerUrl).toBe('https://r2.voxychat.com.br/banner.webp');
     expect(user.bannerKey).toBe('banners/banner.webp');
 
     user.removeBanner();

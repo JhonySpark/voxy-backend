@@ -83,9 +83,9 @@ describe('Server Entity Aggregate Root', () => {
 
   it('should allow owner to update and remove server icon', () => {
     const server = Server.create('Dev Community', 'u_owner').getValue();
-    const iconRes = server.updateIcon('https://r2.voxy.app/icon.webp', 'servers/icon.webp', 'u_owner');
+    const iconRes = server.updateIcon('https://r2.voxychat.com.br/icon.webp', 'servers/icon.webp', 'u_owner');
     expect(iconRes.isSuccess).toBe(true);
-    expect(server.iconUrl).toBe('https://r2.voxy.app/icon.webp');
+    expect(server.iconUrl).toBe('https://r2.voxychat.com.br/icon.webp');
     expect(server.iconKey).toBe('servers/icon.webp');
 
     const unauthorizedRes = server.updateIcon('evil.png', 'key', 'u_other');

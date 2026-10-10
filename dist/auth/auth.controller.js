@@ -28,6 +28,9 @@ let AuthController = class AuthController {
         }
         return this.authService.login(user);
     }
+    async getBetaStatus() {
+        return this.authService.getBetaStatus();
+    }
     async register(body) {
         return this.authService.register(body);
     }
@@ -51,6 +54,12 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    Get('beta-status'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getBetaStatus", null);
 __decorate([
     Post('register'),
     __param(0, Body()),

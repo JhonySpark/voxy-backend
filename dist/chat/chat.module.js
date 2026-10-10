@@ -26,7 +26,7 @@ ChatModule = __decorate([
                 useClass: PrismaChatRepository,
             },
         ],
-        exports: [ChatService],
+        exports: [ChatService, ChatGateway],
     })
 ], ChatModule);
 export { ChatModule };

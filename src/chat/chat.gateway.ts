@@ -720,5 +720,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       customStatus: data.customStatus,
     });
   }
+
+  /**
+   * Métricas em tempo real para o Painel Administrativo
+   */
+  public getOnlineUsersCount(): number {
+    return this.userSockets.size;
+  }
+
+  public getOnlineUserIds(): string[] {
+    return Array.from(this.userSockets.keys());
+  }
+
+  public getVoiceUsersCount(): number {
+    let count = 0;
+    for (const participants of this.voiceStates.values()) {
+      count += participants.size;
+    }
+    return count;
+  }
 }
 

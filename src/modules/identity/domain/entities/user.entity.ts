@@ -3,15 +3,17 @@ import { Result } from '../../../../core/logic/result.js';
 import { Email } from '../value-objects/email.vo.js';
 import { Username } from '../value-objects/username.vo.js';
 import { BirthDate } from '../value-objects/birth-date.vo.js';
-import { AgeClassificationEnum, AgeSignalSourceEnum } from '../../../../core/enums/index.js';
+import { AgeClassificationEnum, AgeSignalSourceEnum, UserRoleEnum } from '../../../../core/enums/index.js';
 
 export type AgeClassificationType = AgeClassificationEnum;
 export type AgeSignalSourceType = AgeSignalSourceEnum;
+export type UserRoleType = UserRoleEnum;
 
 export interface UserProps {
   username: Username;
   email: Email;
   password: string; // Hashed password
+  role?: UserRoleEnum;
   birthDate?: BirthDate | null;
   isEmailVerified?: boolean;
   emailVerifiedAt?: Date | null;
@@ -74,6 +76,15 @@ export class User extends AggregateRoot<UserProps> {
 
   get password(): string {
     return this.props.password;
+  }
+
+  get role(): UserRoleEnum {
+    return this.props.role || UserRoleEnum.USER;
+  }
+
+  public changeRole(newRole: UserRoleEnum): void {
+    this.props.role = newRole;
+    this.props.updatedAt = new Date();
   }
 
   get avatarUrl(): string | null | undefined {

@@ -519,6 +519,19 @@ let ChatGateway = class ChatGateway {
             customStatus: data.customStatus,
         });
     }
+    getOnlineUsersCount() {
+        return this.userSockets.size;
+    }
+    getOnlineUserIds() {
+        return Array.from(this.userSockets.keys());
+    }
+    getVoiceUsersCount() {
+        let count = 0;
+        for (const participants of this.voiceStates.values()) {
+            count += participants.size;
+        }
+        return count;
+    }
 };
 __decorate([
     WebSocketServer(),

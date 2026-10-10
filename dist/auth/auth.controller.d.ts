@@ -14,6 +14,7 @@ export declare class AuthController {
             id: any;
             username: any;
             email: any;
+            role: any;
             isEmailVerified: any;
             ageClassification: any;
             ageSignalSource: any;
@@ -26,11 +27,18 @@ export declare class AuthController {
         email?: undefined;
         message?: undefined;
     }>;
+    getBetaStatus(): Promise<{
+        isOpen: boolean;
+        currentUsers: number;
+        maxUsers: number;
+        remainingSlots: number;
+    }>;
     register(body: {
         email: string;
         username: string;
         password?: string;
         birthDate: string;
+        acceptTerms?: boolean;
     }): Promise<{
         id: string;
         username: string;
