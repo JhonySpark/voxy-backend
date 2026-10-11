@@ -27,6 +27,22 @@ export declare class AuthController {
         email?: undefined;
         message?: undefined;
     }>;
+    refresh(req: any): Promise<{
+        access_token: string;
+        user: {
+            id: string;
+            username: string;
+            email: string;
+            role: import("../core/enums/user-role.enum.js").UserRoleEnum;
+            isEmailVerified: boolean;
+            ageClassification: import("../core/enums/age-classification.enum.js").AgeClassificationEnum;
+            ageSignalSource: import("../core/enums/age-signal-source.enum.js").AgeSignalSourceEnum;
+            canShareScreen: boolean;
+            canStreamGames: boolean;
+            canAccess18Plus: boolean;
+            canUseApp: boolean;
+        };
+    }>;
     getBetaStatus(): Promise<{
         isOpen: boolean;
         currentUsers: number;

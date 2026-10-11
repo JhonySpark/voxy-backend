@@ -27,6 +27,7 @@ export declare class UsersService {
         username: string;
         email: string;
         password: string;
+        role: import("../core/enums/user-role.enum.js").UserRoleEnum;
         birthDate: Date | null;
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;
@@ -39,6 +40,7 @@ export declare class UsersService {
         username: string;
         email: string;
         password: string;
+        role: import("../core/enums/user-role.enum.js").UserRoleEnum;
         birthDate: Date | null;
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;
@@ -51,6 +53,7 @@ export declare class UsersService {
         username: string;
         email: string;
         password: string;
+        role: import("../core/enums/user-role.enum.js").UserRoleEnum;
         birthDate: Date | null;
         isEmailVerified: boolean;
         ageClassification: AgeClassificationEnum;

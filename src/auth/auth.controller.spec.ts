@@ -21,6 +21,7 @@ describe('AuthController', () => {
       register: vi.fn(),
       checkUsername: vi.fn(),
       getBetaStatus: vi.fn(),
+      refreshToken: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -93,6 +94,18 @@ describe('AuthController', () => {
 
       expect(authService.getBetaStatus).toHaveBeenCalled();
       expect(result).toEqual(mockStatus);
+    });
+  });
+
+  describe('refresh', () => {
+    it('should refresh user token and return new credentials', async () => {
+      const mockResult = { access_token: 'new-token-456', user: { id: 'u1', username: 'test' } };
+      authService.refreshToken.mockResolvedValue(mockResult);
+
+      const result = await controller.refresh({ user: { sub: 'u1' } });
+
+      expect(authService.refreshToken).toHaveBeenCalledWith('u1');
+      expect(result).toEqual(mockResult);
     });
   });
 });

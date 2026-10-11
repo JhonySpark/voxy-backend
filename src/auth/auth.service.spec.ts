@@ -13,6 +13,7 @@ describe('AuthService', () => {
   let usersService: {
     findByEmail: ReturnType<typeof vi.fn>;
     findByUsername: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
   };
   let tokenService: { sign: ReturnType<typeof vi.fn>; verify: ReturnType<typeof vi.fn> };
@@ -35,6 +36,7 @@ describe('AuthService', () => {
     usersService = {
       findByEmail: vi.fn(),
       findByUsername: vi.fn(),
+      findById: vi.fn(),
       create: vi.fn(),
     };
     tokenService = {
@@ -314,6 +316,44 @@ describe('AuthService', () => {
 
       expect(status.isOpen).toBe(false);
       expect(status.remainingSlots).toBe(0);
+    });
+  });
+
+  describe('refreshToken', () => {
+    it('should throw UnauthorizedException if user does not exist', async () => {
+      usersService.findById.mockResolvedValue(null);
+
+      await expect(service.refreshToken('non-existent')).rejects.toThrow('Usuário não encontrado.');
+    });
+
+    it('should throw ForbiddenException if user is suspended', async () => {
+      usersService.findById.mockResolvedValue({
+        id: 'u1',
+        isSuspended: true,
+        suspendedReason: 'Spamming',
+      });
+
+      await expect(service.refreshToken('u1')).rejects.toThrow('Spamming');
+    });
+
+    it('should return signed access_token and user info for valid user', async () => {
+      usersService.findById.mockResolvedValue({
+        id: 'u1',
+        username: 'jhony',
+        email: 'jhony@voxy.com',
+        role: 'USER',
+        isEmailVerified: true,
+        isSuspended: false,
+        ageClassification: 'ADULT',
+        ageSignalSource: 'NONE',
+      });
+      tokenService.sign.mockReturnValue('new_jwt_token_123');
+
+      const result = await service.refreshToken('u1');
+
+      expect(result.access_token).toBe('new_jwt_token_123');
+      expect(result.user.username).toBe('jhony');
+      expect(result.user.canShareScreen).toBe(true);
     });
   });
 });

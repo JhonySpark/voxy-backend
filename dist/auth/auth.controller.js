@@ -29,6 +29,9 @@ let AuthController = class AuthController {
         }
         return this.authService.login(user);
     }
+    async refresh(req) {
+        return this.authService.refreshToken(req.user.sub);
+    }
     async getBetaStatus() {
         return this.authService.getBetaStatus();
     }
@@ -55,6 +58,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    Post('refresh'),
+    UseGuards(AuthGuard),
+    __param(0, Request()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refresh", null);
 __decorate([
     Get('beta-status'),
     __metadata("design:type", Function),

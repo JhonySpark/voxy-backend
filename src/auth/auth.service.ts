@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, Inject, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, UnauthorizedException, Inject, Optional } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 import type { IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
@@ -114,6 +114,50 @@ export class AuthService {
         canStreamGames: user.ageClassification === AgeClassification.ADULT || user.ageClassification === AgeClassification.TEEN,
         canAccess18Plus: user.ageClassification === AgeClassification.ADULT,
         canUseApp: user.ageClassification !== AgeClassification.CHILD,
+      },
+    };
+  }
+
+  async refreshToken(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException({
+        code: AuthErrorCodes.INVALID_CREDENTIALS,
+        message: 'Usuário não encontrado.',
+      });
+    }
+
+    if (user.isSuspended) {
+      throw new ForbiddenException({
+        code: AuthErrorCodes.ACCOUNT_SUSPENDED,
+        message: user.suspendedReason || 'Esta conta foi suspensa.',
+      });
+    }
+
+    if ((user.ageClassification as any) === AgeClassification.CHILD) {
+      throw new ForbiddenException({
+        code: AuthErrorCodes.ACCOUNT_CHILD_RESTRICTED,
+        message: 'O acesso a esta conta não é permitido para menores de 13 anos (CHILD).',
+      });
+    }
+
+    const payload = { username: user.username, sub: user.id, role: user.role };
+    return {
+      access_token: this.tokenService.sign(payload),
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        ageClassification: user.ageClassification,
+        ageSignalSource: user.ageSignalSource,
+        canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT,
+        canStreamGames:
+          (user.ageClassification as any) === AgeClassification.ADULT ||
+          (user.ageClassification as any) === AgeClassification.TEEN,
+        canAccess18Plus: (user.ageClassification as any) === AgeClassification.ADULT,
+        canUseApp: (user.ageClassification as any) !== AgeClassification.CHILD,
       },
     };
   }

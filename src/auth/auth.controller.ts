@@ -19,6 +19,12 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Post('refresh')
+  @UseGuards(AuthGuard)
+  async refresh(@Request() req: any) {
+    return this.authService.refreshToken(req.user.sub);
+  }
+
   @Get('beta-status')
   async getBetaStatus() {
     return this.authService.getBetaStatus();
