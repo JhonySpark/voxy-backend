@@ -19,7 +19,8 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     async login(body) {
-        const user = await this.authService.validateUser(body.email, body.password);
+        const identifier = body.email || body.emailOrUsername || body.username;
+        const user = await this.authService.validateUser(identifier, body.password);
         if (!user) {
             throw new UnauthorizedException({
                 code: 'AUTH_INVALID_CREDENTIALS',

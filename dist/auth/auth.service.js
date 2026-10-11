@@ -104,20 +104,14 @@ let AuthService = class AuthService {
                 message: 'Por favor, confirme seu endereço de e-mail para continuar.',
             };
         }
-        const adminEmails = (process.env.ADMIN_EMAILS || '')
-            .split(',')
-            .map((e) => e.trim().toLowerCase())
-            .filter(Boolean);
-        const isAdminByEmail = adminEmails.includes(user.email.toLowerCase());
-        const effectiveRole = (isAdminByEmail && user.role === 'USER') ? 'ADMIN' : user.role;
-        const payload = { username: user.username, sub: user.id, role: effectiveRole };
+        const payload = { username: user.username, sub: user.id, role: user.role };
         return {
             access_token: this.tokenService.sign(payload),
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                role: effectiveRole,
+                role: user.role,
                 isEmailVerified: user.isEmailVerified,
                 ageClassification: user.ageClassification,
                 ageSignalSource: user.ageSignalSource,

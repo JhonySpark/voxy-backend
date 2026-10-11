@@ -20,7 +20,7 @@ import { SystemConfigModule } from '../modules/system-config/system-config.modul
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'secretKey',
-      signOptions: { expiresIn: '1d' },
+      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN as any) || '30d' },
     }),
   ],
   controllers: [AuthController],
