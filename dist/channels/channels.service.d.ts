@@ -4,6 +4,7 @@ import type { IVoiceEnginePort } from '../core/ports/voice-engine.port.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 import { SecurityAuditService } from '../moderation/security-audit.service.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 export declare class ChannelsService {
     private readonly channelRepo;
     private readonly serverRepo;
@@ -11,7 +12,8 @@ export declare class ChannelsService {
     private readonly prisma;
     private readonly logger?;
     private readonly auditService?;
-    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService, logger?: BetterStackLoggerService | undefined, auditService?: SecurityAuditService | undefined);
+    private readonly systemConfigService?;
+    constructor(channelRepo: IChannelRepository, serverRepo: IServerRepository, voiceEngine: IVoiceEnginePort, prisma: PrismaService, logger?: BetterStackLoggerService | undefined, auditService?: SecurityAuditService | undefined, systemConfigService?: SystemConfigService | undefined);
     createChannel(serverId: string, userId: string, name: string, type?: 'TEXT' | 'VOICE'): Promise<{
         id: string;
         name: string;
@@ -37,5 +39,6 @@ export declare class ChannelsService {
         username: string;
     }, isScreen?: boolean): Promise<{
         token: string;
+        maxScreenShareBitrateKbps: number;
     }>;
 }

@@ -246,7 +246,40 @@ describe('ChannelsService', () => {
         participantName: 'user1',
         canUpdateOwnMetadata: false,
       });
-      expect(result).toEqual({ token: 'mock_voice_token' });
+      expect(result).toEqual({ token: 'mock_voice_token', maxScreenShareBitrateKbps: 2500 });
+    });
+
+    it('should throw ForbiddenException if screen sharing is disabled globally', async () => {
+      const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+      voiceEngine.generateAccessToken.mockResolvedValue('mock_screen_token');
+
+      const mockSystemConfigService = {
+        getConfig: vi.fn().mockResolvedValue({
+          allowScreenShare: false,
+          maxScreenShareBitrateKbps: 2500,
+        }),
+      };
+
+      const mockPrisma = {
+        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'ADULT' }) },
+        server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
+      };
+
+      const customService = new ChannelsService(
+        channelRepo as any,
+        serverRepo as any,
+        voiceEngine as any,
+        mockPrisma as any,
+        undefined,
+        undefined,
+        mockSystemConfigService as any,
+      );
+
+      await expect(
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

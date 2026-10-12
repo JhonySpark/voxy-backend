@@ -21,6 +21,7 @@ import { AgeClassificationEnum } from '../core/enums/index.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 import { SecurityAuditService } from '../moderation/security-audit.service.js';
 import { AuditLogActionEnum } from '../core/enums/moderation.enums.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 let ChannelsService = class ChannelsService {
     channelRepo;
     serverRepo;
@@ -28,13 +29,15 @@ let ChannelsService = class ChannelsService {
     prisma;
     logger;
     auditService;
-    constructor(channelRepo, serverRepo, voiceEngine, prisma, logger, auditService) {
+    systemConfigService;
+    constructor(channelRepo, serverRepo, voiceEngine, prisma, logger, auditService, systemConfigService) {
         this.channelRepo = channelRepo;
         this.serverRepo = serverRepo;
         this.voiceEngine = voiceEngine;
         this.prisma = prisma;
         this.logger = logger;
         this.auditService = auditService;
+        this.systemConfigService = systemConfigService;
     }
     async createChannel(serverId, userId, name, type = 'TEXT') {
         const role = await this.serverRepo.getMemberRole(serverId, userId);
@@ -234,7 +237,23 @@ let ChannelsService = class ChannelsService {
                 },
             });
         }
-        return { token };
+        let maxScreenShareBitrateKbps = 2500;
+        if (this.systemConfigService) {
+            try {
+                const config = await this.systemConfigService.getConfig();
+                if (isScreen && !config.allowScreenShare) {
+                    throw new ForbiddenException('O compartilhamento de tela está desativado pelo administrador.');
+                }
+                if (typeof config.maxScreenShareBitrateKbps === 'number' && config.maxScreenShareBitrateKbps > 0) {
+                    maxScreenShareBitrateKbps = config.maxScreenShareBitrateKbps;
+                }
+            }
+            catch (err) {
+                if (err instanceof ForbiddenException)
+                    throw err;
+            }
+        }
+        return { token, maxScreenShareBitrateKbps };
     }
 };
 ChannelsService = __decorate([
@@ -244,9 +263,11 @@ ChannelsService = __decorate([
     __param(2, Inject(VOICE_ENGINE_PORT)),
     __param(4, Optional()),
     __param(5, Optional()),
+    __param(6, Optional()),
     __metadata("design:paramtypes", [Object, Object, Object, PrismaService,
         BetterStackLoggerService,
-        SecurityAuditService])
+        SecurityAuditService,
+        SystemConfigService])
 ], ChannelsService);
 export { ChannelsService };
 //# sourceMappingURL=channels.service.js.map

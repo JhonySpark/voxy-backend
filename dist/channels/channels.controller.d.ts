@@ -25,8 +25,10 @@ export declare class ChannelsController {
     toggleReaction(req: any, channelId: string, messageId: string, emoji: string): Promise<any>;
     getVoiceToken(req: any, channelId: string, screen?: string): Promise<{
         token: string;
+        maxScreenShareBitrateKbps: number;
     }>;
     getVoiceTokenGet(req: any, channelId: string, screen?: string): Promise<{
         token: string;
+        maxScreenShareBitrateKbps: number;
     }>;
 }

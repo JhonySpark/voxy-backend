@@ -19,6 +19,7 @@ import { AgeClassificationEnum } from '../core/enums/index.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 import { SecurityAuditService } from '../moderation/security-audit.service.js';
 import { AuditLogActionEnum } from '../core/enums/moderation.enums.js';
+import { SystemConfigService } from '../modules/system-config/system-config.service.js';
 
 @Injectable()
 export class ChannelsService {
@@ -29,6 +30,7 @@ export class ChannelsService {
     private readonly prisma: PrismaService,
     @Optional() private readonly logger?: BetterStackLoggerService,
     @Optional() private readonly auditService?: SecurityAuditService,
+    @Optional() private readonly systemConfigService?: SystemConfigService,
   ) {}
 
   async createChannel(
@@ -276,6 +278,21 @@ export class ChannelsService {
       });
     }
 
-    return { token };
+    let maxScreenShareBitrateKbps = 2500;
+    if (this.systemConfigService) {
+      try {
+        const config = await this.systemConfigService.getConfig();
+        if (isScreen && !config.allowScreenShare) {
+          throw new ForbiddenException('O compartilhamento de tela está desativado pelo administrador.');
+        }
+        if (typeof config.maxScreenShareBitrateKbps === 'number' && config.maxScreenShareBitrateKbps > 0) {
+          maxScreenShareBitrateKbps = config.maxScreenShareBitrateKbps;
+        }
+      } catch (err) {
+        if (err instanceof ForbiddenException) throw err;
+      }
+    }
+
+    return { token, maxScreenShareBitrateKbps };
   }
 }
