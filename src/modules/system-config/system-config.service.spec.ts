@@ -49,6 +49,7 @@ describe('SystemConfigService', () => {
     mockPrisma.user.count.mockResolvedValue(10);
 
     const status = await service.getAppStatus();
+    expect(mockPrisma.user.count).toHaveBeenCalledWith({ where: { role: 'USER' } });
     expect(status.isBetaOpen).toBe(true);
     expect(status.currentUsers).toBe(10);
     expect(status.remainingSlots).toBe(40);

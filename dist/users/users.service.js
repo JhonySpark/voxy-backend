@@ -113,6 +113,7 @@ let UsersService = class UsersService {
                 id: true,
                 username: true,
                 email: true,
+                role: true,
                 displayName: true,
                 bio: true,
                 avatarUrl: true,
@@ -136,6 +137,7 @@ let UsersService = class UsersService {
         return {
             id: user.id,
             username: user.username,
+            role: user.role,
             displayName: user.displayName,
             bio: user.bio,
             avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,

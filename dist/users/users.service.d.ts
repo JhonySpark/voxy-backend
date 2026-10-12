@@ -64,6 +64,7 @@ export declare class UsersService {
     getProfile(userId: string, requestingUserId?: string): Promise<{
         id: string;
         username: string;
+        role: import("@prisma/client").$Enums.UserRole;
         displayName: string | null;
         bio: string | null;
         avatarUrl: string | null;

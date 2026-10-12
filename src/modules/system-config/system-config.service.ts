@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 export interface AppStatusResponse {
@@ -70,7 +71,9 @@ export class SystemConfigService {
    */
   async getAppStatus(): Promise<AppStatusResponse> {
     const config = await this.getConfig();
-    const currentUsers = await this.prisma.user.count();
+    const currentUsers = await this.prisma.user.count({
+      where: { role: UserRole.USER },
+    });
 
     const isUnlimited = config.maxBetaUsers <= 0;
     const remainingSlots = isUnlimited

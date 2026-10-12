@@ -5,6 +5,7 @@ export declare class UsersController {
     getProfile(req: any): Promise<{
         id: string;
         username: string;
+        role: import("@prisma/client").$Enums.UserRole;
         displayName: string | null;
         bio: string | null;
         avatarUrl: string | null;
@@ -24,6 +25,7 @@ export declare class UsersController {
     getUserProfile(req: any, id: string): Promise<{
         id: string;
         username: string;
+        role: import("@prisma/client").$Enums.UserRole;
         displayName: string | null;
         bio: string | null;
         avatarUrl: string | null;
