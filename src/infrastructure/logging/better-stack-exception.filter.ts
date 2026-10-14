@@ -39,6 +39,11 @@ export class BetterStackExceptionFilter implements ExceptionFilter {
         ? (exceptionResponse as any).message || (exception as any)?.message
         : (exception as any)?.message || 'Erro interno no servidor';
 
+    const code =
+      typeof exceptionResponse === 'object' && exceptionResponse !== null
+        ? (exceptionResponse as any).code
+        : undefined;
+
     const userId = (request as any)?.user?.sub || (request as any)?.user?.id;
     const clientIp =
       request.ip ||
@@ -78,6 +83,7 @@ export class BetterStackExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
+      code,
       message,
       timestamp: new Date().toISOString(),
       path: request.url,
