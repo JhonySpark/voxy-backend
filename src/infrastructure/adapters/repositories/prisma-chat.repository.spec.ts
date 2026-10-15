@@ -31,6 +31,7 @@ describe('PrismaChatRepository', () => {
             username: true,
             displayName: true,
             avatarUrl: true,
+            equippedFrameSlug: true,
           },
         },
         attachments: true,

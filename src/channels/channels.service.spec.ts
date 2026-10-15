@@ -56,7 +56,13 @@ describe('ChannelsService', () => {
     };
     const prisma = {
       user: {
-        findUnique: vi.fn().mockResolvedValue({ ageClassification: 'ADULT' }),
+        findUnique: vi.fn().mockResolvedValue({
+          ageClassification: 'ADULT',
+          isSuspended: false,
+          avatarUrl: null,
+          displayName: null,
+          equippedFrameSlug: null,
+        }),
       },
       server: {
         findUnique: vi.fn().mockResolvedValue({ is18Plus: false }),
@@ -232,7 +238,7 @@ describe('ChannelsService', () => {
       await expect(service.getVoiceToken('c1', { sub: 'u1', username: 'user1' })).rejects.toThrow(ForbiddenException);
     });
 
-    it('should return token when user is member', async () => {
+    it('should return token when user is member with verified ADULT age', async () => {
       const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
       channelRepo.findById.mockResolvedValue(channel);
       serverRepo.isMember.mockResolvedValue(true);
@@ -245,8 +251,110 @@ describe('ChannelsService', () => {
         participantId: 'u1',
         participantName: 'user1',
         canUpdateOwnMetadata: false,
+        metadata: JSON.stringify({ avatarUrl: null, displayName: null, equippedFrameSlug: null }),
       });
       expect(result).toEqual({ token: 'mock_voice_token', maxScreenShareBitrateKbps: 2500 });
+    });
+
+    it('should throw ForbiddenException if user ageClassification is UNKNOWN', async () => {
+      const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+
+      const mockPrisma = {
+        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'UNKNOWN', isSuspended: false }) },
+        server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
+      };
+
+      const customService = new ChannelsService(
+        channelRepo as any,
+        serverRepo as any,
+        voiceEngine as any,
+        mockPrisma as any,
+      );
+
+      await expect(
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException if user ageClassification is DIVERGENT', async () => {
+      const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+
+      const mockPrisma = {
+        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'DIVERGENT', isSuspended: false }) },
+        server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
+      };
+
+      const customService = new ChannelsService(
+        channelRepo as any,
+        serverRepo as any,
+        voiceEngine as any,
+        mockPrisma as any,
+      );
+
+      await expect(
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException if user ageClassification is CHILD', async () => {
+      const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+
+      const mockPrisma = {
+        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'CHILD', isSuspended: false }) },
+        server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
+      };
+
+      const customService = new ChannelsService(
+        channelRepo as any,
+        serverRepo as any,
+        voiceEngine as any,
+        mockPrisma as any,
+      );
+
+      await expect(
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow TEEN to join normal voice, but reject screen share', async () => {
+      const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+      voiceEngine.generateAccessToken.mockResolvedValue('mock_teen_voice_token');
+
+      const mockPrisma = {
+        user: {
+          findUnique: vi.fn().mockResolvedValue({
+            ageClassification: 'TEEN',
+            isSuspended: false,
+            avatarUrl: null,
+            displayName: null,
+            equippedFrameSlug: null,
+          }),
+        },
+        server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
+      };
+
+      const customService = new ChannelsService(
+        channelRepo as any,
+        serverRepo as any,
+        voiceEngine as any,
+        mockPrisma as any,
+      );
+
+      const result = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, false);
+      expect(result.token).toBe('mock_teen_voice_token');
+
+      // Tentativa de compartilhar tela sendo TEEN deve ser rejeitada
+      await expect(
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException if screen sharing is disabled globally', async () => {
@@ -263,7 +371,7 @@ describe('ChannelsService', () => {
       };
 
       const mockPrisma = {
-        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'ADULT' }) },
+        user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'ADULT', isSuspended: false }) },
         server: { findUnique: vi.fn().mockResolvedValue({ is18Plus: false }) },
       };
 
