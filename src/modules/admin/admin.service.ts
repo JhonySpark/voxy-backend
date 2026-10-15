@@ -403,8 +403,67 @@ export class AdminService {
    */
   async getAllCosmetics() {
     return this.prisma.cosmeticItem.findMany({
+      include: {
+        _count: {
+          select: { userCosmetics: true },
+        },
+      },
       orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
     });
+  }
+
+  async grantCosmeticToAll(cosmeticItemId: string, adminId: string, userIds?: string[]) {
+    const item = await this.prisma.cosmeticItem.findUnique({
+      where: { id: cosmeticItemId },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Item cosmético não encontrado.');
+    }
+
+    const users = userIds && userIds.length > 0
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, username: true },
+        })
+      : await this.prisma.user.findMany({
+          select: { id: true, username: true },
+        });
+
+    if (users.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        totalUsers: 0,
+        message: 'Nenhum usuário elegível encontrado para atribuição.',
+      };
+    }
+
+    const records = users.map((u) => ({
+      userId: u.id,
+      cosmeticItemId: item.id,
+    }));
+
+    const result = await this.prisma.userCosmetic.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
+
+    await this.securityAuditService
+      .record({
+        action: AuditLogActionEnum.REPORT_RESOLVED,
+        actorId: adminId,
+        targetType: 'SYSTEM',
+        reason: `Cosmético '${item.name}' (${item.slug}) atribuído em lote para ${result.count} novos usuários (base de ${users.length} usuários avaliados).`,
+      })
+      .catch(() => {});
+
+    return {
+      success: true,
+      count: result.count,
+      totalUsers: users.length,
+      message: `Cosmético '${item.name}' atribuído com sucesso a ${result.count} usuários!`,
+    };
   }
 
   async getUserCosmetics(targetUserId: string) {

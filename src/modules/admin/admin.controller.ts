@@ -102,6 +102,15 @@ export class AdminController {
     return this.adminService.getAllCosmetics();
   }
 
+  @Post('cosmetics/:itemId/grant-all')
+  async grantCosmeticToAll(
+    @Request() req: any,
+    @Param('itemId') itemId: string,
+    @Body() body: { userIds?: string[] },
+  ) {
+    return this.adminService.grantCosmeticToAll(itemId, req.user.sub, body?.userIds);
+  }
+
   @Get('users/:id/cosmetics')
   async getUserCosmetics(@Param('id') userId: string) {
     return this.adminService.getUserCosmetics(userId);
