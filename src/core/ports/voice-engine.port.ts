@@ -3,6 +3,7 @@ export interface CreateVoiceTokenOptions {
   participantId: string;
   participantName: string;
   canUpdateOwnMetadata?: boolean;
+  metadata?: string;
 }
 
 export interface IVoiceEnginePort {

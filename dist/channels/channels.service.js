@@ -210,11 +210,26 @@ let ChannelsService = class ChannelsService {
         if (isSuspended) {
             throw new ForbiddenException('Este servidor está suspenso por violação de segurança.');
         }
+        let metadata = undefined;
+        if (!isScreen) {
+            const userRecord = await this.prisma.user.findUnique({
+                where: { id: user.sub },
+                select: { avatarUrl: true, displayName: true, equippedFrameSlug: true },
+            });
+            if (userRecord) {
+                metadata = JSON.stringify({
+                    avatarUrl: userRecord.avatarUrl || null,
+                    displayName: userRecord.displayName || null,
+                    equippedFrameSlug: userRecord.equippedFrameSlug || null,
+                });
+            }
+        }
         const token = await this.voiceEngine.generateAccessToken({
             roomName: channelId,
             participantId: isScreen ? `${user.sub}#screen` : user.sub,
             participantName: isScreen ? `${user.username} (Tela)` : user.username,
             canUpdateOwnMetadata: isScreen,
+            metadata,
         });
         this.logger?.logBusinessEvent('LIVEKIT_TOKEN_ISSUED', {
             userId: user.sub,

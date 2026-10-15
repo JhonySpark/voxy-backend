@@ -11,6 +11,7 @@ export class LivekitVoiceAdapter implements IVoiceEnginePort {
     const at = new AccessToken(apiKey, apiSecret, {
       identity: options.participantId,
       name: options.participantName,
+      metadata: options.metadata,
     });
 
     at.addGrant({
