@@ -49,6 +49,7 @@ export declare class AuthService {
             isEmailVerified: any;
             ageClassification: any;
             ageSignalSource: any;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -68,6 +69,7 @@ export declare class AuthService {
             isEmailVerified: boolean;
             ageClassification: import("../core/enums/age-classification.enum.js").AgeClassificationEnum;
             ageSignalSource: import("../core/enums/age-signal-source.enum.js").AgeSignalSourceEnum;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -109,6 +111,7 @@ export declare class AuthService {
             isEmailVerified: boolean;
             ageClassification: import("@prisma/client").$Enums.AgeClassification;
             ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -132,6 +135,7 @@ export declare class AuthService {
     }): Promise<{
         success: boolean;
         user: {
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -144,6 +148,7 @@ export declare class AuthService {
             ageClassification: import("@prisma/client").$Enums.AgeClassification;
             ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
             ageSignalCheckedAt: Date | null;
+            isSuspended: boolean;
         };
         changed: boolean;
     }>;

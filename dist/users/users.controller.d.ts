@@ -18,6 +18,7 @@ export declare class UsersController {
         isEmailVerified: boolean;
         ageClassification: import("@prisma/client").$Enums.AgeClassification;
         ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+        canJoinVoice: boolean;
         canShareScreen: boolean;
         canStreamGames: boolean;
         canAccess18Plus: boolean;
@@ -39,6 +40,7 @@ export declare class UsersController {
         isEmailVerified: boolean;
         ageClassification: import("@prisma/client").$Enums.AgeClassification;
         ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+        canJoinVoice: boolean;
         canShareScreen: boolean;
         canStreamGames: boolean;
         canAccess18Plus: boolean;

@@ -190,10 +190,17 @@ let ChannelsService = class ChannelsService {
             throw new NotFoundException('Channel not found');
         const userDb = await this.prisma.user.findUnique({
             where: { id: user.sub },
-            select: { ageClassification: true },
+            select: { ageClassification: true, isSuspended: true },
         });
-        if (userDb?.ageClassification === AgeClassificationEnum.CHILD) {
+        if (!userDb || userDb.isSuspended || userDb.ageClassification === AgeClassificationEnum.CHILD) {
             throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
+        }
+        if (userDb.ageClassification === AgeClassificationEnum.UNKNOWN ||
+            userDb.ageClassification === AgeClassificationEnum.DIVERGENT) {
+            throw new ForbiddenException('Usuários sem validação de idade ou com divergência cadastral não podem entrar em chamadas de voz ou transmitir tela. Apenas o chat de texto está liberado.');
+        }
+        if (isScreen && userDb.ageClassification !== AgeClassificationEnum.ADULT) {
+            throw new ForbiddenException('Compartilhamento de tela permitido apenas para maiores de 18 anos verificados.');
         }
         const serverMeta = await this.prisma.server.findUnique({
             where: { id: channel.serverId },

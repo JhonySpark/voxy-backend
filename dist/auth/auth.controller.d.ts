@@ -18,6 +18,7 @@ export declare class AuthController {
             isEmailVerified: any;
             ageClassification: any;
             ageSignalSource: any;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -37,6 +38,7 @@ export declare class AuthController {
             isEmailVerified: boolean;
             ageClassification: import("../core/enums/age-classification.enum.js").AgeClassificationEnum;
             ageSignalSource: import("../core/enums/age-signal-source.enum.js").AgeSignalSourceEnum;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -75,6 +77,7 @@ export declare class AuthController {
             isEmailVerified: boolean;
             ageClassification: import("@prisma/client").$Enums.AgeClassification;
             ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -87,17 +90,10 @@ export declare class AuthController {
         success: boolean;
         message: string;
     }>;
-    syncAgeSignal(req: any, body: {
-        available: boolean;
-        lower?: number;
-        upper?: number;
-        status?: string;
-        nonce?: string;
-        timestamp?: number;
-        signature?: string;
-    }): Promise<{
+    syncAgeSignal(req: any, body: any): Promise<{
         success: boolean;
         user: {
+            canJoinVoice: boolean;
             canShareScreen: boolean;
             canStreamGames: boolean;
             canAccess18Plus: boolean;
@@ -110,6 +106,7 @@ export declare class AuthController {
             ageClassification: import("@prisma/client").$Enums.AgeClassification;
             ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
             ageSignalCheckedAt: Date | null;
+            isSuspended: boolean;
         };
         changed: boolean;
     }>;

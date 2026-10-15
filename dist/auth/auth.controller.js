@@ -45,7 +45,8 @@ let AuthController = class AuthController {
         return this.authService.resendCode(body.email);
     }
     async syncAgeSignal(req, body) {
-        return this.authService.syncAgeSignal(req.user.sub, body);
+        const signal = body && typeof body.signal === 'object' && body.signal !== null ? body.signal : body;
+        return this.authService.syncAgeSignal(req.user.sub, signal || { available: false });
     }
     async checkUsername(username) {
         return this.authService.checkUsername(username);
