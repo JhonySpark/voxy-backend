@@ -16,6 +16,7 @@ import { ServersModule } from './servers/servers.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { ModerationModule } from './moderation/moderation.module.js';
+import { CosmeticsModule } from './modules/cosmetics/cosmetics.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { SystemConfigModule } from './modules/system-config/system-config.module.js';
@@ -59,6 +60,7 @@ AppModule = __decorate([
             ChannelsModule,
             StorageModule,
             ModerationModule,
+            CosmeticsModule,
         ],
         controllers: [AppController],
         providers: [

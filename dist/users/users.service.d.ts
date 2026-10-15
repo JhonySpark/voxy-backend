@@ -70,6 +70,7 @@ export declare class UsersService {
         avatarUrl: string | null;
         bannerUrl: string | null;
         bannerColor: string | null;
+        equippedFrameSlug: string | null;
         createdAt: Date;
         email: string | undefined;
         birthDate: Date | null | undefined;
@@ -94,6 +95,7 @@ export declare class UsersService {
         displayName: string | null;
         bio: string | null;
         bannerColor: string | null;
+        equippedFrameSlug: string | null;
         updatedAt: Date;
     }>;
     changePassword(userId: string, currentPass: string, newPass: string): Promise<{

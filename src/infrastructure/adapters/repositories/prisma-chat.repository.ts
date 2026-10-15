@@ -14,6 +14,7 @@ const MESSAGE_INCLUDE: Prisma.MessageInclude = {
           username: true,
           displayName: true,
           avatarUrl: true,
+          equippedFrameSlug: true,
         },
       },
       attachments: true,

@@ -11,6 +11,7 @@ export declare class UsersController {
         avatarUrl: string | null;
         bannerUrl: string | null;
         bannerColor: string | null;
+        equippedFrameSlug: string | null;
         createdAt: Date;
         email: string | undefined;
         birthDate: Date | null | undefined;
@@ -31,6 +32,7 @@ export declare class UsersController {
         avatarUrl: string | null;
         bannerUrl: string | null;
         bannerColor: string | null;
+        equippedFrameSlug: string | null;
         createdAt: Date;
         email: string | undefined;
         birthDate: Date | null | undefined;
@@ -55,6 +57,7 @@ export declare class UsersController {
         displayName: string | null;
         bio: string | null;
         bannerColor: string | null;
+        equippedFrameSlug: string | null;
         updatedAt: Date;
     }>;
     changePassword(req: any, body: {

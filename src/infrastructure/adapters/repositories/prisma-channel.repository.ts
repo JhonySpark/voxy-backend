@@ -16,6 +16,7 @@ const CHANNEL_MESSAGE_INCLUDE: Prisma.ChannelMessageInclude = {
           username: true,
           displayName: true,
           avatarUrl: true,
+          equippedFrameSlug: true,
         },
       },
       attachments: true,

@@ -121,6 +121,7 @@ let UsersService = class UsersService {
                 bannerUrl: true,
                 bannerKey: true,
                 bannerColor: true,
+                equippedFrameSlug: true,
                 birthDate: true,
                 isEmailVerified: true,
                 ageClassification: true,
@@ -143,6 +144,7 @@ let UsersService = class UsersService {
             avatarUrl: user.avatarUrl ? `${user.avatarUrl.split('?')[0]}${version}` : null,
             bannerUrl: user.bannerUrl ? `${user.bannerUrl.split('?')[0]}${version}` : null,
             bannerColor: user.bannerColor,
+            equippedFrameSlug: user.equippedFrameSlug,
             createdAt: user.createdAt,
             email: isSelf ? user.email : undefined,
             birthDate: isSelf ? user.birthDate : undefined,
@@ -172,6 +174,7 @@ let UsersService = class UsersService {
                 avatarUrl: true,
                 bannerUrl: true,
                 bannerColor: true,
+                equippedFrameSlug: true,
                 updatedAt: true,
             },
         });

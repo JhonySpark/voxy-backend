@@ -132,6 +132,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         avatarUrl?: string | null;
         bannerUrl?: string | null;
         bannerColor?: string | null;
+        equippedFrameSlug?: string | null;
     }, client: Socket): void;
     handleJoinVoice(data: {
         serverId: string;

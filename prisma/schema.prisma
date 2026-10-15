@@ -23,6 +23,7 @@ model User {
   bannerUrl   String?
   bannerKey   String?
   bannerColor String?
+  equippedFrameSlug String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -53,6 +54,7 @@ model User {
   reportsSent             ModerationReport[]       @relation("UserReportsSent")
   reportsReceived         ModerationReport[]       @relation("UserReportsReceived")
   securityAuditLogs       SecurityAuditLog[]       @relation("AuditLogsActed")
+  cosmetics               UserCosmetic[]
 }
 
 enum ReportTargetType {
@@ -398,4 +400,55 @@ model SystemConfig {
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 }
+
+enum CosmeticType {
+  AVATAR_FRAME
+  PROFILE_EFFECT
+  NAMEPLATE
+  BADGE
+}
+
+enum CosmeticRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model CosmeticItem {
+  id          String         @id @default(uuid())
+  slug        String         @unique
+  name        String
+  description String?
+  type        CosmeticType   @default(AVATAR_FRAME)
+  rarity      CosmeticRarity @default(COMMON)
+  assetUrl    String
+  previewUrl  String?
+  price       Int            @default(0)
+  isAvailable Boolean        @default(true)
+  isDefault   Boolean        @default(false)
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  userCosmetics UserCosmetic[]
+
+  @@index([type])
+  @@index([rarity])
+}
+
+model UserCosmetic {
+  id             String       @id @default(uuid())
+  userId         String
+  cosmeticItemId String
+  unlockedAt     DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticItem   CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cosmeticItemId])
+  @@index([userId])
+  @@index([cosmeticItemId])
+}
+
 

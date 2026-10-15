@@ -257,6 +257,7 @@ export class PrismaServerRepository implements IServerRepository {
             avatarUrl: true,
             bannerUrl: true,
             bannerColor: true,
+            equippedFrameSlug: true,
             bio: true,
             createdAt: true,
             updatedAt: true,

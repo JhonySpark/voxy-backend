@@ -359,6 +359,8 @@ let ChatGateway = class ChatGateway {
                         user.avatarUrl = data.avatarUrl;
                     if (data.displayName !== undefined)
                         user.displayName = data.displayName;
+                    if (data.equippedFrameSlug !== undefined)
+                        user.equippedFrameSlug = data.equippedFrameSlug;
                     changed = true;
                     targetServerId = user.serverId;
                 }
@@ -407,15 +409,17 @@ let ChatGateway = class ChatGateway {
         const participants = this.voiceStates.get(data.channelId);
         let avatarUrl = data.avatarUrl;
         let displayName = client.data.user.username;
+        let equippedFrameSlug = null;
         if (this.prisma) {
             try {
                 const userRecord = await this.prisma.user.findUnique({
                     where: { id: userId },
-                    select: { avatarUrl: true, displayName: true },
+                    select: { avatarUrl: true, displayName: true, equippedFrameSlug: true },
                 });
                 if (userRecord) {
                     avatarUrl = userRecord.avatarUrl || avatarUrl;
                     displayName = userRecord.displayName || displayName;
+                    equippedFrameSlug = userRecord.equippedFrameSlug || null;
                 }
             }
             catch (_) { }
@@ -426,6 +430,7 @@ let ChatGateway = class ChatGateway {
             username: client.data.user.username,
             displayName,
             avatarUrl,
+            equippedFrameSlug,
             socketId: client.id,
             serverId: data.serverId,
             isMuted

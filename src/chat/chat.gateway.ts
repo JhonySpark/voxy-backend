@@ -504,13 +504,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       avatarUrl?: string | null;
       bannerUrl?: string | null;
       bannerColor?: string | null;
+      equippedFrameSlug?: string | null;
     },
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data?.user?.sub || data.userId;
     this.server.emit('userProfileUpdated', { ...data, userId });
 
-    // Atualiza estados de voz ativos com o novo avatar e displayName
+    // Atualiza estados de voz ativos com o novo avatar, displayName e moldura
     for (const [channelId, participants] of this.voiceStates.entries()) {
       let changed = false;
       let targetServerId: string | null = null;
@@ -518,6 +519,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (user.userId === userId) {
           if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
           if (data.displayName !== undefined) user.displayName = data.displayName;
+          if (data.equippedFrameSlug !== undefined) (user as any).equippedFrameSlug = data.equippedFrameSlug;
           changed = true;
           targetServerId = user.serverId;
         }
@@ -578,15 +580,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     let avatarUrl = data.avatarUrl;
     let displayName = client.data.user.username;
+    let equippedFrameSlug: string | null = null;
     if (this.prisma) {
       try {
         const userRecord = await this.prisma.user.findUnique({
           where: { id: userId },
-          select: { avatarUrl: true, displayName: true },
+          select: { avatarUrl: true, displayName: true, equippedFrameSlug: true },
         });
         if (userRecord) {
           avatarUrl = userRecord.avatarUrl || avatarUrl;
           displayName = userRecord.displayName || displayName;
+          equippedFrameSlug = userRecord.equippedFrameSlug || null;
         }
       } catch (_) {}
     }
@@ -598,10 +602,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       username: client.data.user.username,
       displayName,
       avatarUrl,
+      equippedFrameSlug,
       socketId: client.id,
       serverId: data.serverId,
       isMuted
-    });
+    } as any);
 
     // Notify users in the voice room (for WebRTC)
     client.to(`voice-${data.channelId}`).emit('userJoinedVoice', { 
