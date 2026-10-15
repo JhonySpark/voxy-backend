@@ -112,12 +112,14 @@ export class AuthService {
         ageSignalSource: user.ageSignalSource,
         canJoinVoice:
           (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN) &&
+            user.ageClassification === AgeClassification.TEEN ||
+            user.ageClassification === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN) &&
+            user.ageClassification === AgeClassification.TEEN ||
+            user.ageClassification === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
@@ -161,12 +163,14 @@ export class AuthService {
         ageSignalSource: user.ageSignalSource,
         canJoinVoice:
           ((user.ageClassification as any) === AgeClassification.ADULT ||
-            (user.ageClassification as any) === AgeClassification.TEEN) &&
+            (user.ageClassification as any) === AgeClassification.TEEN ||
+            (user.ageClassification as any) === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           ((user.ageClassification as any) === AgeClassification.ADULT ||
-            (user.ageClassification as any) === AgeClassification.TEEN) &&
+            (user.ageClassification as any) === AgeClassification.TEEN ||
+            (user.ageClassification as any) === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canAccess18Plus: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: (user.ageClassification as any) !== AgeClassification.CHILD && !user.isSuspended,
@@ -456,12 +460,14 @@ export class AuthService {
         ageSignalSource: user.ageSignalSource,
         canJoinVoice:
           (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN) &&
+            user.ageClassification === AgeClassification.TEEN ||
+            user.ageClassification === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN) &&
+            user.ageClassification === AgeClassification.TEEN ||
+            user.ageClassification === AgeClassification.DIVERGENT) &&
           !user.isSuspended,
         canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
@@ -673,15 +679,17 @@ export class AuthService {
 
     const isAdult = updated.ageClassification === AgeClassification.ADULT;
     const isTeen = updated.ageClassification === AgeClassification.TEEN;
-    const isVerified = (isAdult || isTeen) && !updated.isSuspended;
+    const isDivergent = updated.ageClassification === AgeClassification.DIVERGENT;
+    // DIVERGENT opera com as permissões equivalentes a TEEN (voz liberada, tela/18+ restritos)
+    const canVoice = (isAdult || isTeen || isDivergent) && !updated.isSuspended;
 
     return {
       success: true,
       user: {
         ...updated,
-        canJoinVoice: isVerified,
+        canJoinVoice: canVoice,
         canShareScreen: isAdult && !updated.isSuspended,
-        canStreamGames: isVerified,
+        canStreamGames: canVoice,
         canAccess18Plus: isAdult && !updated.isSuspended,
         canUseApp: !isChild && !updated.isSuspended,
       },

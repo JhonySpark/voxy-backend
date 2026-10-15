@@ -160,7 +160,8 @@ export class User extends AggregateRoot<UserProps> {
     return (
       !this.isSuspended &&
       (this.ageClassification === AgeClassificationEnum.ADULT ||
-        this.ageClassification === AgeClassificationEnum.TEEN)
+        this.ageClassification === AgeClassificationEnum.TEEN ||
+        this.ageClassification === AgeClassificationEnum.DIVERGENT)
     );
   }
 
@@ -172,7 +173,8 @@ export class User extends AggregateRoot<UserProps> {
     return (
       !this.isSuspended &&
       (this.ageClassification === AgeClassificationEnum.ADULT ||
-        this.ageClassification === AgeClassificationEnum.TEEN)
+        this.ageClassification === AgeClassificationEnum.TEEN ||
+        this.ageClassification === AgeClassificationEnum.DIVERGENT)
     );
   }
 

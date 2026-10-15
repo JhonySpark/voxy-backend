@@ -229,12 +229,9 @@ export class ChannelsService {
       throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
     }
 
-    if (
-      userDb.ageClassification === AgeClassificationEnum.UNKNOWN ||
-      userDb.ageClassification === AgeClassificationEnum.DIVERGENT
-    ) {
+    if (userDb.ageClassification === AgeClassificationEnum.UNKNOWN) {
       throw new ForbiddenException(
-        'Usuários sem validação de idade ou com divergência cadastral não podem entrar em chamadas de voz ou transmitir tela. Apenas o chat de texto está liberado.'
+        'Usuários sem validação de idade não podem entrar em chamadas de voz ou transmitir tela. Apenas o chat de texto está liberado.'
       );
     }
 

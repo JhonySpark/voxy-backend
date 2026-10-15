@@ -278,10 +278,11 @@ describe('ChannelsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw ForbiddenException if user ageClassification is DIVERGENT', async () => {
+    it('should allow DIVERGENT to join normal voice as TEEN, but reject screen share', async () => {
       const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
       channelRepo.findById.mockResolvedValue(channel);
       serverRepo.isMember.mockResolvedValue(true);
+      voiceEngine.generateAccessToken.mockResolvedValue('mock_divergent_voice_token');
 
       const mockPrisma = {
         user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'DIVERGENT', isSuspended: false }) },
@@ -295,8 +296,11 @@ describe('ChannelsService', () => {
         mockPrisma as any,
       );
 
+      const result = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, false);
+      expect(result.token).toBe('mock_divergent_voice_token');
+
       await expect(
-        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }),
+        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true),
       ).rejects.toThrow(ForbiddenException);
     });
 

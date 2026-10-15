@@ -133,7 +133,9 @@ export class UsersService {
 
     const isAdult = user.ageClassification === AgeClassificationEnum.ADULT;
     const isTeen = user.ageClassification === AgeClassificationEnum.TEEN;
-    const isVerified = (isAdult || isTeen) && !user.isSuspended;
+    const isDivergent = user.ageClassification === AgeClassificationEnum.DIVERGENT;
+    // DIVERGENT opera com as permissões de TEEN
+    const isVerified = (isAdult || isTeen || isDivergent) && !user.isSuspended;
 
     return {
       id: user.id,
@@ -149,13 +151,13 @@ export class UsersService {
       email: isSelf ? user.email : undefined,
       birthDate: isSelf ? user.birthDate : undefined,
       isEmailVerified: user.isEmailVerified,
-      ageClassification: user.ageClassification,
-      ageSignalSource: user.ageSignalSource,
-      canJoinVoice: isVerified,
-      canShareScreen: isAdult && !user.isSuspended,
-      canStreamGames: isVerified,
-      canAccess18Plus: isAdult && !user.isSuspended,
-      canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD && !user.isSuspended,
+      ageClassification: isSelf ? user.ageClassification : undefined,
+      ageSignalSource: isSelf ? user.ageSignalSource : undefined,
+      canJoinVoice: isSelf ? isVerified : undefined,
+      canShareScreen: isSelf ? (isAdult && !user.isSuspended) : undefined,
+      canStreamGames: isSelf ? isVerified : undefined,
+      canAccess18Plus: isSelf ? (isAdult && !user.isSuspended) : undefined,
+      canUseApp: isSelf ? (user.ageClassification !== AgeClassificationEnum.CHILD && !user.isSuspended) : undefined,
     };
   }
 
