@@ -102,6 +102,7 @@ enum AgeClassification {
   CHILD
   TEEN
   ADULT
+  DIVERGENT
 }
 
 enum AgeSignalSource {

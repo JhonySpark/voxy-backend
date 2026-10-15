@@ -3,4 +3,5 @@ export enum AgeClassificationEnum {
   CHILD = 'CHILD',
   TEEN = 'TEEN',
   ADULT = 'ADULT',
+  DIVERGENT = 'DIVERGENT',
 }

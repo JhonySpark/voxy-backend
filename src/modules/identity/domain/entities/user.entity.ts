@@ -156,16 +156,28 @@ export class User extends AggregateRoot<UserProps> {
     return !this.isSuspended && this.ageClassification !== AgeClassificationEnum.CHILD;
   }
 
+  public canJoinVoice(): boolean {
+    return (
+      !this.isSuspended &&
+      (this.ageClassification === AgeClassificationEnum.ADULT ||
+        this.ageClassification === AgeClassificationEnum.TEEN)
+    );
+  }
+
   public canShareScreen(): boolean {
-    return this.ageClassification === AgeClassificationEnum.ADULT;
+    return !this.isSuspended && this.ageClassification === AgeClassificationEnum.ADULT;
   }
 
   public canStreamGames(): boolean {
-    return this.ageClassification === AgeClassificationEnum.ADULT || this.ageClassification === AgeClassificationEnum.TEEN;
+    return (
+      !this.isSuspended &&
+      (this.ageClassification === AgeClassificationEnum.ADULT ||
+        this.ageClassification === AgeClassificationEnum.TEEN)
+    );
   }
 
   public canAccess18Plus(): boolean {
-    return this.ageClassification === AgeClassificationEnum.ADULT;
+    return !this.isSuspended && this.ageClassification === AgeClassificationEnum.ADULT;
   }
 
   get createdAt(): Date {

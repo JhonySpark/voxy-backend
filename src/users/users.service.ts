@@ -118,6 +118,7 @@ export class UsersService {
         isEmailVerified: true,
         ageClassification: true,
         ageSignalSource: true,
+        isSuspended: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -129,6 +130,10 @@ export class UsersService {
 
     const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
     const isSelf = !requestingUserId || requestingUserId === userId;
+
+    const isAdult = user.ageClassification === AgeClassificationEnum.ADULT;
+    const isTeen = user.ageClassification === AgeClassificationEnum.TEEN;
+    const isVerified = (isAdult || isTeen) && !user.isSuspended;
 
     return {
       id: user.id,
@@ -146,10 +151,11 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: user.ageClassification,
       ageSignalSource: user.ageSignalSource,
-      canShareScreen: user.ageClassification === AgeClassificationEnum.ADULT,
-      canStreamGames: user.ageClassification === AgeClassificationEnum.ADULT || user.ageClassification === AgeClassificationEnum.TEEN,
-      canAccess18Plus: user.ageClassification === AgeClassificationEnum.ADULT,
-      canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD,
+      canJoinVoice: isVerified,
+      canShareScreen: isAdult && !user.isSuspended,
+      canStreamGames: isVerified,
+      canAccess18Plus: isAdult && !user.isSuspended,
+      canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD && !user.isSuspended,
     };
   }
 

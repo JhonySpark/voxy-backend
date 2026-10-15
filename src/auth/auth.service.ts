@@ -110,10 +110,17 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canShareScreen: user.ageClassification === AgeClassification.ADULT,
-        canStreamGames: user.ageClassification === AgeClassification.ADULT || user.ageClassification === AgeClassification.TEEN,
-        canAccess18Plus: user.ageClassification === AgeClassification.ADULT,
-        canUseApp: user.ageClassification !== AgeClassification.CHILD,
+        canJoinVoice:
+          (user.ageClassification === AgeClassification.ADULT ||
+            user.ageClassification === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
+        canStreamGames:
+          (user.ageClassification === AgeClassification.ADULT ||
+            user.ageClassification === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
+        canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
       },
     };
   }
@@ -152,12 +159,17 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT,
+        canJoinVoice:
+          ((user.ageClassification as any) === AgeClassification.ADULT ||
+            (user.ageClassification as any) === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
-          (user.ageClassification as any) === AgeClassification.ADULT ||
-          (user.ageClassification as any) === AgeClassification.TEEN,
-        canAccess18Plus: (user.ageClassification as any) === AgeClassification.ADULT,
-        canUseApp: (user.ageClassification as any) !== AgeClassification.CHILD,
+          ((user.ageClassification as any) === AgeClassification.ADULT ||
+            (user.ageClassification as any) === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canAccess18Plus: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
+        canUseApp: (user.ageClassification as any) !== AgeClassification.CHILD && !user.isSuspended,
       },
     };
   }
@@ -442,10 +454,17 @@ export class AuthService {
         isEmailVerified: true,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canShareScreen: user.ageClassification === AgeClassification.ADULT,
-        canStreamGames: user.ageClassification === AgeClassification.ADULT || user.ageClassification === AgeClassification.TEEN,
-        canAccess18Plus: user.ageClassification === AgeClassification.ADULT,
-        canUseApp: user.ageClassification !== AgeClassification.CHILD,
+        canJoinVoice:
+          (user.ageClassification === AgeClassification.ADULT ||
+            user.ageClassification === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
+        canStreamGames:
+          (user.ageClassification === AgeClassification.ADULT ||
+            user.ageClassification === AgeClassification.TEEN) &&
+          !user.isSuspended,
+        canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
+        canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
       },
     };
   }
@@ -514,8 +533,33 @@ export class AuthService {
     let classification: AgeClassification = AgeClassification.UNKNOWN;
     let source: AgeSignalSource = AgeSignalSource.NONE;
 
+    // Busca o usuário e sua data de nascimento declarada para checagem cruzada
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, birthDate: true, isSuspended: true },
+    });
+
+    const getDeclaredCategory = (bDate?: Date | null): 'CHILD' | 'TEEN' | 'ADULT' | null => {
+      if (!bDate) return null;
+      const today = new Date();
+      let age = today.getFullYear() - bDate.getFullYear();
+      const m = today.getMonth() - bDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) {
+        age--;
+      }
+      if (age < 13) return 'CHILD';
+      if (age < 18) return 'TEEN';
+      return 'ADULT';
+    };
+
+    const declaredCategory = getDeclaredCategory(userRecord?.birthDate);
+
     if (signal.available && typeof signal.lower === 'number') {
-      const secret = process.env.VOXY_AGE_SIGNAL_SECRET || 'v0xy_4g3_s1gn4l_s3cur1ty_pr0t0c0l_2026_k3y';
+      const secretsToTry = [
+        process.env.VOXY_AGE_SIGNAL_SECRET,
+        'v0xy_4g3_s1gn4l_s3cur1ty_pr0t0c0l_2026_k3y',
+      ].filter(Boolean) as string[];
+
       let isCryptographicallyVerified = false;
 
       // 1. Checa presença dos campos criptográficos obrigatórios
@@ -527,16 +571,21 @@ export class AuthService {
         if (ageDiff <= 5 * 60 * 1000) {
           // 3. Validação anti-replay do nonce
           if (this.validateAndConsumeNonce(signal.nonce)) {
-            // 4. Recálculo e conferência da assinatura HMAC-SHA256
+            // 4. Recálculo e conferência da assinatura HMAC-SHA256 (suporta chave configurada e chave oficial da sonda)
             const canonicalData = `${signal.available ? 'true' : 'false'}:${signal.lower}:${signal.upper}:${signal.status}:${signal.timestamp}:${signal.nonce}`;
-            const expectedSig = crypto.createHmac('sha256', secret).update(canonicalData).digest('hex');
 
-            if (
-              expectedSig.length === signal.signature.length &&
-              crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(signal.signature))
-            ) {
-              isCryptographicallyVerified = true;
-            } else {
+            for (const sec of secretsToTry) {
+              const expectedSig = crypto.createHmac('sha256', sec).update(canonicalData).digest('hex');
+              if (
+                expectedSig.length === signal.signature.length &&
+                crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(signal.signature))
+              ) {
+                isCryptographicallyVerified = true;
+                break;
+              }
+            }
+
+            if (!isCryptographicallyVerified) {
               this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`, 'SecurityAlert', { userId });
             }
           } else {
@@ -551,12 +600,36 @@ export class AuthService {
 
       if (isCryptographicallyVerified) {
         source = AgeSignalSource.WINDOWS_OS;
-        if (signal.lower >= 18) {
-          classification = AgeClassification.ADULT;
-        } else if (signal.lower >= 13 || (signal.upper !== undefined && signal.upper <= 17)) {
-          classification = AgeClassification.TEEN;
+
+        // Determina a categoria de idade reportada pelo SO
+        let osCategory: 'CHILD' | 'TEEN' | 'ADULT';
+        if (signal.lower < 13 || (signal.upper !== undefined && signal.upper < 13)) {
+          osCategory = 'CHILD';
+        } else if (signal.lower >= 18) {
+          osCategory = 'ADULT';
         } else {
+          osCategory = 'TEEN';
+        }
+
+        // Se menor de 13 anos, bloqueio imediato da plataforma
+        if (osCategory === 'CHILD' || declaredCategory === 'CHILD') {
           classification = AgeClassification.CHILD;
+          this.logger?.warn(`Usuário ${userId} classificado como menor de 13 anos (CHILD). Suspensão imediata aplicada.`, 'SecurityAlert', {
+            userId,
+            osCategory,
+            declaredCategory,
+          });
+        } else if (declaredCategory && declaredCategory !== osCategory) {
+          // Divergência entre o sinal do SO e a data de nascimento declarada
+          classification = AgeClassification.DIVERGENT;
+          this.logger?.warn(`Divergência cadastral de idade detectada para o usuário ${userId}: declarada=${declaredCategory}, SO=${osCategory}`, 'SecurityAlert', {
+            userId,
+            declaredCategory,
+            osCategory,
+          });
+        } else {
+          // Validação consistente com a data declarada
+          classification = osCategory === 'ADULT' ? AgeClassification.ADULT : AgeClassification.TEEN;
         }
       } else {
         // Falha de integridade/autenticidade: rejeita qualquer promoção e mantém UNKNOWN
@@ -569,12 +642,21 @@ export class AuthService {
       source = AgeSignalSource.NONE;
     }
 
+    const isChild = classification === AgeClassification.CHILD;
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         ageClassification: classification,
         ageSignalSource: source,
         ageSignalCheckedAt: new Date(),
+        ...(isChild
+          ? {
+              isSuspended: true,
+              suspendedReason: 'Conta bloqueada: Idade verificada inferior a 13 anos.',
+              suspendedAt: new Date(),
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -585,17 +667,23 @@ export class AuthService {
         ageClassification: true,
         ageSignalSource: true,
         ageSignalCheckedAt: true,
+        isSuspended: true,
       },
     });
+
+    const isAdult = updated.ageClassification === AgeClassification.ADULT;
+    const isTeen = updated.ageClassification === AgeClassification.TEEN;
+    const isVerified = (isAdult || isTeen) && !updated.isSuspended;
 
     return {
       success: true,
       user: {
         ...updated,
-        canShareScreen: updated.ageClassification === AgeClassification.ADULT,
-        canStreamGames: updated.ageClassification === AgeClassification.ADULT || updated.ageClassification === AgeClassification.TEEN,
-        canAccess18Plus: updated.ageClassification === AgeClassification.ADULT,
-        canUseApp: updated.ageClassification !== AgeClassification.CHILD,
+        canJoinVoice: isVerified,
+        canShareScreen: isAdult && !updated.isSuspended,
+        canStreamGames: isVerified,
+        canAccess18Plus: isAdult && !updated.isSuspended,
+        canUseApp: !isChild && !updated.isSuspended,
       },
       changed: true,
     };
