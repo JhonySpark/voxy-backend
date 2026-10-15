@@ -12,7 +12,7 @@ const INITIAL_COSMETICS = [
   {
     slug: 'beta-pioneer',
     name: 'Obsidian Pioneer',
-    description: 'Moldura exclusiva concedida aos pioneiros do Beta do Voxy.',
+    description: 'Moldura lendária concedida exclusivamente aos pioneiros do Beta do Voxy.',
     type: 'AVATAR_FRAME',
     rarity: 'LEGENDARY',
     assetUrl: '/cosmetics/frames/beta-pioneer.svg',
@@ -48,7 +48,7 @@ const INITIAL_COSMETICS = [
     name: 'Cyber Circuit',
     description: 'Circuitos cibernéticos com iluminação neon ciano futurista.',
     type: 'AVATAR_FRAME',
-    rarity: 'RARE',
+    rarity: 'COMMON',
     assetUrl: '/cosmetics/frames/cyber-circuit.svg',
     previewUrl: '/cosmetics/frames/cyber-circuit.svg',
     price: 0,
@@ -64,7 +64,7 @@ const INITIAL_COSMETICS = [
     name: 'Cosmic Violet',
     description: 'Aura mística estelar com gradiente em tons de violeta e magenta.',
     type: 'AVATAR_FRAME',
-    rarity: 'RARE',
+    rarity: 'COMMON',
     assetUrl: '/cosmetics/frames/cosmic-violet.svg',
     previewUrl: '/cosmetics/frames/cosmic-violet.svg',
     price: 0,
@@ -102,13 +102,12 @@ async function seed() {
     console.log(`[Cosmético] ${upserted.slug} (${upserted.rarity}) pronto.`);
   }
 
-  // 2. Conceder molduras para usuários existentes
+  // 2. Conceder molduras para usuários existentes no inventário
   const users = await prisma.user.findMany({
     select: { id: true, username: true, equippedFrameSlug: true },
   });
   console.log(`Total de usuários encontrados para vincular cosméticos: ${users.length}`);
 
-  const betaPioneerItem = createdItems.find((i) => i.slug === 'beta-pioneer');
   const defaultItems = createdItems.filter((i) => i.isDefault || i.slug === 'beta-pioneer');
 
   for (const user of users) {
@@ -128,16 +127,13 @@ async function seed() {
         },
       });
     }
-
-    // Se o usuário ainda não tiver nenhuma moldura equipada, equipar o Obsidian Pioneer por padrão
-    if (!user.equippedFrameSlug && betaPioneerItem) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { equippedFrameSlug: betaPioneerItem.slug },
-      });
-      console.log(`Usuário @${user.username} recebeu e equipou ${betaPioneerItem.slug}.`);
-    }
   }
+
+  // 3. Garantir que ninguém comece com moldura equipada forçadamente
+  await prisma.user.updateMany({
+    data: { equippedFrameSlug: null },
+  });
+  console.log('Todos os usuários foram atualizados para começar sem moldura equipada (equippedFrameSlug = null).');
 
   console.log('--- Seed de Cosméticos Finalizado com Sucesso! ---');
 }

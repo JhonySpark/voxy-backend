@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -94,5 +95,33 @@ export class AdminController {
   @Get('audit-logs')
   async getAuditLogs(@Request() req: any, @Query() query: any) {
     return this.adminService.getAuditLogs(req.user.sub, query);
+  }
+
+  @Get('cosmetics')
+  async getAllCosmetics() {
+    return this.adminService.getAllCosmetics();
+  }
+
+  @Get('users/:id/cosmetics')
+  async getUserCosmetics(@Param('id') userId: string) {
+    return this.adminService.getUserCosmetics(userId);
+  }
+
+  @Post('users/:id/cosmetics/:itemId')
+  async grantCosmeticToUser(
+    @Request() req: any,
+    @Param('id') userId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.adminService.grantCosmeticToUser(userId, itemId, req.user.sub);
+  }
+
+  @Delete('users/:id/cosmetics/:itemId')
+  async revokeCosmeticFromUser(
+    @Request() req: any,
+    @Param('id') userId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.adminService.revokeCosmeticFromUser(userId, itemId, req.user.sub);
   }
 }

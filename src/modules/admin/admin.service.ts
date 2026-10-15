@@ -397,4 +397,124 @@ export class AdminService {
       offset: query.offset ? parseInt(query.offset, 10) : 0,
     });
   }
+
+  /**
+   * Gestão Administrativa de Cosméticos e Inventários de Usuários
+   */
+  async getAllCosmetics() {
+    return this.prisma.cosmeticItem.findMany({
+      orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
+    });
+  }
+
+  async getUserCosmetics(targetUserId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        role: true,
+        equippedFrameSlug: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    const userItems = await this.prisma.userCosmetic.findMany({
+      where: { userId: targetUserId },
+      include: { cosmeticItem: true },
+      orderBy: { unlockedAt: 'desc' },
+    });
+
+    return {
+      user,
+      inventory: userItems.map((ui) => ({
+        ...ui.cosmeticItem,
+        unlockedAt: ui.unlockedAt,
+      })),
+    };
+  }
+
+  async grantCosmeticToUser(targetUserId: string, cosmeticItemId: string, adminId: string) {
+    const [user, item] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: targetUserId } }),
+      this.prisma.cosmeticItem.findUnique({ where: { id: cosmeticItemId } }),
+    ]);
+
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+    if (!item) throw new NotFoundException('Item cosmético não encontrado.');
+
+    await this.prisma.userCosmetic.upsert({
+      where: {
+        userId_cosmeticItemId: {
+          userId: targetUserId,
+          cosmeticItemId,
+        },
+      },
+      update: {},
+      create: {
+        userId: targetUserId,
+        cosmeticItemId,
+      },
+    });
+
+    await this.securityAuditService
+      .record({
+        action: AuditLogActionEnum.REPORT_RESOLVED,
+        actorId: adminId,
+        targetType: 'USER',
+        targetId: targetUserId,
+        reason: `Cosmético '${item.name}' (${item.slug}) concedido ao usuário @${user.username} pela administração.`,
+      })
+      .catch(() => {});
+
+    return {
+      success: true,
+      message: `Item '${item.name}' concedido a @${user.username} com sucesso!`,
+    };
+  }
+
+  async revokeCosmeticFromUser(targetUserId: string, cosmeticItemId: string, adminId: string) {
+    const [user, item] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: targetUserId } }),
+      this.prisma.cosmeticItem.findUnique({ where: { id: cosmeticItemId } }),
+    ]);
+
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+    if (!item) throw new NotFoundException('Item cosmético não encontrado.');
+
+    await this.prisma.userCosmetic.deleteMany({
+      where: {
+        userId: targetUserId,
+        cosmeticItemId,
+      },
+    });
+
+    // Se o usuário estiver utilizando a moldura revogada, desequipar imediatamente
+    if (user.equippedFrameSlug === item.slug) {
+      await this.prisma.user.update({
+        where: { id: targetUserId },
+        data: { equippedFrameSlug: null },
+      });
+    }
+
+    await this.securityAuditService
+      .record({
+        action: AuditLogActionEnum.REPORT_RESOLVED,
+        actorId: adminId,
+        targetType: 'USER',
+        targetId: targetUserId,
+        reason: `Cosmético '${item.name}' (${item.slug}) revogado do usuário @${user.username} pela administração.`,
+      })
+      .catch(() => {});
+
+    return {
+      success: true,
+      message: `Item '${item.name}' revogado de @${user.username} com sucesso!`,
+    };
+  }
 }
