@@ -16,6 +16,7 @@ import { Channel } from '../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../modules/servers/domain/value-objects/channel-type.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassificationEnum } from '../core/enums/index.js';
+import { canJoinVoiceByAge } from '../core/logic/age-policy.js';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 import { SecurityAuditService } from '../moderation/security-audit.service.js';
 import { AuditLogActionEnum } from '../core/enums/moderation.enums.js';
@@ -222,14 +223,14 @@ export class ChannelsService {
 
     const userDb = await this.prisma.user.findUnique({
       where: { id: user.sub },
-      select: { ageClassification: true, isSuspended: true },
+      select: { ageClassification: true, isSuspended: true, birthDate: true },
     });
 
     if (!userDb || userDb.isSuspended || userDb.ageClassification === AgeClassificationEnum.CHILD) {
       throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
     }
 
-    if (userDb.ageClassification === AgeClassificationEnum.UNKNOWN) {
+    if (!canJoinVoiceByAge(userDb)) {
       throw new ForbiddenException(
         'Usuários sem validação de idade não podem entrar em chamadas de voz ou transmitir tela. Apenas o chat de texto está liberado.'
       );

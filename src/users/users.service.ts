@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { PASSWORD_HASHER_PORT } from '../core/ports/security/password-hasher.port.js';
 import type { IPasswordHasherPort } from '../core/ports/security/password-hasher.port.js';
 import { AgeClassificationEnum, AgeSignalSourceEnum } from '../core/enums/index.js';
+import { canJoinVoiceByAge } from '../core/logic/age-policy.js';
 
 @Injectable()
 export class UsersService {
@@ -153,7 +154,7 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: isSelf ? user.ageClassification : undefined,
       ageSignalSource: isSelf ? user.ageSignalSource : undefined,
-      canJoinVoice: isSelf ? isVerified : undefined,
+      canJoinVoice: isSelf ? canJoinVoiceByAge(user) : undefined,
       canShareScreen: isSelf ? (isAdult && !user.isSuspended) : undefined,
       canStreamGames: isSelf ? isVerified : undefined,
       canAccess18Plus: isSelf ? (isAdult && !user.isSuspended) : undefined,

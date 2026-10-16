@@ -12,6 +12,7 @@ import { Password } from '../modules/identity/domain/value-objects/password.vo.j
 import { BirthDate } from '../modules/identity/domain/value-objects/birth-date.vo.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AgeClassification, AgeSignalSource, UserRole } from '@prisma/client';
+import { canJoinVoiceByAge } from '../core/logic/age-policy.js';
 import crypto from 'node:crypto';
 import { BetterStackLoggerService } from '../infrastructure/logging/better-stack-logger.service.js';
 import { SystemConfigService } from '../modules/system-config/system-config.service.js';
@@ -110,11 +111,7 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice:
-          (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN ||
-            user.ageClassification === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canJoinVoice: canJoinVoiceByAge(user as any),
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           (user.ageClassification === AgeClassification.ADULT ||
@@ -161,11 +158,7 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice:
-          ((user.ageClassification as any) === AgeClassification.ADULT ||
-            (user.ageClassification as any) === AgeClassification.TEEN ||
-            (user.ageClassification as any) === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canJoinVoice: canJoinVoiceByAge(user as any),
         canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           ((user.ageClassification as any) === AgeClassification.ADULT ||
@@ -458,11 +451,7 @@ export class AuthService {
         isEmailVerified: true,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice:
-          (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN ||
-            user.ageClassification === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canJoinVoice: canJoinVoiceByAge(user as any),
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canStreamGames:
           (user.ageClassification === AgeClassification.ADULT ||
@@ -539,10 +528,13 @@ export class AuthService {
     let classification: AgeClassification = AgeClassification.UNKNOWN;
     let source: AgeSignalSource = AgeSignalSource.NONE;
 
+    let outcome = 'SIGNAL_UNAVAILABLE';
+    const startedAt = Date.now();
+
     // Busca o usuário e sua data de nascimento declarada para checagem cruzada
     const userRecord = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, birthDate: true, isSuspended: true },
+      select: { id: true, birthDate: true, isSuspended: true, ageClassification: true },
     });
 
     const getDeclaredCategory = (bDate?: Date | null): 'CHILD' | 'TEEN' | 'ADULT' | null => {
@@ -567,7 +559,7 @@ export class AuthService {
       ].filter(Boolean) as string[];
 
       let isCryptographicallyVerified = false;
-
+      outcome = 'MISSING_SIGNATURE';
       // 1. Checa presença dos campos criptográficos obrigatórios
       if (signal.signature && signal.nonce && signal.timestamp) {
         const now = Date.now();
@@ -578,6 +570,7 @@ export class AuthService {
           // 3. Validação anti-replay do nonce
           if (this.validateAndConsumeNonce(signal.nonce)) {
             // 4. Recálculo e conferência da assinatura HMAC-SHA256 (suporta chave configurada e chave oficial da sonda)
+            outcome = 'INVALID_SIGNATURE';
             const canonicalData = `${signal.available ? 'true' : 'false'}:${signal.lower}:${signal.upper}:${signal.status}:${signal.timestamp}:${signal.nonce}`;
 
             for (const sec of secretsToTry) {
@@ -595,9 +588,11 @@ export class AuthService {
               this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`, 'SecurityAlert', { userId });
             }
           } else {
+            outcome = 'REPLAY_DETECTED';
             this.logger?.warn(`Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`, 'SecurityAlert', { userId, nonce: signal.nonce });
           }
         } else {
+          outcome = 'TIMESTAMP_EXPIRED';
           this.logger?.warn(`Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`, 'SecurityAlert', { userId, ageDiff });
         }
       } else {
@@ -605,6 +600,7 @@ export class AuthService {
       }
 
       if (isCryptographicallyVerified) {
+        outcome = 'VERIFIED';
         source = AgeSignalSource.WINDOWS_OS;
 
         // Determina a categoria de idade reportada pelo SO
@@ -650,6 +646,29 @@ export class AuthService {
 
     const isChild = classification === AgeClassification.CHILD;
 
+    // Telemetria: uma linha por execução da verificação de idade (filtrar por eventName=AGE_SIGNAL_SYNC)
+    const sigSkewMs =
+      typeof signal.timestamp === 'number' ? Date.now() - signal.timestamp : undefined;
+    this.logger?.logBusinessEvent('AGE_SIGNAL_SYNC', {
+      userId,
+      success: outcome === 'VERIFIED',
+      outcome,
+      previousClassification: userRecord?.ageClassification ?? null,
+      newClassification: classification,
+      source,
+      declaredCategory,
+      signalAvailable: Boolean(signal.available),
+      signalStatus: signal.status ?? null,
+      clientReason: (signal as any).reason ?? null,
+      clientExitCode: (signal as any).code ?? null,
+      clientStderr: (signal as any).stderr ? String((signal as any).stderr).slice(0, 300) : null,
+      clientError: (signal as any).error ? String((signal as any).error).slice(0, 300) : null,
+      hasSignature: Boolean(signal.signature),
+      clockSkewMs: sigSkewMs,
+      suspended: isChild,
+      durationMs: Date.now() - startedAt,
+    });
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -687,7 +706,7 @@ export class AuthService {
       success: true,
       user: {
         ...updated,
-        canJoinVoice: canVoice,
+        canJoinVoice: canJoinVoiceByAge(updated as any),
         canShareScreen: isAdult && !updated.isSuspended,
         canStreamGames: canVoice,
         canAccess18Plus: isAdult && !updated.isSuspended,
