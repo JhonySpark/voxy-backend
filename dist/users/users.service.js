@@ -137,6 +137,7 @@ let UsersService = class UsersService {
         const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
         const isSelf = !requestingUserId || requestingUserId === userId;
         const isChild = user.ageClassification === AgeClassificationEnum.CHILD;
+        const isAdult = user.ageClassification === AgeClassificationEnum.ADULT;
         const canUsePlatform = !user.isSuspended && !isChild;
         return {
             id: user.id,
@@ -155,9 +156,9 @@ let UsersService = class UsersService {
             ageClassification: isSelf ? user.ageClassification : undefined,
             ageSignalSource: isSelf ? user.ageSignalSource : undefined,
             canJoinVoice: isSelf ? canUsePlatform : undefined,
-            canShareScreen: isSelf ? canUsePlatform : undefined,
+            canShareScreen: isSelf ? (isAdult && !user.isSuspended) : undefined,
             canStreamGames: isSelf ? canUsePlatform : undefined,
-            canAccess18Plus: isSelf ? canUsePlatform : undefined,
+            canAccess18Plus: isSelf ? (isAdult && !user.isSuspended) : undefined,
             canUseApp: isSelf ? canUsePlatform : undefined,
         };
     }

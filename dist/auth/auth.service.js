@@ -116,9 +116,9 @@ let AuthService = class AuthService {
                 ageClassification: user.ageClassification,
                 ageSignalSource: user.ageSignalSource,
                 canJoinVoice: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canShareScreen: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canStreamGames: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canAccess18Plus: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
             },
         };
@@ -155,9 +155,9 @@ let AuthService = class AuthService {
                 ageClassification: user.ageClassification,
                 ageSignalSource: user.ageSignalSource,
                 canJoinVoice: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canShareScreen: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canStreamGames: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canAccess18Plus: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
             },
         };
@@ -386,9 +386,9 @@ let AuthService = class AuthService {
                 ageClassification: user.ageClassification,
                 ageSignalSource: user.ageSignalSource,
                 canJoinVoice: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canShareScreen: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canStreamGames: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
-                canAccess18Plus: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
+                canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
                 canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
             },
         };
@@ -647,16 +647,17 @@ let AuthService = class AuthService {
                 isSuspended: true,
             },
         });
-        const canUseEverything = !updated.isSuspended && !isChild;
+        const isAdult = updated.ageClassification === AgeClassification.ADULT;
+        const canStream = !updated.isSuspended && !isChild;
         return {
             success: true,
             user: {
                 ...updated,
-                canJoinVoice: canUseEverything,
-                canShareScreen: canUseEverything,
-                canStreamGames: canUseEverything,
-                canAccess18Plus: canUseEverything,
-                canUseApp: canUseEverything,
+                canJoinVoice: canStream,
+                canShareScreen: isAdult && !updated.isSuspended,
+                canStreamGames: canStream,
+                canAccess18Plus: isAdult && !updated.isSuspended,
+                canUseApp: canStream,
             },
             outcome,
             preservedPrevious,

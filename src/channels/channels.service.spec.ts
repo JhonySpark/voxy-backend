@@ -256,10 +256,11 @@ describe('ChannelsService', () => {
       expect(result).toEqual({ token: 'mock_voice_token', maxScreenShareBitrateKbps: 2500 });
     });
 
-    it('should throw ForbiddenException if user ageClassification is UNKNOWN', async () => {
+    it('should allow user with ageClassification UNKNOWN to join voice during diagnosis', async () => {
       const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
       channelRepo.findById.mockResolvedValue(channel);
       serverRepo.isMember.mockResolvedValue(true);
+      voiceEngine.generateAccessToken.mockResolvedValue('mock_unknown_voice_token');
 
       const mockPrisma = {
         user: { findUnique: vi.fn().mockResolvedValue({ ageClassification: 'UNKNOWN', isSuspended: false }) },
@@ -273,12 +274,11 @@ describe('ChannelsService', () => {
         mockPrisma as any,
       );
 
-      await expect(
-        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }),
-      ).rejects.toThrow(ForbiddenException);
+      const result = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' });
+      expect(result.token).toBe('mock_unknown_voice_token');
     });
 
-    it('should allow DIVERGENT to join normal voice as TEEN, but reject screen share', async () => {
+    it('should allow DIVERGENT to join normal voice and stream games', async () => {
       const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
       channelRepo.findById.mockResolvedValue(channel);
       serverRepo.isMember.mockResolvedValue(true);
@@ -299,9 +299,8 @@ describe('ChannelsService', () => {
       const result = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, false);
       expect(result.token).toBe('mock_divergent_voice_token');
 
-      await expect(
-        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true),
-      ).rejects.toThrow(ForbiddenException);
+      const screenResult = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true);
+      expect(screenResult.token).toBe('mock_divergent_voice_token');
     });
 
     it('should throw ForbiddenException if user ageClassification is CHILD', async () => {
@@ -326,7 +325,7 @@ describe('ChannelsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow TEEN to join normal voice, but reject screen share', async () => {
+    it('should allow TEEN to join normal voice and stream games', async () => {
       const channel = createDomainChannel('c1', 'voice-room', 's1', 'VOICE');
       channelRepo.findById.mockResolvedValue(channel);
       serverRepo.isMember.mockResolvedValue(true);
@@ -355,10 +354,8 @@ describe('ChannelsService', () => {
       const result = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, false);
       expect(result.token).toBe('mock_teen_voice_token');
 
-      // Tentativa de compartilhar tela sendo TEEN deve ser rejeitada
-      await expect(
-        customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true),
-      ).rejects.toThrow(ForbiddenException);
+      const screenResult = await customService.getVoiceToken('c1', { sub: 'u1', username: 'user1' }, true);
+      expect(screenResult.token).toBe('mock_teen_voice_token');
     });
 
     it('should throw ForbiddenException if screen sharing is disabled globally', async () => {
