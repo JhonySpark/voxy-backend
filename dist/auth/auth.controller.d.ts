@@ -108,6 +108,8 @@ export declare class AuthController {
             ageSignalCheckedAt: Date | null;
             isSuspended: boolean;
         };
+        outcome: string;
+        preservedPrevious: boolean;
         changed: boolean;
     }>;
     checkUsername(username: string): Promise<{

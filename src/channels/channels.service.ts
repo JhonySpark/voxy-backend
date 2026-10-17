@@ -236,18 +236,10 @@ export class ChannelsService {
       );
     }
 
-    if (isScreen && userDb.ageClassification !== AgeClassificationEnum.ADULT) {
-      throw new ForbiddenException('Compartilhamento de tela permitido apenas para maiores de 18 anos verificados.');
-    }
-
     const serverMeta = await this.prisma.server.findUnique({
       where: { id: channel.serverId },
       select: { is18Plus: true },
     });
-
-    if (serverMeta?.is18Plus && userDb?.ageClassification !== AgeClassificationEnum.ADULT) {
-      throw new ForbiddenException('Este canal pertence a um servidor restrito para maiores de 18 anos (+18).');
-    }
 
     const isMember = await this.serverRepo.isMember(channel.serverId, user.sub);
     if (!isMember) {

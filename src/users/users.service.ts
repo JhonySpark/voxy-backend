@@ -132,11 +132,9 @@ export class UsersService {
     const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
     const isSelf = !requestingUserId || requestingUserId === userId;
 
+    const isChild = user.ageClassification === AgeClassificationEnum.CHILD;
     const isAdult = user.ageClassification === AgeClassificationEnum.ADULT;
-    const isTeen = user.ageClassification === AgeClassificationEnum.TEEN;
-    const isDivergent = user.ageClassification === AgeClassificationEnum.DIVERGENT;
-    // DIVERGENT opera com as permissões de TEEN
-    const isVerified = (isAdult || isTeen || isDivergent) && !user.isSuspended;
+    const canUsePlatform = !user.isSuspended && !isChild;
 
     return {
       id: user.id,
@@ -154,11 +152,11 @@ export class UsersService {
       isEmailVerified: user.isEmailVerified,
       ageClassification: isSelf ? user.ageClassification : undefined,
       ageSignalSource: isSelf ? user.ageSignalSource : undefined,
-      canJoinVoice: isSelf ? canJoinVoiceByAge(user) : undefined,
+      canJoinVoice: isSelf ? canUsePlatform : undefined,
       canShareScreen: isSelf ? (isAdult && !user.isSuspended) : undefined,
-      canStreamGames: isSelf ? isVerified : undefined,
+      canStreamGames: isSelf ? canUsePlatform : undefined,
       canAccess18Plus: isSelf ? (isAdult && !user.isSuspended) : undefined,
-      canUseApp: isSelf ? (user.ageClassification !== AgeClassificationEnum.CHILD && !user.isSuspended) : undefined,
+      canUseApp: isSelf ? canUsePlatform : undefined,
     };
   }
 

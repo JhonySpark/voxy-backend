@@ -37,8 +37,8 @@ export class ServersService {
         where: { id: ownerId },
         select: { ageClassification: true },
       });
-      if (owner?.ageClassification !== AgeClassificationEnum.ADULT) {
-        throw new ForbiddenException('Apenas usuários adultos (18+) podem criar servidores para maiores de 18 anos.');
+      if (owner?.ageClassification === AgeClassificationEnum.CHILD) {
+        throw new ForbiddenException('Apenas usuários permitidos podem criar servidores para maiores de 18 anos.');
       }
     }
 
@@ -191,8 +191,8 @@ export class ServersService {
         where: { id: userId },
         select: { ageClassification: true },
       });
-      if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
-        throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+      if (user?.ageClassification === AgeClassificationEnum.CHILD) {
+        throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
       }
     }
 
@@ -252,8 +252,8 @@ export class ServersService {
         where: { id: userId },
         select: { ageClassification: true },
       });
-      if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
-        throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+      if (user?.ageClassification === AgeClassificationEnum.CHILD) {
+        throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
       }
     }
 

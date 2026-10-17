@@ -150,6 +150,8 @@ export declare class AuthService {
             ageSignalCheckedAt: Date | null;
             isSuspended: boolean;
         };
+        outcome: string;
+        preservedPrevious: boolean;
         changed: boolean;
     }>;
 }

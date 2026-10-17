@@ -34,9 +34,9 @@ export function getDeclaredAgeCategory(birthDate?: Date | string | null): Declar
 
 /**
  * Regra única de acesso a chamadas de voz por idade.
- * - ADULT / TEEN / DIVERGENT (opera como TEEN): liberado
- * - UNKNOWN: bloqueado, exceto durante a carência e se a idade declarada for >= 13
- * - CHILD / suspenso: bloqueado
+ * TRAVAS DESATIVADAS TEMPORARIAMENTE:
+ * Libera acesso para todos os usuários normais, bloqueando apenas
+ * contas explicitamente suspensas ou confirmadas como CHILD (<13 anos).
  */
 export function canJoinVoiceByAge(params: {
   ageClassification?: string | null;
@@ -44,17 +44,7 @@ export function canJoinVoiceByAge(params: {
   birthDate?: Date | string | null;
 }): boolean {
   if (params.isSuspended) return false;
-  switch (params.ageClassification) {
-    case AgeClassificationEnum.ADULT:
-    case AgeClassificationEnum.TEEN:
-    case AgeClassificationEnum.DIVERGENT:
-      return true;
-    case AgeClassificationEnum.UNKNOWN: {
-      if (!isUnknownGraceActive()) return false;
-      const declared = getDeclaredAgeCategory(params.birthDate);
-      return declared === 'TEEN' || declared === 'ADULT';
-    }
-    default:
-      return false;
-  }
+  if (params.ageClassification === AgeClassificationEnum.CHILD) return false;
+  // Temporariamente liberado para UNKNOWN, TEEN, ADULT e DIVERGENT
+  return true;
 }

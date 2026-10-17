@@ -42,8 +42,8 @@ let ServersService = class ServersService {
                 where: { id: ownerId },
                 select: { ageClassification: true },
             });
-            if (owner?.ageClassification !== AgeClassificationEnum.ADULT) {
-                throw new ForbiddenException('Apenas usuários adultos (18+) podem criar servidores para maiores de 18 anos.');
+            if (owner?.ageClassification === AgeClassificationEnum.CHILD) {
+                throw new ForbiddenException('Apenas usuários permitidos podem criar servidores para maiores de 18 anos.');
             }
         }
         const serverOrError = Server.create(name, ownerId);
@@ -169,8 +169,8 @@ let ServersService = class ServersService {
                 where: { id: userId },
                 select: { ageClassification: true },
             });
-            if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
-                throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+            if (user?.ageClassification === AgeClassificationEnum.CHILD) {
+                throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
             }
         }
         const version = server.updatedAt ? `?v=${new Date(server.updatedAt).getTime()}` : '';
@@ -223,8 +223,8 @@ let ServersService = class ServersService {
                 where: { id: userId },
                 select: { ageClassification: true },
             });
-            if (user?.ageClassification !== AgeClassificationEnum.ADULT) {
-                throw new ForbiddenException('Este servidor é restrito para maiores de 18 anos (+18).');
+            if (user?.ageClassification === AgeClassificationEnum.CHILD) {
+                throw new ForbiddenException('Acesso restrito para menores de 13 anos.');
             }
         }
         const isBanned = await this.serverRepo.isBanned(serverId, userId);

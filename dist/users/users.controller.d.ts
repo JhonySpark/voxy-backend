@@ -16,13 +16,13 @@ export declare class UsersController {
         email: string | undefined;
         birthDate: Date | null | undefined;
         isEmailVerified: boolean;
-        ageClassification: import("@prisma/client").$Enums.AgeClassification;
-        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
-        canJoinVoice: boolean;
-        canShareScreen: boolean;
-        canStreamGames: boolean;
-        canAccess18Plus: boolean;
-        canUseApp: boolean;
+        ageClassification: import("@prisma/client").$Enums.AgeClassification | undefined;
+        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource | undefined;
+        canJoinVoice: boolean | undefined;
+        canShareScreen: boolean | undefined;
+        canStreamGames: boolean | undefined;
+        canAccess18Plus: boolean | undefined;
+        canUseApp: boolean | undefined;
     }>;
     getUserProfile(req: any, id: string): Promise<{
         id: string;
@@ -38,13 +38,13 @@ export declare class UsersController {
         email: string | undefined;
         birthDate: Date | null | undefined;
         isEmailVerified: boolean;
-        ageClassification: import("@prisma/client").$Enums.AgeClassification;
-        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource;
-        canJoinVoice: boolean;
-        canShareScreen: boolean;
-        canStreamGames: boolean;
-        canAccess18Plus: boolean;
-        canUseApp: boolean;
+        ageClassification: import("@prisma/client").$Enums.AgeClassification | undefined;
+        ageSignalSource: import("@prisma/client").$Enums.AgeSignalSource | undefined;
+        canJoinVoice: boolean | undefined;
+        canShareScreen: boolean | undefined;
+        canStreamGames: boolean | undefined;
+        canAccess18Plus: boolean | undefined;
+        canUseApp: boolean | undefined;
     }>;
     updateProfile(req: any, body: {
         displayName?: string;

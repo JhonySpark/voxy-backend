@@ -111,13 +111,9 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice: canJoinVoiceByAge(user as any),
+        canJoinVoice: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
-        canStreamGames:
-          (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN ||
-            user.ageClassification === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canStreamGames: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
         canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
       },
@@ -158,13 +154,9 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice: canJoinVoiceByAge(user as any),
+        canJoinVoice: !user.isSuspended && (user.ageClassification as any) !== AgeClassification.CHILD,
         canShareScreen: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
-        canStreamGames:
-          ((user.ageClassification as any) === AgeClassification.ADULT ||
-            (user.ageClassification as any) === AgeClassification.TEEN ||
-            (user.ageClassification as any) === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canStreamGames: !user.isSuspended && (user.ageClassification as any) !== AgeClassification.CHILD,
         canAccess18Plus: (user.ageClassification as any) === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: (user.ageClassification as any) !== AgeClassification.CHILD && !user.isSuspended,
       },
@@ -451,13 +443,9 @@ export class AuthService {
         isEmailVerified: true,
         ageClassification: user.ageClassification,
         ageSignalSource: user.ageSignalSource,
-        canJoinVoice: canJoinVoiceByAge(user as any),
+        canJoinVoice: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
         canShareScreen: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
-        canStreamGames:
-          (user.ageClassification === AgeClassification.ADULT ||
-            user.ageClassification === AgeClassification.TEEN ||
-            user.ageClassification === AgeClassification.DIVERGENT) &&
-          !user.isSuspended,
+        canStreamGames: !user.isSuspended && user.ageClassification !== AgeClassification.CHILD,
         canAccess18Plus: user.ageClassification === AgeClassification.ADULT && !user.isSuspended,
         canUseApp: user.ageClassification !== AgeClassification.CHILD && !user.isSuspended,
       },
@@ -531,11 +519,22 @@ export class AuthService {
     let outcome = 'SIGNAL_UNAVAILABLE';
     const startedAt = Date.now();
 
-    // Busca o usuário e sua data de nascimento declarada para checagem cruzada
+    // Busca o usuário e seus dados cadastrais para validação e auditoria detalhada
     const userRecord = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, birthDate: true, isSuspended: true, ageClassification: true },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        birthDate: true,
+        isSuspended: true,
+        ageClassification: true,
+        ageSignalSource: true,
+      },
     });
+
+    const previousClassification = userRecord?.ageClassification ?? AgeClassification.UNKNOWN;
+    let preservedPrevious = false;
 
     const getDeclaredCategory = (bDate?: Date | null): 'CHILD' | 'TEEN' | 'ADULT' | null => {
       if (!bDate) return null;
@@ -553,10 +552,17 @@ export class AuthService {
     const declaredCategory = getDeclaredCategory(userRecord?.birthDate);
 
     if (signal.available && typeof signal.lower === 'number') {
-      const secretsToTry = [
-        process.env.VOXY_AGE_SIGNAL_SECRET,
-        'v0xy_4g3_s1gn4l_s3cur1ty_pr0t0c0l_2026_k3y',
-      ].filter(Boolean) as string[];
+      const rawEnvSecret = process.env.VOXY_AGE_SIGNAL_SECRET;
+      const cleanedEnvSecret = rawEnvSecret?.trim().replace(/^["']|["']$/g, '');
+      const secretsToTry = Array.from(
+        new Set(
+          [
+            cleanedEnvSecret,
+            rawEnvSecret,
+            'v0xy_4g3_s1gn4l_s3cur1ty_pr0t0c0l_2026_k3y',
+          ].filter(Boolean) as string[]
+        )
+      );
 
       let isCryptographicallyVerified = false;
       outcome = 'MISSING_SIGNATURE';
@@ -585,18 +591,24 @@ export class AuthService {
             }
 
             if (!isCryptographicallyVerified) {
-              this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userId}!`, 'SecurityAlert', { userId });
+              this.logger?.warn(`Assinatura HMAC inválida para o sinal de idade do usuário ${userRecord?.username || userId} (${userRecord?.email})!`, 'SecurityAlert', {
+                userId,
+                username: userRecord?.username,
+                email: userRecord?.email,
+                secretsTestedCount: secretsToTry.length,
+                receivedSig: signal.signature,
+              });
             }
           } else {
             outcome = 'REPLAY_DETECTED';
-            this.logger?.warn(`Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userId}!`, 'SecurityAlert', { userId, nonce: signal.nonce });
+            this.logger?.warn(`Replay Attack detectado para o nonce ${signal.nonce} do usuário ${userRecord?.username || userId}!`, 'SecurityAlert', { userId, nonce: signal.nonce });
           }
         } else {
           outcome = 'TIMESTAMP_EXPIRED';
-          this.logger?.warn(`Timestamp expirado para o sinal de idade do usuário ${userId}: diff=${ageDiff}ms`, 'SecurityAlert', { userId, ageDiff });
+          this.logger?.warn(`Timestamp expirado para o sinal de idade do usuário ${userRecord?.username || userId}: diff=${ageDiff}ms`, 'SecurityAlert', { userId, ageDiff });
         }
       } else {
-        this.logger?.warn(`Sinal de idade recebido sem assinatura criptográfica para o usuário ${userId}!`, 'SecurityAlert', { userId });
+        this.logger?.warn(`Sinal de idade recebido sem assinatura criptográfica para o usuário ${userRecord?.username || userId}!`, 'SecurityAlert', { userId });
       }
 
       if (isCryptographicallyVerified) {
@@ -618,6 +630,8 @@ export class AuthService {
           classification = AgeClassification.CHILD;
           this.logger?.warn(`Usuário ${userId} classificado como menor de 13 anos (CHILD). Suspensão imediata aplicada.`, 'SecurityAlert', {
             userId,
+            username: userRecord?.username,
+            email: userRecord?.email,
             osCategory,
             declaredCategory,
           });
@@ -626,6 +640,8 @@ export class AuthService {
           classification = AgeClassification.DIVERGENT;
           this.logger?.warn(`Divergência cadastral de idade detectada para o usuário ${userId}: declarada=${declaredCategory}, SO=${osCategory}`, 'SecurityAlert', {
             userId,
+            username: userRecord?.username,
+            email: userRecord?.email,
             declaredCategory,
             osCategory,
           });
@@ -634,40 +650,87 @@ export class AuthService {
           classification = osCategory === 'ADULT' ? AgeClassification.ADULT : AgeClassification.TEEN;
         }
       } else {
-        // Falha de integridade/autenticidade: rejeita qualquer promoção e mantém UNKNOWN
+        // Falha de validação criptográfica: Se o usuário já tinha classificação válida prévia (ADULT/TEEN), preserva!
+        if (previousClassification && previousClassification !== AgeClassification.UNKNOWN) {
+          classification = previousClassification;
+          source = userRecord?.ageSignalSource ?? AgeSignalSource.NONE;
+          preservedPrevious = true;
+        } else {
+          classification = AgeClassification.UNKNOWN;
+          source = AgeSignalSource.NONE;
+        }
+      }
+    } else {
+      // Quando o sinal não estiver disponível ou a sonda retornar available: false
+      if (signal && !signal.available && (signal as any).reason) {
+        outcome = `PROBE_${String((signal as any).reason).toUpperCase()}`;
+      } else if (!signal.available) {
+        outcome = 'PROBE_UNAVAILABLE';
+      }
+
+      // Se o usuário já tinha uma classificação válida anterior (ex: ADULT ou TEEN),
+      // preservamos para não derrubar usuários em caso de erro transitório de sonda ou rede.
+      if (previousClassification && previousClassification !== AgeClassification.UNKNOWN) {
+        classification = previousClassification;
+        source = userRecord?.ageSignalSource ?? AgeSignalSource.NONE;
+        preservedPrevious = true;
+      } else {
         classification = AgeClassification.UNKNOWN;
         source = AgeSignalSource.NONE;
       }
-    } else {
-      // Quando o sinal não estiver disponível, mantém UNKNOWN conforme o fluxo do projeto
-      classification = AgeClassification.UNKNOWN;
-      source = AgeSignalSource.NONE;
     }
 
     const isChild = classification === AgeClassification.CHILD;
 
-    // Telemetria: uma linha por execução da verificação de idade (filtrar por eventName=AGE_SIGNAL_SYNC)
+    // Telemetria rica e detalhada: registro completo no Better Stack e no console
     const sigSkewMs =
       typeof signal.timestamp === 'number' ? Date.now() - signal.timestamp : undefined;
-    this.logger?.logBusinessEvent('AGE_SIGNAL_SYNC', {
+
+    const logPayload = {
+      tag: 'AgeSignal',
+      flow: 'Backend',
+      type: 'verification',
       userId,
+      username: userRecord?.username ?? null,
+      email: userRecord?.email ?? null,
+      declaredBirthDate: userRecord?.birthDate ?? null,
+      declaredCategory,
+      previousClassification,
+      newClassification: classification,
+      preservedPrevious,
       success: outcome === 'VERIFIED',
       outcome,
-      previousClassification: userRecord?.ageClassification ?? null,
-      newClassification: classification,
       source,
-      declaredCategory,
       signalAvailable: Boolean(signal.available),
+      signalLower: signal.lower ?? null,
+      signalUpper: signal.upper ?? null,
       signalStatus: signal.status ?? null,
+      signalTimestamp: signal.timestamp ?? null,
+      clockSkewMs: sigSkewMs,
+      hasNonce: Boolean(signal.nonce),
+      nonce: signal.nonce ?? null,
+      hasSignature: Boolean(signal.signature),
+      signature: signal.signature ? `${signal.signature.slice(0, 10)}...${signal.signature.slice(-6)}` : null,
+      clientPlatform: (signal as any).platform ?? null,
+      clientOsRelease: (signal as any).osRelease ?? null,
+      clientOsVersion: (signal as any).osVersion ?? null,
       clientReason: (signal as any).reason ?? null,
       clientExitCode: (signal as any).code ?? null,
-      clientStderr: (signal as any).stderr ? String((signal as any).stderr).slice(0, 300) : null,
-      clientError: (signal as any).error ? String((signal as any).error).slice(0, 300) : null,
-      hasSignature: Boolean(signal.signature),
-      clockSkewMs: sigSkewMs,
+      clientStderr: (signal as any).stderr ? String((signal as any).stderr).slice(0, 500) : null,
+      clientStdout: (signal as any).stdout ? String((signal as any).stdout).slice(0, 500) : null,
+      clientError: (signal as any).error ? String((signal as any).error).slice(0, 500) : null,
+      hasEnvSecret: Boolean(process.env.VOXY_AGE_SIGNAL_SECRET),
+      envSecretLength: process.env.VOXY_AGE_SIGNAL_SECRET?.length ?? 0,
       suspended: isChild,
       durationMs: Date.now() - startedAt,
-    });
+    };
+
+    this.logger?.logBusinessEvent('AGE_SIGNAL_SYNC', logPayload);
+    this.logger?.log(
+      `[AgeSignal][Backend] Validação de idade: @${userRecord?.username || userId} (${userRecord?.email || 'sem email'}) -> outcome=${outcome}, prev=${previousClassification}, new=${classification}, preservedPrevious=${preservedPrevious}, clientReason=${(signal as any).reason || 'none'}, status=${signal.status || 'none'}`,
+      'AgeSignalService',
+      logPayload
+    );
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -697,22 +760,21 @@ export class AuthService {
     });
 
     const isAdult = updated.ageClassification === AgeClassification.ADULT;
-    const isTeen = updated.ageClassification === AgeClassification.TEEN;
-    const isDivergent = updated.ageClassification === AgeClassification.DIVERGENT;
-    // DIVERGENT opera com as permissões equivalentes a TEEN (voz liberada, tela/18+ restritos)
-    const canVoice = (isAdult || isTeen || isDivergent) && !updated.isSuspended;
+    const canStream = !updated.isSuspended && !isChild;
 
     return {
       success: true,
       user: {
         ...updated,
-        canJoinVoice: canJoinVoiceByAge(updated as any),
+        canJoinVoice: canStream,
         canShareScreen: isAdult && !updated.isSuspended,
-        canStreamGames: canVoice,
+        canStreamGames: canStream,
         canAccess18Plus: isAdult && !updated.isSuspended,
-        canUseApp: !isChild && !updated.isSuspended,
+        canUseApp: canStream,
       },
-      changed: true,
+      outcome,
+      preservedPrevious,
+      changed: previousClassification !== classification,
     };
   }
 }

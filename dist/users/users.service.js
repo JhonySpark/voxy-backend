@@ -136,9 +136,8 @@ let UsersService = class UsersService {
         }
         const version = user.updatedAt ? `?v=${new Date(user.updatedAt).getTime()}` : '';
         const isSelf = !requestingUserId || requestingUserId === userId;
-        const isAdult = user.ageClassification === AgeClassificationEnum.ADULT;
-        const isTeen = user.ageClassification === AgeClassificationEnum.TEEN;
-        const isVerified = (isAdult || isTeen) && !user.isSuspended;
+        const isChild = user.ageClassification === AgeClassificationEnum.CHILD;
+        const canUsePlatform = !user.isSuspended && !isChild;
         return {
             id: user.id,
             username: user.username,
@@ -153,13 +152,13 @@ let UsersService = class UsersService {
             email: isSelf ? user.email : undefined,
             birthDate: isSelf ? user.birthDate : undefined,
             isEmailVerified: user.isEmailVerified,
-            ageClassification: user.ageClassification,
-            ageSignalSource: user.ageSignalSource,
-            canJoinVoice: isVerified,
-            canShareScreen: isAdult && !user.isSuspended,
-            canStreamGames: isVerified,
-            canAccess18Plus: isAdult && !user.isSuspended,
-            canUseApp: user.ageClassification !== AgeClassificationEnum.CHILD && !user.isSuspended,
+            ageClassification: isSelf ? user.ageClassification : undefined,
+            ageSignalSource: isSelf ? user.ageSignalSource : undefined,
+            canJoinVoice: isSelf ? canUsePlatform : undefined,
+            canShareScreen: isSelf ? canUsePlatform : undefined,
+            canStreamGames: isSelf ? canUsePlatform : undefined,
+            canAccess18Plus: isSelf ? canUsePlatform : undefined,
+            canUseApp: isSelf ? canUsePlatform : undefined,
         };
     }
     async updateProfile(userId, data) {
