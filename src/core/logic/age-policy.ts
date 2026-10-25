@@ -1,20 +1,20 @@
 import { AgeClassificationEnum } from '../enums/index.js';
 
 /**
- * Data a partir da qual usuários UNKNOWN (sem validação do SO) passam a ser
- * bloqueados em voz. Antes disso vale um período de carência, para que clientes
- * já instalados (que não revalidam sozinhos) tenham tempo de atualizar.
- * Pode ser sobrescrita via env AGE_ENFORCEMENT_START (ISO 8601).
+ * Política de acesso a chamadas de voz e compartilhamento de tela de jogos por idade.
+ * O prazo de carência foi removido definitivamente:
+ * Todos os usuários (ADULT, TEEN, DIVERGENT e UNKNOWN) têm permissão liberada
+ * para chamadas de voz e compartilhamento/transmissão de jogos detectados,
+ * bloqueando apenas contas explicitamente suspensas ou confirmadas como CHILD (<13 anos).
  */
-export function getAgeEnforcementStart(): Date {
-  const raw = process.env.AGE_ENFORCEMENT_START;
-  const parsed = raw ? new Date(raw) : null;
-  if (parsed && !Number.isNaN(parsed.getTime())) return parsed;
-  return new Date('2026-10-22T00:00:00-03:00');
+export function getAgeEnforcementStart(): Date | null {
+  // Prazo de carência desativado permanentemente: sem prazo limite
+  return null;
 }
 
-export function isUnknownGraceActive(now: Date = new Date()): boolean {
-  return now.getTime() < getAgeEnforcementStart().getTime();
+export function isUnknownGraceActive(_now: Date = new Date()): boolean {
+  // Sempre ativo / sem prazo expiratório
+  return true;
 }
 
 export type DeclaredAgeCategory = 'CHILD' | 'TEEN' | 'ADULT' | null;
@@ -34,9 +34,8 @@ export function getDeclaredAgeCategory(birthDate?: Date | string | null): Declar
 
 /**
  * Regra única de acesso a chamadas de voz por idade.
- * TRAVAS DESATIVADAS TEMPORARIAMENTE:
- * Libera acesso para todos os usuários normais, bloqueando apenas
- * contas explicitamente suspensas ou confirmadas como CHILD (<13 anos).
+ * Libera acesso para todos os usuários normais (incluindo UNKNOWN),
+ * bloqueando apenas contas explicitamente suspensas ou confirmadas como CHILD (<13 anos).
  */
 export function canJoinVoiceByAge(params: {
   ageClassification?: string | null;
@@ -45,6 +44,20 @@ export function canJoinVoiceByAge(params: {
 }): boolean {
   if (params.isSuspended) return false;
   if (params.ageClassification === AgeClassificationEnum.CHILD) return false;
-  // Temporariamente liberado para UNKNOWN, TEEN, ADULT e DIVERGENT
   return true;
 }
+
+/**
+ * Regra de acesso para compartilhamento / streaming de jogos por idade.
+ * Libera para ADULT, TEEN, DIVERGENT e UNKNOWN (sem limite de prazo).
+ * Apenas contas suspensas ou CHILD (<13 anos) são bloqueadas.
+ */
+export function canStreamGamesByAge(params: {
+  ageClassification?: string | null;
+  isSuspended?: boolean | null;
+}): boolean {
+  if (params.isSuspended) return false;
+  if (params.ageClassification === AgeClassificationEnum.CHILD) return false;
+  return true;
+}
+

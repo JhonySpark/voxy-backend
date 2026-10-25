@@ -93,4 +93,17 @@ describe('User Entity', () => {
     expect(user.bannerUrl).toBeNull();
     expect(user.bannerKey).toBeNull();
   });
+
+  it('should allow game streaming for UNKNOWN age classification', () => {
+    const user = User.create({
+      username,
+      email,
+      password: 'initialpassword',
+    }).getValue();
+
+    // Default ageClassification is UNKNOWN
+    expect(user.canStreamGames()).toBe(true);
+    expect(user.canJoinVoice()).toBe(true);
+    expect(user.canShareScreen()).toBe(false); // apenas ADULT compartilha tela cheia/janelas gerais
+  });
 });
