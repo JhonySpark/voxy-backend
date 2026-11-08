@@ -82,6 +82,7 @@ export class ChannelsService {
       icon: created.icon,
       isRestricted: created.isRestricted,
       allowedRoles: created.allowedRoles,
+      userLimit: created.userLimit,
       serverId: created.serverId,
     };
   }
@@ -131,6 +132,7 @@ export class ChannelsService {
       icon?: string | null;
       isRestricted?: boolean;
       allowedRoles?: string[];
+      userLimit?: number;
     },
   ) {
     const channel = await this.channelRepo.findById(channelId);
@@ -154,6 +156,7 @@ export class ChannelsService {
       icon: updated.icon,
       isRestricted: updated.isRestricted,
       allowedRoles: updated.allowedRoles,
+      userLimit: updated.userLimit,
       serverId: updated.serverId,
     };
   }

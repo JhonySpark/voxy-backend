@@ -114,6 +114,7 @@ describe('ChannelsService', () => {
         icon: 'hash',
         isRestricted: false,
         allowedRoles: [],
+        userLimit: 0,
         serverId: 's1',
       });
     });
@@ -216,6 +217,30 @@ describe('ChannelsService', () => {
         icon: 'megaphone',
         isRestricted: true,
         allowedRoles: ['ADMIN', 'MODERATOR'],
+        userLimit: 0,
+        serverId: 's1',
+      });
+    });
+
+    it('should update voice channel userLimit', async () => {
+      const channel = createDomainChannel('c2', 'voice-room', 's1', 'VOICE');
+      channelRepo.findById.mockResolvedValue(channel);
+      channelRepo.update.mockImplementation(async (updatedChannel) => updatedChannel);
+      serverRepo.getMemberRole.mockResolvedValue('OWNER');
+
+      const result = await service.updateChannel('c2', 'u1', {
+        name: 'Sala VIP',
+        userLimit: 5,
+      });
+
+      expect(result).toEqual({
+        id: 'c2',
+        name: 'Sala VIP',
+        type: 'VOICE',
+        icon: 'hash',
+        isRestricted: false,
+        allowedRoles: [],
+        userLimit: 5,
         serverId: 's1',
       });
     });

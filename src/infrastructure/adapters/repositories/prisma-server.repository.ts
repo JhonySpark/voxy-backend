@@ -39,6 +39,7 @@ export class PrismaServerRepository implements IServerRepository {
           icon: c.icon ?? 'hash',
           isRestricted: Boolean(c.isRestricted),
           allowedRoles: Array.isArray(c.allowedRoles) ? c.allowedRoles : [],
+          userLimit: typeof c.userLimit === 'number' ? c.userLimit : 0,
           createdAt: c.createdAt,
         },
         c.id

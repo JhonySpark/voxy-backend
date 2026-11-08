@@ -541,6 +541,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.user.sub;
+
+    const existingParticipants = this.voiceStates.get(data.channelId);
+    if (this.prisma && existingParticipants && !existingParticipants.has(userId)) {
+      try {
+        const channelRecord = await this.prisma.channel.findUnique({
+          where: { id: data.channelId },
+          select: { userLimit: true },
+        });
+        if (
+          channelRecord?.userLimit &&
+          channelRecord.userLimit > 0 &&
+          existingParticipants.size >= channelRecord.userLimit
+        ) {
+          client.emit('error', `Este canal de voz atingiu o limite máximo de ${channelRecord.userLimit} usuários.`);
+          return;
+        }
+      } catch (_) {}
+    }
+
     client.join(`voice-${data.channelId}`);
     
     // Clear any pending disconnect timeout for this user in this channel

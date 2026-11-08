@@ -53,6 +53,7 @@ export class PrismaChannelRepository implements IChannelRepository {
         icon: raw.icon ?? 'hash',
         isRestricted: Boolean(raw.isRestricted),
         allowedRoles: Array.isArray(raw.allowedRoles) ? raw.allowedRoles : [],
+        userLimit: typeof raw.userLimit === 'number' ? raw.userLimit : 0,
         createdAt: raw.createdAt,
       },
       raw.id
@@ -68,6 +69,7 @@ export class PrismaChannelRepository implements IChannelRepository {
         icon: channel.icon ?? 'hash',
         isRestricted: channel.isRestricted,
         allowedRoles: channel.allowedRoles,
+        userLimit: channel.userLimit,
         serverId: channel.serverId,
         createdAt: channel.createdAt,
       },
@@ -84,6 +86,7 @@ export class PrismaChannelRepository implements IChannelRepository {
         icon: channel.icon,
         isRestricted: channel.isRestricted,
         allowedRoles: channel.allowedRoles,
+        userLimit: channel.userLimit,
       },
     });
     return this.toDomain(raw)!;

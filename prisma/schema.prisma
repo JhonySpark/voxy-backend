@@ -260,6 +260,7 @@ model Channel {
   icon         String?  @default("hash")
   isRestricted Boolean  @default(false)
   allowedRoles String[] @default([])
+  userLimit    Int      @default(0)
   serverId     String
   createdAt    DateTime @default(now())
 

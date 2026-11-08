@@ -31,11 +31,13 @@ export class ChannelsController {
     @Body('icon') icon?: string | null,
     @Body('isRestricted') isRestricted?: boolean,
     @Body('allowedRoles') allowedRoles?: string[],
+    @Body('userLimit') userLimit?: number,
   ) {
     if (
       icon === undefined &&
       isRestricted === undefined &&
       allowedRoles === undefined &&
+      userLimit === undefined &&
       name !== undefined
     ) {
       return this.channelsService.renameChannel(channelId, req.user.sub, name);
@@ -45,6 +47,7 @@ export class ChannelsController {
       icon,
       isRestricted,
       allowedRoles,
+      userLimit,
     });
   }
 

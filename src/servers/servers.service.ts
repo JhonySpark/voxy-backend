@@ -85,6 +85,7 @@ export class ServersService {
         icon: c.icon,
         isRestricted: c.isRestricted,
         allowedRoles: c.allowedRoles,
+        userLimit: c.userLimit,
         serverId: c.serverId,
       })),
       members: created.members.map(m => ({
@@ -164,6 +165,7 @@ export class ServersService {
           icon: c.icon,
           isRestricted: c.isRestricted,
           allowedRoles: c.allowedRoles,
+          userLimit: c.userLimit,
           serverId: c.serverId,
         })),
       };
@@ -220,6 +222,7 @@ export class ServersService {
         icon: c.icon,
         isRestricted: c.isRestricted,
         allowedRoles: c.allowedRoles,
+        userLimit: c.userLimit,
         serverId: c.serverId,
       })),
       members: server.members.map(m => ({

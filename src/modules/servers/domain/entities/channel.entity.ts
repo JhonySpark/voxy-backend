@@ -9,6 +9,7 @@ export interface ChannelProps {
   icon?: string | null;
   isRestricted?: boolean;
   allowedRoles?: string[];
+  userLimit?: number;
   createdAt?: Date;
 }
 
@@ -37,6 +38,10 @@ export class Channel extends Entity<ChannelProps> {
     return this.props.allowedRoles ?? [];
   }
 
+  get userLimit(): number {
+    return this.props.userLimit ?? 0;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt || new Date();
   }
@@ -54,6 +59,7 @@ export class Channel extends Entity<ChannelProps> {
     icon?: string | null;
     isRestricted?: boolean;
     allowedRoles?: string[];
+    userLimit?: number;
   }): Result<void> {
     if (settings.name !== undefined) {
       const renameRes = this.rename(settings.name);
@@ -64,15 +70,20 @@ export class Channel extends Entity<ChannelProps> {
       this.props.icon = settings.icon ? settings.icon.trim() : 'hash';
     }
 
-    if (settings.isRestricted !== undefined) {
+    if (settings.isRestricted !== undefined && this.props.type.isText()) {
       this.props.isRestricted = Boolean(settings.isRestricted);
     }
 
-    if (settings.allowedRoles !== undefined) {
+    if (settings.allowedRoles !== undefined && this.props.type.isText()) {
       const validRoles = ['ADMIN', 'MODERATOR', 'MEMBER'];
       this.props.allowedRoles = Array.from(
         new Set((settings.allowedRoles || []).filter((r) => validRoles.includes(r)))
       );
+    }
+
+    if (settings.userLimit !== undefined && this.props.type.isVoice()) {
+      const parsed = Math.floor(Number(settings.userLimit) || 0);
+      this.props.userLimit = Math.min(99, Math.max(0, parsed));
     }
 
     return Result.ok<void>();
@@ -104,6 +115,7 @@ export class Channel extends Entity<ChannelProps> {
       icon: props.icon ?? 'hash',
       isRestricted: Boolean(props.isRestricted),
       allowedRoles: Array.isArray(props.allowedRoles) ? props.allowedRoles : [],
+      userLimit: typeof props.userLimit === 'number' ? Math.min(99, Math.max(0, Math.floor(props.userLimit))) : 0,
       createdAt: props.createdAt || new Date(),
     }, id);
 
