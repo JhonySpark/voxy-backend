@@ -56,6 +56,12 @@ export class ChannelsService {
     userId: string,
     name: string,
     type: 'TEXT' | 'VOICE' = 'TEXT',
+    options?: {
+      icon?: string | null;
+      isRestricted?: boolean;
+      allowedRoles?: string[];
+      userLimit?: number;
+    },
   ) {
     const canManage = await this.canUserManageChannels(serverId, userId);
     if (!canManage) {
@@ -66,6 +72,10 @@ export class ChannelsService {
       name,
       type: ChannelType.create(type).getValue(),
       serverId,
+      icon: type === 'TEXT' ? options?.icon ?? 'hash' : 'hash',
+      isRestricted: type === 'TEXT' ? Boolean(options?.isRestricted) : false,
+      allowedRoles: type === 'TEXT' && options?.isRestricted ? options?.allowedRoles ?? [] : [],
+      userLimit: type === 'VOICE' ? options?.userLimit ?? 0 : 0,
     });
 
     if (channelOrError.isFailure) {

@@ -12,9 +12,26 @@ export class ChannelsController {
     @Request() req: any,
     @Param('serverId') serverId: string,
     @Body('name') name: string,
-    @Body('type') type: 'TEXT' | 'VOICE'
+    @Body('type') type: 'TEXT' | 'VOICE',
+    @Body('icon') icon?: string | null,
+    @Body('isRestricted') isRestricted?: boolean,
+    @Body('allowedRoles') allowedRoles?: string[],
+    @Body('userLimit') userLimit?: number,
   ) {
-    return this.channelsService.createChannel(serverId, req.user.sub, name, type);
+    if (
+      icon === undefined &&
+      isRestricted === undefined &&
+      allowedRoles === undefined &&
+      userLimit === undefined
+    ) {
+      return this.channelsService.createChannel(serverId, req.user.sub, name, type);
+    }
+    return this.channelsService.createChannel(serverId, req.user.sub, name, type, {
+      icon,
+      isRestricted,
+      allowedRoles,
+      userLimit,
+    });
   }
 
   @Delete(':channelId')
