@@ -111,6 +111,9 @@ describe('ChannelsService', () => {
         id: 'c1',
         name: 'general',
         type: 'TEXT',
+        icon: 'hash',
+        isRestricted: false,
+        allowedRoles: [],
         serverId: 's1',
       });
     });
@@ -192,9 +195,71 @@ describe('ChannelsService', () => {
 
       await expect(service.renameChannel('c1', 'u1', ' ')).rejects.toThrow(ForbiddenException);
     });
+
+    it('should update channel icon and write permissions', async () => {
+      const channel = createDomainChannel('c1', 'general', 's1');
+      channelRepo.findById.mockResolvedValue(channel);
+      channelRepo.update.mockImplementation(async (updatedChannel) => updatedChannel);
+      serverRepo.getMemberRole.mockResolvedValue('OWNER');
+
+      const result = await service.updateChannel('c1', 'u1', {
+        name: 'anuncios',
+        icon: 'megaphone',
+        isRestricted: true,
+        allowedRoles: ['ADMIN', 'MODERATOR'],
+      });
+
+      expect(result).toEqual({
+        id: 'c1',
+        name: 'anuncios',
+        type: 'TEXT',
+        icon: 'megaphone',
+        isRestricted: true,
+        allowedRoles: ['ADMIN', 'MODERATOR'],
+        serverId: 's1',
+      });
+    });
   });
 
   describe('saveChannelMessage', () => {
+    it('should throw ForbiddenException if channel is restricted and user role is not allowed', async () => {
+      const channel = Channel.create(
+        {
+          name: 'avisos',
+          serverId: 's1',
+          type: ChannelType.text(),
+          isRestricted: true,
+          allowedRoles: ['ADMIN'],
+        },
+        'c1',
+      ).getValue();
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+      serverRepo.getMemberRole.mockResolvedValue('MEMBER');
+
+      await expect(service.saveChannelMessage('c1', 'u1', 'hello')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow message if channel is restricted and user role is allowed', async () => {
+      const channel = Channel.create(
+        {
+          name: 'avisos',
+          serverId: 's1',
+          type: ChannelType.text(),
+          isRestricted: true,
+          allowedRoles: ['ADMIN', 'MODERATOR'],
+        },
+        'c1',
+      ).getValue();
+      channelRepo.findById.mockResolvedValue(channel);
+      serverRepo.isMember.mockResolvedValue(true);
+      serverRepo.getMemberRole.mockResolvedValue('MODERATOR');
+      const mockSaved = { id: 'm1', content: 'hello', channelId: 'c1', senderId: 'u1' };
+      channelRepo.saveMessage.mockResolvedValue(mockSaved);
+
+      const result = await service.saveChannelMessage('c1', 'u1', 'hello');
+      expect(result).toEqual(mockSaved);
+    });
     it('should throw NotFoundException if channel not found', async () => {
       channelRepo.findById.mockResolvedValue(null);
 

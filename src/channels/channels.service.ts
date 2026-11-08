@@ -34,14 +34,31 @@ export class ChannelsService {
     @Optional() private readonly systemConfigService?: SystemConfigService,
   ) {}
 
+  private async canUserManageChannels(serverId: string, userId: string): Promise<boolean> {
+    const role = await this.serverRepo.getMemberRole(serverId, userId);
+    if (!role) return false;
+    if (role === 'OWNER') return true;
+
+    if (typeof (this.serverRepo as any).getRolePermissions === 'function') {
+      const rolePerms = await this.serverRepo.getRolePermissions(serverId);
+      const custom = (rolePerms || []).find((p: any) => p.role === role);
+      if (custom && typeof custom.canManageChannels === 'boolean') {
+        return custom.canManageChannels;
+      }
+      return role === 'ADMIN';
+    }
+
+    return false;
+  }
+
   async createChannel(
     serverId: string,
     userId: string,
     name: string,
     type: 'TEXT' | 'VOICE' = 'TEXT',
   ) {
-    const role = await this.serverRepo.getMemberRole(serverId, userId);
-    if (!role || role !== 'OWNER') {
+    const canManage = await this.canUserManageChannels(serverId, userId);
+    if (!canManage) {
       throw new ForbiddenException('Only the owner can create channels');
     }
 
@@ -62,6 +79,9 @@ export class ChannelsService {
       id: created.id,
       name: created.name,
       type: created.type.value,
+      icon: created.icon,
+      isRestricted: created.isRestricted,
+      allowedRoles: created.allowedRoles,
       serverId: created.serverId,
     };
   }
@@ -91,8 +111,8 @@ export class ChannelsService {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
 
-    const role = await this.serverRepo.getMemberRole(channel.serverId, userId);
-    if (role !== 'OWNER') {
+    const canManage = await this.canUserManageChannels(channel.serverId, userId);
+    if (!canManage) {
       throw new ForbiddenException('Only the owner can delete channels');
     }
 
@@ -100,17 +120,30 @@ export class ChannelsService {
   }
 
   async renameChannel(channelId: string, userId: string, name: string) {
+    return this.updateChannel(channelId, userId, { name });
+  }
+
+  async updateChannel(
+    channelId: string,
+    userId: string,
+    data: {
+      name?: string;
+      icon?: string | null;
+      isRestricted?: boolean;
+      allowedRoles?: string[];
+    },
+  ) {
     const channel = await this.channelRepo.findById(channelId);
     if (!channel) throw new NotFoundException('Channel not found');
 
-    const role = await this.serverRepo.getMemberRole(channel.serverId, userId);
-    if (role !== 'OWNER') {
+    const canManage = await this.canUserManageChannels(channel.serverId, userId);
+    if (!canManage) {
       throw new ForbiddenException('Only the owner can rename channels');
     }
 
-    const renameResult = channel.rename(name);
-    if (renameResult.isFailure) {
-      throw new ForbiddenException(renameResult.error);
+    const updateResult = channel.updateSettings(data);
+    if (updateResult.isFailure) {
+      throw new ForbiddenException(updateResult.error);
     }
 
     const updated = await this.channelRepo.update(channel);
@@ -118,6 +151,9 @@ export class ChannelsService {
       id: updated.id,
       name: updated.name,
       type: updated.type.value,
+      icon: updated.icon,
+      isRestricted: updated.isRestricted,
+      allowedRoles: updated.allowedRoles,
       serverId: updated.serverId,
     };
   }
@@ -145,6 +181,13 @@ export class ChannelsService {
     const isMuted = await this.serverRepo.isMemberMuted(channel.serverId, senderId);
     if (isMuted) {
       throw new ForbiddenException('Você está silenciado neste servidor e não pode enviar mensagens.');
+    }
+
+    if (channel.isRestricted) {
+      const role = await this.serverRepo.getMemberRole(channel.serverId, senderId);
+      if (!channel.canUserWrite(role)) {
+        throw new ForbiddenException('Você não tem permissão para enviar mensagens neste canal.');
+      }
     }
 
     return this.channelRepo.saveMessage(channelId, senderId, content, attachmentId, replyToId);

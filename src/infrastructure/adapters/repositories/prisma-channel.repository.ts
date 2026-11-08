@@ -50,6 +50,9 @@ export class PrismaChannelRepository implements IChannelRepository {
         name: raw.name,
         type: ChannelType.create(raw.type).getValue(),
         serverId: raw.serverId,
+        icon: raw.icon ?? 'hash',
+        isRestricted: Boolean(raw.isRestricted),
+        allowedRoles: Array.isArray(raw.allowedRoles) ? raw.allowedRoles : [],
         createdAt: raw.createdAt,
       },
       raw.id
@@ -62,6 +65,9 @@ export class PrismaChannelRepository implements IChannelRepository {
         id: channel.id,
         name: channel.name,
         type: channel.type.value,
+        icon: channel.icon ?? 'hash',
+        isRestricted: channel.isRestricted,
+        allowedRoles: channel.allowedRoles,
         serverId: channel.serverId,
         createdAt: channel.createdAt,
       },
@@ -73,7 +79,12 @@ export class PrismaChannelRepository implements IChannelRepository {
   async update(channel: Channel): Promise<Channel> {
     const raw = await this.prisma.channel.update({
       where: { id: channel.id },
-      data: { name: channel.name },
+      data: {
+        name: channel.name,
+        icon: channel.icon,
+        isRestricted: channel.isRestricted,
+        allowedRoles: channel.allowedRoles,
+      },
     });
     return this.toDomain(raw)!;
   }

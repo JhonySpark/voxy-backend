@@ -254,11 +254,14 @@ model ServerRolePermission {
 }
 
 model Channel {
-  id        String   @id @default(uuid())
-  name      String
-  type      String   @default("TEXT") // TEXT, VOICE
-  serverId  String
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  type         String   @default("TEXT") // TEXT, VOICE
+  icon         String?  @default("hash")
+  isRestricted Boolean  @default(false)
+  allowedRoles String[] @default([])
+  serverId     String
+  createdAt    DateTime @default(now())
 
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages  ChannelMessage[]

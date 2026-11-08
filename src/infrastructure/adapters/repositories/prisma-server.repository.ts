@@ -36,6 +36,9 @@ export class PrismaServerRepository implements IServerRepository {
           name: c.name,
           type: ChannelType.create(c.type).getValue(),
           serverId: c.serverId || raw.id,
+          icon: c.icon ?? 'hash',
+          isRestricted: Boolean(c.isRestricted),
+          allowedRoles: Array.isArray(c.allowedRoles) ? c.allowedRoles : [],
           createdAt: c.createdAt,
         },
         c.id

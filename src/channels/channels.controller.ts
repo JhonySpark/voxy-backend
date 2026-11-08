@@ -27,9 +27,25 @@ export class ChannelsController {
   async renameChannel(
     @Request() req: any,
     @Param('channelId') channelId: string,
-    @Body('name') name: string,
+    @Body('name') name?: string,
+    @Body('icon') icon?: string | null,
+    @Body('isRestricted') isRestricted?: boolean,
+    @Body('allowedRoles') allowedRoles?: string[],
   ) {
-    return this.channelsService.renameChannel(channelId, req.user.sub, name);
+    if (
+      icon === undefined &&
+      isRestricted === undefined &&
+      allowedRoles === undefined &&
+      name !== undefined
+    ) {
+      return this.channelsService.renameChannel(channelId, req.user.sub, name);
+    }
+    return this.channelsService.updateChannel(channelId, req.user.sub, {
+      name,
+      icon,
+      isRestricted,
+      allowedRoles,
+    });
   }
 
   @Get(':channelId/messages')
