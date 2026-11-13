@@ -55,6 +55,11 @@ model User {
   reportsReceived         ModerationReport[]       @relation("UserReportsReceived")
   securityAuditLogs       SecurityAuditLog[]       @relation("AuditLogsActed")
   cosmetics               UserCosmetic[]
+
+  @@index([createdAt])
+  @@index([role])
+  @@index([isSuspended])
+  @@index([ageClassification])
 }
 
 enum ReportTargetType {
@@ -127,6 +132,7 @@ model EmailVerification {
   createdAt DateTime @default(now())
 
   @@index([email])
+  @@index([email, createdAt])
 }
 
 
@@ -141,6 +147,8 @@ model Friendship {
   friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
+  @@index([friendId, status])
+  @@index([userId, status])
 }
 
 model BlockedUser {
@@ -178,6 +186,7 @@ model Message {
   @@index([replyToId])
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
+  @@index([createdAt])
 }
 
 model Server {
@@ -202,6 +211,10 @@ model Server {
   rolePermissions ServerRolePermission[]
   reports         ModerationReport[]     @relation("ServerReports")
   securityAuditLogs SecurityAuditLog[]   @relation("ServerAuditLogs")
+
+  @@index([ownerId])
+  @@index([deletedAt, isSuspended])
+  @@index([createdAt])
 }
 
 model ServerMember {
@@ -293,6 +306,8 @@ model ChannelMessage {
 
   @@index([replyToId])
   @@index([channelId, createdAt])
+  @@index([senderId])
+  @@index([createdAt])
 }
 
 model Attachment {
@@ -375,6 +390,8 @@ model ModerationReport {
   @@index([targetServerId])
   @@index([targetType])
   @@index([status])
+  @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 model SecurityAuditLog {
@@ -446,6 +463,7 @@ model CosmeticItem {
 
   @@index([type])
   @@index([rarity])
+  @@index([isAvailable, isDefault])
 }
 
 model UserCosmetic {
