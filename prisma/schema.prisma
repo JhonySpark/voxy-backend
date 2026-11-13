@@ -176,6 +176,8 @@ model Message {
   reactions   MessageReaction[]
 
   @@index([replyToId])
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
 }
 
 model Server {
@@ -216,6 +218,7 @@ model ServerMember {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, userId])
+  @@index([userId])
 }
 
 model ServerBan {
@@ -266,6 +269,8 @@ model Channel {
 
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages  ChannelMessage[]
+
+  @@index([serverId])
 }
 
 model ChannelMessage {
@@ -287,6 +292,7 @@ model ChannelMessage {
   reactions   ChannelMessageReaction[]
 
   @@index([replyToId])
+  @@index([channelId, createdAt])
 }
 
 model Attachment {

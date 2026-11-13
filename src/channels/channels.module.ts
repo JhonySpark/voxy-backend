@@ -10,9 +10,10 @@ import { LivekitVoiceAdapter } from '../infrastructure/adapters/voice/livekit-vo
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { ModerationModule } from '../moderation/moderation.module.js';
 import { SystemConfigModule } from '../modules/system-config/system-config.module.js';
+import { StorageModule } from '../modules/storage/storage.module.js';
 
 @Module({
-  imports: [PrismaModule, ModerationModule, SystemConfigModule],
+  imports: [PrismaModule, ModerationModule, SystemConfigModule, StorageModule],
   controllers: [ChannelsController],
   providers: [
     ChannelsService,

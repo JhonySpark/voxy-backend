@@ -1,12 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IChannelRepository, MessagePageOptions } from '../../../core/ports/repositories/channel.repository.port.js';
+import { STORAGE_PORT } from '../../../core/ports/storage.port.js';
+import type { IStoragePort } from '../../../core/ports/storage.port.js';
 import { Channel } from '../../../modules/servers/domain/entities/channel.entity.js';
 import { ChannelType } from '../../../modules/servers/domain/value-objects/channel-type.vo.js';
 
 const CHANNEL_MESSAGE_INCLUDE: Prisma.ChannelMessageInclude = {
-  sender: true,
+  sender: {
+    select: {
+      id: true,
+      username: true,
+      displayName: true,
+      email: true,
+      avatarUrl: true,
+      bannerUrl: true,
+      bannerColor: true,
+      bio: true,
+      equippedFrameSlug: true,
+    },
+  },
   attachments: true,
   replyTo: {
     include: {
@@ -41,7 +55,63 @@ const CHANNEL_MESSAGE_INCLUDE: Prisma.ChannelMessageInclude = {
 
 @Injectable()
 export class PrismaChannelRepository implements IChannelRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() @Inject(STORAGE_PORT) private readonly storagePort?: IStoragePort,
+  ) {}
+
+  private async enrichAttachmentUrls(att: any): Promise<any> {
+    if (!att || !this.storagePort) return att;
+    try {
+      const downloadUrl = att.fileKey
+        ? await this.storagePort.getPresignedDownloadUrl(att.fileKey, 86400)
+        : att.url;
+      const thumbnailUrl = att.thumbnailKey
+        ? await this.storagePort.getPresignedDownloadUrl(att.thumbnailKey, 86400)
+        : downloadUrl;
+      return {
+        ...att,
+        downloadUrl,
+        thumbnailUrl,
+      };
+    } catch {
+      return att;
+    }
+  }
+
+  private async enrichMessage(msg: any): Promise<any> {
+    if (!msg || !this.storagePort) return msg;
+
+    const hasAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
+    const hasReplyAttachments =
+      Array.isArray(msg.replyTo?.attachments) && msg.replyTo.attachments.length > 0;
+
+    if (!hasAttachments && !hasReplyAttachments) {
+      return msg;
+    }
+
+    const [enrichedAttachments, enrichedReplyAttachments] = await Promise.all([
+      hasAttachments
+        ? Promise.all(msg.attachments.map((att: any) => this.enrichAttachmentUrls(att)))
+        : Promise.resolve(msg.attachments),
+      hasReplyAttachments
+        ? Promise.all(msg.replyTo.attachments.map((att: any) => this.enrichAttachmentUrls(att)))
+        : Promise.resolve(msg.replyTo?.attachments),
+    ]);
+
+    return {
+      ...msg,
+      ...(hasAttachments ? { attachments: enrichedAttachments } : {}),
+      ...(hasReplyAttachments
+        ? {
+            replyTo: {
+              ...msg.replyTo,
+              attachments: enrichedReplyAttachments,
+            },
+          }
+        : {}),
+    };
+  }
 
   private toDomain(raw: any): Channel | null {
     if (!raw) return null;
@@ -132,13 +202,14 @@ export class PrismaChannelRepository implements IChannelRepository {
         where: { id: attachmentId },
         data: { channelMessageId: msg.id },
       });
-      return this.prisma.channelMessage.findUnique({
+      const updated = await this.prisma.channelMessage.findUnique({
         where: { id: msg.id },
         include: CHANNEL_MESSAGE_INCLUDE,
       });
+      return this.enrichMessage(updated);
     }
 
-    return msg;
+    return this.enrichMessage(msg);
   }
 
   async getMessages(channelId: string, options: MessagePageOptions = {}): Promise<any[]> {
@@ -154,7 +225,8 @@ export class PrismaChannelRepository implements IChannelRepository {
       include: CHANNEL_MESSAGE_INCLUDE,
     });
 
-    return messages.reverse();
+    const ordered = messages.reverse();
+    return Promise.all(ordered.map((m) => this.enrichMessage(m)));
   }
 
   async findMessageById(messageId: string): Promise<any | null> {
@@ -173,7 +245,7 @@ export class PrismaChannelRepository implements IChannelRepository {
   }
 
   async updateMessage(messageId: string, content: string): Promise<any> {
-    return this.prisma.channelMessage.update({
+    const updated = await this.prisma.channelMessage.update({
       where: { id: messageId },
       data: {
         content,
@@ -181,6 +253,7 @@ export class PrismaChannelRepository implements IChannelRepository {
       },
       include: CHANNEL_MESSAGE_INCLUDE,
     });
+    return this.enrichMessage(updated);
   }
 
   async toggleReaction(messageId: string, userId: string, emoji: string): Promise<any> {
@@ -214,9 +287,10 @@ export class PrismaChannelRepository implements IChannelRepository {
       });
     }
 
-    return this.prisma.channelMessage.findUnique({
+    const updated = await this.prisma.channelMessage.findUnique({
       where: { id: messageId },
       include: CHANNEL_MESSAGE_INCLUDE,
     });
+    return this.enrichMessage(updated);
   }
 }

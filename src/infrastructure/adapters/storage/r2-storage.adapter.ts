@@ -19,6 +19,8 @@ export class R2StorageAdapter implements IStoragePort {
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
   private readonly publicBaseUrl: string;
+  private readonly presignedDownloadCache = new Map<string, { url: string; expiresAt: number }>();
+  private static readonly MAX_CACHE_ENTRIES = 5000;
 
   constructor() {
     const accountId = process.env.R2_ACCOUNT_ID;
@@ -85,16 +87,43 @@ export class R2StorageAdapter implements IStoragePort {
   }
 
   async getPresignedDownloadUrl(key: string, expiresInSeconds = 86400): Promise<string> {
+    const cacheKey = `${key}:${expiresInSeconds}`;
+    const now = Date.now();
+    const cached = this.presignedDownloadCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.url;
+    }
+
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       ResponseCacheControl: 'private, max-age=86400',
     });
 
-    return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
+    const url = await getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
+
+    // Reutiliza a mesma URL assinada por metade do tempo de expiração (ex: 12h para assinatura de 24h)
+    // para que o navegador possa aproveitar 100% do cache HTTP em disco (evita que X-Amz-Date mude a cada chamada).
+    const ttlMs = Math.max(60_000, Math.floor((expiresInSeconds * 1000) / 2));
+    if (this.presignedDownloadCache.size >= R2StorageAdapter.MAX_CACHE_ENTRIES) {
+      const oldestKey = this.presignedDownloadCache.keys().next().value;
+      if (oldestKey) this.presignedDownloadCache.delete(oldestKey);
+    }
+    this.presignedDownloadCache.set(cacheKey, {
+      url,
+      expiresAt: now + ttlMs,
+    });
+
+    return url;
   }
 
   async deleteFile(key: string): Promise<void> {
+    for (const k of this.presignedDownloadCache.keys()) {
+      if (k.startsWith(`${key}:`)) {
+        this.presignedDownloadCache.delete(k);
+      }
+    }
+
     const command = new DeleteObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -105,6 +134,14 @@ export class R2StorageAdapter implements IStoragePort {
 
   async deleteFiles(keys: string[]): Promise<void> {
     if (!keys || keys.length === 0) return;
+
+    const keySet = new Set(keys);
+    for (const k of this.presignedDownloadCache.keys()) {
+      const baseKey = k.substring(0, k.lastIndexOf(':'));
+      if (keySet.has(baseKey)) {
+        this.presignedDownloadCache.delete(k);
+      }
+    }
 
     // S3 DeleteObjects aceita até 1000 chaves por requisição
     const batchSize = 1000;
